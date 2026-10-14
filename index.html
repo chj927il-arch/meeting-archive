@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>회의록 아카이브</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@400;600;700&display=swap" />
+  <style>
+    /* === 토큰 시스템 === */
+    :root {
+      --bg: #f7f6f3;
+      --bg-card: #ffffff;
+      --bg-sidebar: #f0ede8;
+      --fg: #1a1916;
+      --fg-muted: #6b6760;
+      --fg-subtle: #9c9890;
+      --border: #e2ddd6;
+      --accent: #1e4d8c;
+      --accent-light: #e8eef7;
+      --accent-muted: #5a7fb5;
+      --tag-bg: #e8eef7;
+      --tag-fg: #1e4d8c;
+      --danger: #c0392b;
+      --success: #1a7a4a;
+      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+      --radius: 8px;
+      --font-display: 'Noto Serif KR', serif;
+      --font-body: 'Noto Sans KR', sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #13120f;
+        --bg-card: #1d1c18;
+        --bg-sidebar: #181713;
+        --fg: #f0ede8;
+        --fg-muted: #a09d97;
+        --fg-subtle: #6b6760;
+        --border: #2e2c27;
+        --accent: #5a90d9;
+        --accent-light: #1a2840;
+        --accent-muted: #4a78b8;
+        --tag-bg: #1a2840;
+        --tag-fg: #7eb3f0;
+        --shadow: 0 1px 3px rgba(0,0,0,.3);
+        --shadow-md: 0 4px 12px rgba(0,0,0,.4);
+        color-scheme: dark;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #13120f;
+      --bg-card: #1d1c18;
+      --bg-sidebar: #181713;
+      --fg: #f0ede8;
+      --fg-muted: #a09d97;
+      --fg-subtle: #6b6760;
+      --border: #2e2c27;
+      --accent: #5a90d9;
+      --accent-light: #1a2840;
+      --accent-muted: #4a78b8;
+      --tag-bg: #1a2840;
+      --tag-fg: #7eb3f0;
+      --shadow: 0 1px 3px rgba(0,0,0,.3);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.4);
+      color-scheme: dark;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg);
+      color: var(--fg);
+      font-size: 14px;
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* === 헤더 === */
+    .app-header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: env(safe-area-inset-top, 0px);
+      z-index: 100;
+      box-shadow: var(--shadow);
+    }
+    .app-header h1 {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--fg);
+      letter-spacing: -0.3px;
+    }
+    .app-header h1 span {
+      color: var(--accent);
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* === 레이아웃 === */
+    .app-body {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* === 사이드바 === */
+    .sidebar {
+      width: 280px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow-y: auto;
+    }
+    .sidebar-section {
+      padding: 20px 16px 12px;
+    }
+    .sidebar-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--fg-subtle);
+      margin-bottom: 10px;
+    }
+    .search-wrap {
+      position: relative;
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 8px 12px 8px 34px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-card);
+      color: var(--fg);
+      font-family: var(--font-body);
+      font-size: 13px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .search-wrap input:focus { border-color: var(--accent-muted); }
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--fg-subtle);
+      pointer-events: none;
+    }
+
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      border: none;
+      background: none;
+      color: var(--fg-muted);
+      font-family: var(--font-body);
+      font-size: 13px;
+      cursor: pointer;
+      text-align: left;
+      transition: background .12s, color .12s;
+      width: 100%;
+    }
+    .filter-btn:hover { background: var(--border); color: var(--fg); }
+    .filter-btn.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+    .filter-btn .count {
+      margin-left: auto;
+      font-size: 11px;
+      background: var(--border);
+      color: var(--fg-muted);
+      border-radius: 20px;
+      padding: 1px 7px;
+      font-variant-numeric: tabular-nums;
+    }
+    .filter-btn.active .count { background: var(--accent); color: #fff; }
+
+    .year-list { display: flex; flex-direction: column; gap: 2px; }
+
+    /* === 메인 콘텐츠 === */
+    .main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .main-toolbar {
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .result-count {
+      font-size: 13px;
+      color: var(--fg-muted);
+    }
+    .sort-select {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg-card);
+      color: var(--fg);
+      font-family: var(--font-body);
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .meeting-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* === 회의록 카드 === */
+    .meeting-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      cursor: pointer;
+      transition: box-shadow .15s, border-color .15s;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 16px;
+      align-items: start;
+    }
+    .meeting-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: var(--accent-muted);
+    }
+    .card-main { min-width: 0; }
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+      flex-wrap: wrap;
+    }
+    .card-date {
+      font-size: 12px;
+      color: var(--fg-subtle);
+      font-variant-numeric: tabular-nums;
+      font-weight: 500;
+    }
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--fg);
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+    .card-summary {
+      font-size: 13px;
+      color: var(--fg-muted);
+      line-height: 1.6;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .card-tags {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      background: var(--tag-bg);
+      color: var(--tag-fg);
+      letter-spacing: .02em;
+    }
+    .card-actions {
+      display: flex;
+      gap: 6px;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    /* === 버튼 === */
+    .btn {
+      padding: 8px 16px;
+      border-radius: var(--radius);
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 600;
+      transition: opacity .12s, background .12s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:active { opacity: .85; }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-muted); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--fg-muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--bg-sidebar); color: var(--fg); }
+    .btn-danger-ghost {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid transparent;
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+    .btn-danger-ghost:hover { background: #fef2f2; border-color: #fecaca; }
+    .btn-edit {
+      background: transparent;
+      color: var(--fg-muted);
+      border: 1px solid transparent;
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+    .btn-edit:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent-muted); }
+
+    /* === 빈 상태 === */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      gap: 12px;
+      color: var(--fg-subtle);
+      padding: 60px 24px;
+      text-align: center;
+    }
+    .empty-icon { font-size: 48px; opacity: .4; }
+    .empty-state h3 { font-size: 16px; color: var(--fg-muted); font-weight: 600; }
+    .empty-state p { font-size: 13px; }
+
+    /* === 모달 === */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.45);
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      z-index: 200;
+      padding: 24px 16px;
+      overflow-y: auto;
+    }
+    .modal {
+      background: var(--bg-card);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 680px;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+      margin: auto;
+    }
+    .modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-header h2 {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .modal-close {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: none;
+      background: var(--bg-sidebar);
+      color: var(--fg-muted);
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-close:hover { background: var(--border); }
+    .modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* === 폼 === */
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--fg-muted);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .form-input, .form-textarea {
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg);
+      color: var(--fg);
+      font-family: var(--font-body);
+      font-size: 14px;
+      outline: none;
+      transition: border-color .15s;
+      width: 100%;
+    }
+    .form-input:focus, .form-textarea:focus { border-color: var(--accent-muted); }
+    .form-textarea {
+      resize: vertical;
+      min-height: 120px;
+      line-height: 1.6;
+    }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .tag-input-wrap { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 10px; background: var(--bg); min-height: 40px; cursor: text; }
+    .tag-input-wrap:focus-within { border-color: var(--accent-muted); }
+    .tag-chip { display: flex; align-items: center; gap: 4px; background: var(--tag-bg); color: var(--tag-fg); font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+    .tag-chip button { border: none; background: none; color: inherit; cursor: pointer; font-size: 13px; line-height: 1; padding: 0; opacity: .6; }
+    .tag-chip button:hover { opacity: 1; }
+    .tag-input { border: none; outline: none; background: transparent; color: var(--fg); font-family: var(--font-body); font-size: 13px; min-width: 80px; flex: 1; }
+
+    /* === 상세보기 모달 === */
+    .detail-meta {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
+    .detail-meta-item { display: flex; flex-direction: column; gap: 2px; }
+    .detail-meta-label { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-subtle); }
+    .detail-meta-value { font-size: 14px; font-weight: 500; color: var(--fg); }
+    .detail-content {
+      font-size: 14px;
+      color: var(--fg);
+      line-height: 1.8;
+      white-space: pre-wrap;
+      font-family: var(--font-body);
+    }
+    .detail-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+
+    /* === 반응형 === */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main-toolbar { padding: 12px 16px; }
+      .meeting-list { padding: 14px 16px; }
+      .app-header { padding: 0 16px; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+
+    /* 스크롤바 */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--fg-subtle); }
+  </style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<header class="app-header">
+  <h1>회의록 <span>아카이브</span></h1>
+  <div class="header-actions">
+    <button class="btn btn-ghost" onclick="toggleTheme()" title="테마 전환">
+      <span id="theme-icon">🌙</span>
+    </button>
+    <button class="btn btn-primary" onclick="openAddModal()">
+      + 회의록 추가
+    </button>
+  </div>
+</header>
+
+<div class="app-body">
+  <!-- 사이드바 -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">검색</div>
+      <div class="search-wrap">
+        <svg class="search-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="search-input" placeholder="제목, 내용, 참석자 검색…" oninput="onSearch()" />
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">필터</div>
+      <div class="filter-group" id="category-filters">
+        <button class="filter-btn active" data-cat="all" onclick="setFilter('all')">
+          <span>전체</span>
+          <span class="count" id="cnt-all">0</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">연도별</div>
+      <div class="year-list" id="year-filters"></div>
+    </div>
+  </aside>
+
+  <!-- 메인 -->
+  <main class="main">
+    <div class="main-toolbar">
+      <div class="toolbar-left">
+        <span class="result-count" id="result-count">0건</span>
+      </div>
+      <select class="sort-select" id="sort-select" onchange="renderList()">
+        <option value="newest">최신순</option>
+        <option value="oldest">오래된순</option>
+        <option value="title">제목순</option>
+      </select>
+    </div>
+
+    <div class="meeting-list" id="meeting-list"></div>
+  </main>
+</div>
+
+<!-- 추가/편집 모달 -->
+<div class="modal-overlay" id="add-modal" hidden onclick="onOverlayClick(event,'add-modal')">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <h2 id="modal-title">회의록 추가</h2>
+      <button class="modal-close" onclick="closeModal('add-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="f-date">날짜</label>
+          <input class="form-input" type="date" id="f-date" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="f-category">카테고리</label>
+          <input class="form-input" type="text" id="f-category" placeholder="예: 경영회의, 기획회의…" list="cat-datalist" />
+          <datalist id="cat-datalist"></datalist>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="f-title">회의 제목</label>
+        <input class="form-input" type="text" id="f-title" placeholder="회의 제목을 입력하세요" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="f-attendees">참석자</label>
+        <input class="form-input" type="text" id="f-attendees" placeholder="예: 대표이사, 기획팀장, 마케팅팀…" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">태그</label>
+        <div class="tag-input-wrap" id="tag-wrap" onclick="document.getElementById('tag-input').focus()">
+          <span id="tag-chips"></span>
+          <input class="tag-input" id="tag-input" placeholder="태그 입력 후 Enter" onkeydown="onTagKey(event)" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="f-content">회의 내용</label>
+        <textarea class="form-textarea" id="f-content" placeholder="회의 내용, 결정사항, 액션아이템 등을 자유롭게 기록하세요…" style="min-height:160px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('add-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveRecord()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 상세보기 모달 -->
+<div class="modal-overlay" id="view-modal" hidden onclick="onOverlayClick(event,'view-modal')">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <h2 id="view-title" style="font-size:18px"></h2>
+      <button class="modal-close" onclick="closeModal('view-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="detail-meta" id="view-meta"></div>
+      <div class="detail-content" id="view-content"></div>
+      <div class="detail-tags" id="view-tags"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('view-modal')">닫기</button>
+      <button class="btn btn-ghost" id="view-edit-btn">편집</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ===== 데이터 =====
+  const STORAGE_KEY = 'meeting_archive_v1';
+  let records = [];
+  let editingId = null;
+  let currentFilter = 'all';
+  let currentYear = 'all';
+  let searchQuery = '';
+  let currentTags = [];
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      records = raw ? JSON.parse(raw) : sampleData();
+    } catch { records = sampleData(); }
+  }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch {}
+  }
+
+  function sampleData() {
+    return [
+      {
+        id: uid(), date: '2026-10-10', title: '4분기 사업계획 검토',
+        category: '경영회의', attendees: '대표이사, 기획팀장, 재무팀장, 영업팀장',
+        content: '■ 안건\n- 4분기 매출 목표 재검토\n- 신규 사업 진행 현황\n\n■ 결정사항\n- 4분기 매출 목표 120억 유지\n- 신규 사업 TF 구성 10월 내 완료\n\n■ 액션아이템\n- 기획팀: TF 구성안 10/20까지 제출\n- 재무팀: 예산 재배분 안 작성',
+        tags: ['4분기', '사업계획', '목표']
+      },
+      {
+        id: uid(), date: '2026-09-25', title: '마케팅 전략 브리핑',
+        category: '기획회의', attendees: '대표이사, 마케팅팀장, 기획팀',
+        content: '■ 안건\n- SNS 광고 집행 현황 보고\n- 브랜드 리뉴얼 방향 논의\n\n■ 결정사항\n- 인스타그램 광고비 월 500만원 증액\n- 브랜드 BI 리뉴얼은 내년 1분기로 이월\n\n■ 액션아이템\n- 마케팅팀: 10월 광고 집행 계획서 제출',
+        tags: ['마케팅', 'SNS', '브랜드']
+      },
+      {
+        id: uid(), date: '2026-09-12', title: '하반기 인사 검토',
+        category: '경영회의', attendees: '대표이사, 인사팀장, 기획팀장',
+        content: '■ 안건\n- 하반기 조직 개편 방향\n- 승진 대상자 검토\n\n■ 결정사항\n- 영업본부 팀장급 1명 승진\n- 개발팀 인원 2명 추가 채용\n\n■ 액션아이템\n- 인사팀: 채용 공고 10월 1일 오픈',
+        tags: ['인사', '조직개편']
+      }
+    ];
+  }
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  // ===== 렌더 =====
+  function getFiltered() {
+    let result = [...records];
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(r =>
+        r.title.toLowerCase().includes(q) ||
+        r.content.toLowerCase().includes(q) ||
+        r.attendees.toLowerCase().includes(q) ||
+        (r.tags || []).some(t => t.toLowerCase().includes(q))
+      );
+    }
+    if (currentFilter !== 'all') result = result.filter(r => r.category === currentFilter);
+    if (currentYear !== 'all') result = result.filter(r => r.date.startsWith(currentYear));
+
+    const sort = document.getElementById('sort-select').value;
+    if (sort === 'newest') result.sort((a, b) => b.date.localeCompare(a.date));
+    else if (sort === 'oldest') result.sort((a, b) => a.date.localeCompare(b.date));
+    else result.sort((a, b) => a.title.localeCompare(b.title));
+
+    return result;
+  }
+
+  function renderList() {
+    const list = document.getElementById('meeting-list');
+    const filtered = getFiltered();
+    document.getElementById('result-count').textContent = `${filtered.length}건`;
+
+    if (!filtered.length) {
+      list.innerHTML = `<div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h3>${records.length === 0 ? '회의록이 없습니다' : '검색 결과가 없습니다'}</h3>
+        <p>${records.length === 0 ? '오른쪽 상단의 버튼으로 첫 회의록을 추가해보세요.' : '다른 검색어나 필터를 사용해보세요.'}</p>
+      </div>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(r => `
+      <div class="meeting-card" onclick="viewRecord('${r.id}')">
+        <div class="card-main">
+          <div class="card-meta">
+            <span class="card-date">${formatDate(r.date)}</span>
+            ${r.category ? `<span class="tag">${esc(r.category)}</span>` : ''}
+          </div>
+          <div class="card-title">${esc(r.title)}</div>
+          ${r.attendees ? `<div class="card-summary">👥 ${esc(r.attendees)}</div>` : ''}
+          ${r.content ? `<div class="card-summary" style="margin-top:4px">${esc(r.content).split('\n')[0]}</div>` : ''}
+          ${r.tags && r.tags.length ? `<div class="card-tags">${r.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+        </div>
+        <div class="card-actions" onclick="event.stopPropagation()">
+          <button class="btn btn-edit" onclick="editRecord('${r.id}')">편집</button>
+          <button class="btn btn-danger-ghost" onclick="deleteRecord('${r.id}')">삭제</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function renderSidebar() {
+    const cats = {};
+    records.forEach(r => {
+      const c = r.category || '미분류';
+      cats[c] = (cats[c] || 0) + 1;
+    });
+    document.getElementById('cnt-all').textContent = records.length;
+
+    const catFilters = document.getElementById('category-filters');
+    const extraBtns = Object.entries(cats).map(([c, n]) =>
+      `<button class="filter-btn${currentFilter===c?' active':''}" data-cat="${esc(c)}" onclick="setFilter('${esc(c)}')">`+
+      `<span>${esc(c)}</span><span class="count">${n}</span></button>`
+    ).join('');
+    catFilters.innerHTML =
+      `<button class="filter-btn${currentFilter==='all'?' active':''}" data-cat="all" onclick="setFilter('all')">`+
+      `<span>전체</span><span class="count" id="cnt-all">${records.length}</span></button>` + extraBtns;
+
+    const years = [...new Set(records.map(r => r.date.slice(0,4)))].sort((a,b)=>b-a);
+    const yearEl = document.getElementById('year-filters');
+    yearEl.innerHTML = years.map(y =>
+      `<button class="filter-btn${currentYear===y?' active':''}" onclick="setYear('${y}')"><span>${y}년</span></button>`
+    ).join('');
+
+    const datalist = document.getElementById('cat-datalist');
+    datalist.innerHTML = Object.keys(cats).map(c=>`<option value="${esc(c)}">`).join('');
+  }
+
+  function renderAll() { renderSidebar(); renderList(); }
+
+  // ===== 필터 =====
+  function setFilter(cat) {
+    currentFilter = cat;
+    currentYear = 'all';
+    renderAll();
+  }
+  function setYear(y) {
+    currentYear = currentYear === y ? 'all' : y;
+    renderAll();
+  }
+  function onSearch() {
+    searchQuery = document.getElementById('search-input').value.trim();
+    renderList();
+  }
+
+  // ===== 모달 =====
+  function openAddModal() {
+    editingId = null;
+    currentTags = [];
+    document.getElementById('modal-title').textContent = '회의록 추가';
+    document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+    document.getElementById('f-title').value = '';
+    document.getElementById('f-category').value = '';
+    document.getElementById('f-attendees').value = '';
+    document.getElementById('f-content').value = '';
+    renderTagChips();
+    document.getElementById('add-modal').hidden = false;
+    document.getElementById('f-title').focus();
+  }
+
+  function editRecord(id) {
+    const r = records.find(x => x.id === id);
+    if (!r) return;
+    editingId = id;
+    currentTags = [...(r.tags || [])];
+    document.getElementById('modal-title').textContent = '회의록 편집';
+    document.getElementById('f-date').value = r.date;
+    document.getElementById('f-title').value = r.title;
+    document.getElementById('f-category').value = r.category || '';
+    document.getElementById('f-attendees').value = r.attendees || '';
+    document.getElementById('f-content').value = r.content || '';
+    renderTagChips();
+    document.getElementById('add-modal').hidden = false;
+    closeModal('view-modal');
+  }
+
+  function viewRecord(id) {
+    const r = records.find(x => x.id === id);
+    if (!r) return;
+    document.getElementById('view-title').textContent = r.title;
+    document.getElementById('view-meta').innerHTML = [
+      `<div class="detail-meta-item"><div class="detail-meta-label">날짜</div><div class="detail-meta-value">${formatDate(r.date)}</div></div>`,
+      r.category ? `<div class="detail-meta-item"><div class="detail-meta-label">카테고리</div><div class="detail-meta-value">${esc(r.category)}</div></div>` : '',
+      r.attendees ? `<div class="detail-meta-item"><div class="detail-meta-label">참석자</div><div class="detail-meta-value">${esc(r.attendees)}</div></div>` : '',
+    ].join('');
+    document.getElementById('view-content').textContent = r.content || '';
+    document.getElementById('view-tags').innerHTML = (r.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('');
+    document.getElementById('view-edit-btn').onclick = () => editRecord(id);
+    document.getElementById('view-modal').hidden = false;
+  }
+
+  function closeModal(id) { document.getElementById(id).hidden = true; }
+  function onOverlayClick(e, id) { if (e.target.classList.contains('modal-overlay')) closeModal(id); }
+
+  function saveRecord() {
+    const date = document.getElementById('f-date').value;
+    const title = document.getElementById('f-title').value.trim();
+    if (!title) { document.getElementById('f-title').focus(); return; }
+    if (!date) { document.getElementById('f-date').focus(); return; }
+
+    const data = {
+      date, title,
+      category: document.getElementById('f-category').value.trim(),
+      attendees: document.getElementById('f-attendees').value.trim(),
+      content: document.getElementById('f-content').value.trim(),
+      tags: [...currentTags]
+    };
+
+    if (editingId) {
+      const idx = records.findIndex(r => r.id === editingId);
+      if (idx >= 0) records[idx] = { ...records[idx], ...data };
+    } else {
+      records.unshift({ id: uid(), ...data });
+    }
+    save();
+    renderAll();
+    closeModal('add-modal');
+  }
+
+  function deleteRecord(id) {
+    if (!confirm('이 회의록을 삭제하시겠습니까?')) return;
+    records = records.filter(r => r.id !== id);
+    save();
+    renderAll();
+  }
+
+  // ===== 태그 =====
+  function renderTagChips() {
+    document.getElementById('tag-chips').innerHTML =
+      currentTags.map((t, i) =>
+        `<span class="tag-chip">${esc(t)}<button type="button" onclick="removeTag(${i})">×</button></span>`
+      ).join('');
+  }
+  function onTagKey(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const val = e.target.value.trim().replace(/,$/, '');
+      if (val && !currentTags.includes(val)) { currentTags.push(val); renderTagChips(); }
+      e.target.value = '';
+    }
+  }
+  function removeTag(i) { currentTags.splice(i, 1); renderTagChips(); }
+
+  // ===== 테마 =====
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    document.getElementById('theme-icon').textContent = next === 'dark' ? '☀️' : '🌙';
+    try { localStorage.setItem('theme', next); } catch {}
+  }
+
+  // ===== 유틸 =====
+  function formatDate(d) {
+    if (!d) return '';
+    const [y, m, day] = d.split('-');
+    return `${y}년 ${parseInt(m)}월 ${parseInt(day)}일`;
+  }
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ===== 키보드 =====
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeModal('add-modal');
+      closeModal('view-modal');
+    }
+  });
+
+  // ===== 초기화 =====
+  load();
+  try {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      document.getElementById('theme-icon').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    }
+  } catch {}
+  renderAll();
+</script>
+</body>
+</html>
