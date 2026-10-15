@@ -71,8 +71,8 @@ async function analyzeWithGemini(fileBuffer, mimeType, fileName, textContent) {
       summary: {
         type: 'object',
         properties: {
-          result:      { type: 'string' },
-          implications:{ type: 'string' },
+          result:      { type: 'array', items: { type: 'string' } },
+          implications:{ type: 'array', items: { type: 'string' } },
           decisions:   { type: 'array', items: { type: 'string' } },
           actionItems: { type: 'array', items: { type: 'string' } }
         },
@@ -92,8 +92,8 @@ async function analyzeWithGemini(fileBuffer, mimeType, fileName, textContent) {
 - meetingTitle: 회의 제목. 문서에 없으면 내용 기반으로 적절히 생성
 - meetingDate: 회의 날짜(YYYY-MM-DD). 여러 날짜 중 주요 회의일 선택. 없으면 빈 문자열
 - attendees: 참석자 목록. 이름+직함 형태면 그대로 포함
-- summary.result: 회의에서 논의된 주요 결과 (2~4 문장)
-- summary.implications: 이 회의의 시사점/의미 (2~4 문장)
+- summary.result: 회의 결과를 핵심만 뽑아 3~5개 개조식 bullet (각 항목 15~30자, 명사형으로 끝낼 것)
+- summary.implications: 시사점을 핵심만 뽑아 3~5개 개조식 bullet (각 항목 15~30자, 명사형으로 끝낼 것)
 - summary.decisions: 결정된 사항들 (개조식 목록)
 - summary.actionItems: 후속 조치와 담당자 (예: "마케팅팀 - 제안서 초안 작성 (~10/20)")
 - tags: 핵심 키워드 5~10개
@@ -228,7 +228,10 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     id, fileName: meta.fileName, fileSize: meta.fileSize,
     meetingTitle: meta.meetingTitle, meetingDate: meta.meetingDate,
     attendees: meta.attendees, oneLiner: meta.oneLiner,
-    tags: meta.tags, uploadedAt: now, analysisStatus
+    tags: meta.tags, uploadedAt: now, analysisStatus,
+    previewResult:       analysis?.summary?.result?.slice(0,1)       || [],
+    previewImplications: analysis?.summary?.implications?.slice(0,1) || [],
+    previewDecisions:    analysis?.summary?.decisions?.slice(0,1)    || []
   });
   if (idx.length > 500) idx.splice(500);
   saveIndex(idx);
