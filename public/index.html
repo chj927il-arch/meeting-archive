@@ -365,6 +365,19 @@ input,textarea{font-family:var(--font)}
   .filter-select{width:100%}
 }
 
+/* ── 업로드 탭 ───────────────────────────────────────────────────────── */
+.upload-tab{
+  padding:9px 18px;border-radius:8px;border:1px solid var(--border);
+  background:none;color:var(--text2);font-size:14px;font-weight:500;transition:all .15s;
+}
+.upload-tab:hover{background:var(--bg3);color:var(--text)}
+.upload-tab.active{background:rgba(59,130,246,.15);border-color:var(--accent);color:var(--accent2);font-weight:700}
+
+/* ── 카드 오디오 배지 ─────────────────────────────────────────────────── */
+.mc-ext.mp3,.mc-ext.m4a,.mc-ext.wav,.mc-ext.ogg,.mc-ext.webm,.mc-ext.aac,.mc-ext.flac{
+  background:rgba(139,92,246,.15);color:#a78bfa;
+}
+
 /* ── 로딩 스피너 ─────────────────────────────────────────────────────── */
 .spinner{
   width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);
@@ -471,14 +484,34 @@ input,textarea{font-family:var(--font)}
     <!-- 업로드 뷰 -->
     <div class="view" id="view-upload">
       <div class="page-title">➕ 회의록 등록</div>
-      <div class="page-sub">PDF, DOCX, DOC, HWP 파일을 올리면 AI가 자동으로 분석·요약합니다.<br>HWP는 AI 분석 없이 저장만 됩니다. PDF로 저장 후 올리시면 더 정확합니다.</div>
 
-      <div class="drop-zone" id="dropZone" onclick="document.getElementById('uploadFileInput').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
-        <div class="drop-icon">📁</div>
-        <div class="drop-title">파일을 드래그하거나 클릭해서 선택</div>
-        <div class="drop-sub">PDF, DOCX, DOC, HWP — 최대 20MB<br><span onclick="event.stopPropagation();document.getElementById('uploadFileInput').click()">파일 선택</span></div>
+      <!-- 탭 -->
+      <div style="display:flex;gap:8px;margin-bottom:20px">
+        <button class="upload-tab active" id="tabDoc" onclick="switchUploadTab('doc')">📄 문서 파일</button>
+        <button class="upload-tab" id="tabAudio" onclick="switchUploadTab('audio')">🎙️ 음성 파일</button>
       </div>
-      <input type="file" id="uploadFileInput" accept=".pdf,.docx,.doc,.hwp,.hwpx" onchange="onFileSelected(this.files[0])">
+
+      <!-- 문서 탭 -->
+      <div id="uploadTabDoc">
+        <div class="page-sub" style="margin-bottom:16px">PDF, DOCX, DOC, HWP 파일을 올리면 AI가 자동으로 분석·요약합니다.<br>HWP는 AI 분석 없이 저장만 됩니다. PDF로 저장 후 올리시면 더 정확합니다.</div>
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('uploadFileInput').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+          <div class="drop-icon">📁</div>
+          <div class="drop-title">파일을 드래그하거나 클릭해서 선택</div>
+          <div class="drop-sub">PDF, DOCX, DOC, HWP — 최대 15MB<br><span onclick="event.stopPropagation();document.getElementById('uploadFileInput').click()">파일 선택</span></div>
+        </div>
+        <input type="file" id="uploadFileInput" accept=".pdf,.docx,.doc,.hwp,.hwpx" onchange="onFileSelected(this.files[0])">
+      </div>
+
+      <!-- 음성 탭 -->
+      <div id="uploadTabAudio" style="display:none">
+        <div class="page-sub" style="margin-bottom:16px">회의 녹음 파일을 올리면 Gemini AI가 전사 후 자동으로 회의록을 작성합니다.<br>파일이 크더라도 Google 서버에 직접 업로드하므로 용량 제한 없이 가능합니다.</div>
+        <div class="drop-zone" id="dropZoneAudio" onclick="document.getElementById('uploadAudioInput').click()" ondragover="onDragOver(event)" ondragleave="onDragLeaveAudio(event)" ondrop="onDropAudio(event)">
+          <div class="drop-icon">🎙️</div>
+          <div class="drop-title">음성 파일을 드래그하거나 클릭해서 선택</div>
+          <div class="drop-sub">MP3, M4A, WAV, OGG, WebM — 용량 제한 없음<br><span onclick="event.stopPropagation();document.getElementById('uploadAudioInput').click()">파일 선택</span></div>
+        </div>
+        <input type="file" id="uploadAudioInput" accept=".mp3,.m4a,.wav,.ogg,.webm,.aac,.flac" onchange="onAudioFileSelected(this.files[0])">
+      </div>
 
       <div class="upload-progress" id="uploadProgress">
         <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
@@ -968,6 +1001,145 @@ async function deleteMeeting(id) {
   } catch (e) {
     showToast('오류: ' + e.message);
   }
+}
+
+// ── 업로드 탭 전환 ───────────────────────────────────────────────────────
+function switchUploadTab(tab) {
+  document.getElementById('uploadTabDoc').style.display   = tab === 'doc'   ? '' : 'none';
+  document.getElementById('uploadTabAudio').style.display = tab === 'audio' ? '' : 'none';
+  document.getElementById('tabDoc').classList.toggle('active',   tab === 'doc');
+  document.getElementById('tabAudio').classList.toggle('active', tab === 'audio');
+  document.getElementById('uploadResult').style.display   = 'none';
+  document.getElementById('uploadProgress').style.display = 'none';
+}
+
+// ── 오디오 업로드 ────────────────────────────────────────────────────────
+function onDragLeaveAudio(e) { document.getElementById('dropZoneAudio').classList.remove('dragover'); }
+function onDropAudio(e) {
+  e.preventDefault();
+  document.getElementById('dropZoneAudio').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) onAudioFileSelected(file);
+}
+
+function onAudioFileSelected(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const allowed = ['mp3','m4a','wav','ogg','webm','aac','flac'];
+  if (!allowed.includes(ext)) { showToast('⚠️ MP3, M4A, WAV, OGG 등 음성 파일만 가능합니다'); return; }
+  startAudioUpload(file);
+}
+
+const AUDIO_MIME = {
+  mp3:'audio/mpeg', m4a:'audio/mp4', wav:'audio/wav',
+  ogg:'audio/ogg',  webm:'audio/webm', aac:'audio/aac', flac:'audio/flac'
+};
+
+async function startAudioUpload(file) {
+  const progWrap  = document.getElementById('uploadProgress');
+  const progBar   = document.getElementById('progressBar');
+  const progLabel = document.getElementById('progressLabel');
+  const result    = document.getElementById('uploadResult');
+  const ext       = file.name.split('.').pop().toLowerCase();
+  const mimeType  = AUDIO_MIME[ext] || 'audio/mpeg';
+
+  progWrap.style.display = 'block';
+  result.style.display   = 'none';
+  progBar.style.width    = '5%';
+  progLabel.textContent  = `🎙️ "${file.name}" 업로드 준비 중...`;
+
+  try {
+    // ① Worker에서 Google 업로드 URL 발급
+    const initRes = await fetch('/api/audio/init', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileName: file.name, mimeType, fileSize: file.size })
+    });
+    const initData = await initRes.json();
+    if (!initData.ok) throw new Error(initData.error || '업로드 URL 발급 실패');
+
+    progBar.style.width  = '10%';
+    progLabel.textContent = `📤 Google 서버에 파일 업로드 중... (${formatSize(file.size)})`;
+
+    // ② 브라우저 → Google 직접 업로드 (XMLHttpRequest로 진행률 표시)
+    const fileUri = await uploadToGoogle(initData.uploadUrl, file, mimeType, (pct) => {
+      progBar.style.width  = (10 + pct * 0.6) + '%';
+      progLabel.textContent = `📤 업로드 중... ${Math.round(pct)}% (${formatSize(file.size)})`;
+    });
+
+    progBar.style.width  = '75%';
+    progLabel.textContent = '🤖 Gemini AI 전사·분석 중... (수 분 소요될 수 있습니다)';
+
+    // ③ Worker에 fileUri 전달 → 분석 + KV 저장
+    const analyzeRes = await fetch('/api/audio/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileUri, fileName: file.name, fileSize: file.size, mimeType })
+    });
+    const analyzeData = await analyzeRes.json();
+    if (!analyzeData.ok) throw new Error(analyzeData.error || '분석 실패');
+
+    progBar.style.width = '100%';
+
+    const m = analyzeData.meta;
+    let warnHtml = analyzeData.analysisStatus !== 'ok'
+      ? `<div class="upload-warn">⚠️ AI 분석에 실패했습니다. 파일은 등록되었습니다. 상세에서 재분석하세요.</div>`
+      : '';
+
+    result.innerHTML = `${warnHtml}
+      <div class="upload-ok">
+        <div style="font-size:15px;font-weight:700;margin-bottom:6px">✅ "${esc(file.name)}" 등록 완료</div>
+        <div style="font-size:13px;color:var(--text2)">🎙️ 음성 파일 · ${formatSize(file.size)}</div>
+        ${m.summary ? `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">🤖 AI 분석 결과</div>
+          <div style="font-size:13.5px;color:var(--text);margin-bottom:6px"><strong>회의 제목:</strong> ${esc(m.meetingTitle)}</div>
+          <div style="font-size:13.5px;color:var(--text);margin-bottom:6px"><strong>참석자:</strong> ${esc((m.attendees||[]).join(', ')||'—')}</div>
+          ${m.oneLiner ? `<div style="font-size:13px;color:var(--text2);font-style:italic">"${esc(m.oneLiner)}"</div>` : ''}
+        </div>` : ''}
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="openDetail('${analyzeData.id}');showView('list')">상세 보기</button>
+          <button class="btn btn-ghost btn-sm" onclick="showView('list')">목록으로</button>
+        </div>
+      </div>`;
+
+    progWrap.style.display = 'none';
+    result.style.display   = 'block';
+    document.getElementById('uploadAudioInput').value = '';
+    await loadMeetings();
+
+  } catch (e) {
+    progWrap.style.display = 'none';
+    result.style.display   = 'block';
+    result.innerHTML = `<div class="upload-err">❌ 오류: ${esc(e.message)}</div>`;
+  }
+}
+
+// Google resumable upload — XMLHttpRequest로 진행률 콜백
+function uploadToGoogle(uploadUrl, file, mimeType, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', uploadUrl, true);
+    xhr.setRequestHeader('Content-Type', mimeType);
+    xhr.setRequestHeader('X-Goog-Upload-Command', 'upload, finalize');
+    xhr.setRequestHeader('X-Goog-Upload-Offset', '0');
+
+    xhr.upload.addEventListener('progress', e => {
+      if (e.lengthComputable) onProgress((e.loaded / e.total) * 100);
+    });
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          resolve(data.file?.uri || data.uri);
+        } catch { reject(new Error('파일 URI 파싱 실패')); }
+      } else {
+        reject(new Error(`Google 업로드 실패 (${xhr.status}): ${xhr.responseText.slice(0,200)}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error('네트워크 오류'));
+    xhr.send(file);
+  });
 }
 
 // ── 파일 업로드 ──────────────────────────────────────────────────────────

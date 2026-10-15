@@ -405,6 +405,156 @@ async function handleReanalyze(request, env, id) {
   return json({ ok: true, analysisStatus, meta });
 }
 
+// ── 오디오: Gemini File API 업로드 초기화 ─────────────────────────────
+// 브라우저가 Google에 직접 업로드할 수 있는 resumable URL을 발급
+async function handleAudioInit(request, env) {
+  if (!isAuthed(request, env)) return authResponse();
+  const { fileName, mimeType, fileSize } = await request.json();
+
+  const initRes = await fetch(
+    `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${env.GEMINI_API_KEY}&uploadType=resumable`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Upload-Protocol': 'resumable',
+        'X-Goog-Upload-Command': 'start',
+        'X-Goog-Upload-Header-Content-Length': String(fileSize),
+        'X-Goog-Upload-Header-Content-Type': mimeType,
+      },
+      body: JSON.stringify({ file: { displayName: fileName } })
+    }
+  );
+
+  if (!initRes.ok) {
+    const err = await initRes.text();
+    return json({ ok: false, error: 'Gemini 업로드 초기화 실패: ' + err }, 500);
+  }
+
+  const uploadUrl = initRes.headers.get('X-Goog-Upload-URL');
+  if (!uploadUrl) return json({ ok: false, error: '업로드 URL 발급 실패' }, 500);
+
+  return json({ ok: true, uploadUrl });
+}
+
+// ── 오디오: 업로드 완료 후 Gemini 분석 요청 ───────────────────────────
+async function handleAudioAnalyze(request, env) {
+  if (!isAuthed(request, env)) return authResponse();
+  const { fileUri, fileName, fileSize, mimeType } = await request.json();
+
+  const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+
+  const schema = {
+    type: 'object',
+    properties: {
+      meetingTitle: { type: 'string' },
+      meetingDate:  { type: 'string' },
+      attendees:    { type: 'array', items: { type: 'string' } },
+      summary: {
+        type: 'object',
+        properties: {
+          result:       { type: 'array', items: { type: 'string' } },
+          implications: { type: 'array', items: { type: 'string' } },
+          decisions:    { type: 'array', items: { type: 'string' } },
+          actionItems:  { type: 'array', items: { type: 'string' } }
+        },
+        required: ['result', 'implications', 'decisions', 'actionItems']
+      },
+      tags:     { type: 'array', items: { type: 'string' } },
+      oneLiner: { type: 'string' }
+    },
+    required: ['meetingTitle', 'meetingDate', 'attendees', 'summary', 'tags', 'oneLiner']
+  };
+
+  const promptText = `당신은 회의록 분석 전문가입니다. 첨부된 회의 녹음 파일을 듣고 분석해 JSON으로 반환하세요.
+
+파일명: ${fileName}
+
+분석 규칙:
+- meetingTitle: 회의 제목. 대화 내용에서 파악하거나 내용 기반으로 적절히 생성
+- meetingDate: 회의 날짜(YYYY-MM-DD). 언급되면 추출, 없으면 빈 문자열
+- attendees: 발언자/참석자 목록. 목소리나 자기소개에서 이름 추출
+- summary.result: 회의 결과를 핵심만 뽑아 3~5개 개조식 bullet (각 항목 15~30자, 명사형으로 끝낼 것)
+- summary.implications: 시사점을 핵심만 뽑아 3~5개 개조식 bullet (각 항목 15~30자, 명사형으로 끝낼 것)
+- summary.decisions: 결정된 사항들 개조식 목록
+- summary.actionItems: 후속 조치와 담당자 (예: "마케팅팀 — 제안서 초안 작성 (~10/20)")
+- tags: 핵심 키워드 5~10개
+- oneLiner: 가장 핵심적인 한 줄 요약 (30자 이내)`;
+
+  const body = {
+    contents: [{ parts: [
+      { text: promptText },
+      { fileData: { mimeType, fileUri } }
+    ]}],
+    generationConfig: {
+      responseMimeType: 'application/json',
+      responseSchema: schema,
+      maxOutputTokens: 8192,
+      thinkingConfig: { thinkingBudget: 4096 }
+    }
+  };
+
+  let analysis = null;
+  for (let i = 0; i < 4; i++) {
+    try {
+      const res = await fetch(`${GEMINI_URL}?key=${env.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        if (res.status === 503 || res.status === 429) {
+          await new Promise(r => setTimeout(r, 3000 * (i + 1)));
+          continue;
+        }
+        console.error('Gemini 오디오 분석 오류:', errText);
+        break;
+      }
+      const data = await res.json();
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error('빈 응답');
+      analysis = JSON.parse(text);
+      break;
+    } catch (e) {
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+
+  const analysisStatus = analysis ? 'ok' : 'failed';
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  const meta = {
+    id, fileName, fileSize, mimeType,
+    fileType: 'audio',
+    uploadedAt: now, analysisStatus,
+    meetingTitle: analysis?.meetingTitle || fileName.replace(/\.[^.]+$/, ''),
+    meetingDate:  analysis?.meetingDate  || '',
+    attendees:    analysis?.attendees    || [],
+    oneLiner:     analysis?.oneLiner     || '',
+    tags:         analysis?.tags         || [],
+    summary:      analysis?.summary      || null
+  };
+
+  await env.MEETING_KV.put(`meeting-${id}`, JSON.stringify(meta));
+
+  const idx = await getIndex(env);
+  idx.unshift({
+    id, fileName, fileSize, fileType: 'audio',
+    meetingTitle: meta.meetingTitle, meetingDate: meta.meetingDate,
+    attendees: meta.attendees, oneLiner: meta.oneLiner,
+    tags: meta.tags, uploadedAt: now, analysisStatus,
+    previewResult:       analysis?.summary?.result?.slice(0,1)       || [],
+    previewImplications: analysis?.summary?.implications?.slice(0,1) || [],
+    previewDecisions:    analysis?.summary?.decisions?.slice(0,1)    || []
+  });
+  if (idx.length > 500) idx.splice(500);
+  await saveIndex(env, idx);
+
+  return json({ ok: true, id, analysisStatus, meta });
+}
+
 // ── 로그인/로그아웃 ────────────────────────────────────────────────────
 async function handleLogin(request, env) {
   const { pw } = await request.json();
@@ -445,10 +595,12 @@ export default {
       });
     }
 
-    if (pathname === '/api/login'    && method === 'POST') return handleLogin(request, env);
-    if (pathname === '/api/logout'   && method === 'POST') return handleLogout();
-    if (pathname === '/api/upload'   && method === 'POST') return handleUpload(request, env);
-    if (pathname === '/api/meetings' && method === 'GET')  return handleList(request, env);
+    if (pathname === '/api/login'         && method === 'POST') return handleLogin(request, env);
+    if (pathname === '/api/logout'        && method === 'POST') return handleLogout();
+    if (pathname === '/api/upload'        && method === 'POST') return handleUpload(request, env);
+    if (pathname === '/api/audio/init'    && method === 'POST') return handleAudioInit(request, env);
+    if (pathname === '/api/audio/analyze' && method === 'POST') return handleAudioAnalyze(request, env);
+    if (pathname === '/api/meetings'      && method === 'GET')  return handleList(request, env);
 
     const detailMatch = pathname.match(/^\/api\/meetings\/([^/]+)$/);
     if (detailMatch) {
