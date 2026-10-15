@@ -131,7 +131,10 @@
     .mcard-footer{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);gap:6px;}
     .mcard-file-info{font-size:11px;color:var(--fg-subtle);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 
-    .mtag{font-size:10px;padding:2px 7px;border-radius:20px;background:var(--bg-card2);color:var(--fg-subtle);border:1px solid var(--border);}
+    .mcard-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
+    .mtag{font-size:11px;padding:3px 8px;border-radius:20px;background:var(--accent-lt);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);font-weight:600;}
+    .no-ai-notice{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--amber-lt);border:1px solid color-mix(in srgb,var(--amber) 30%,transparent);border-radius:var(--r-sm);margin-bottom:8px;font-size:12px;color:var(--amber);}
+    :root[data-theme="light"] .no-ai-notice{background:#fef3c7;border-color:#fcd34d;}
 
     /* ── 버튼 ── */
     .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:var(--r-sm);border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:opacity .12s,background .12s;}
@@ -524,8 +527,8 @@ async function callClaude(fileText, fileName, attendees) {
 
   const hasText = fileText && fileText.trim().length > 100;
   const prompt = hasText
-    ? `다음은 회의록 파일("${fileName}")의 내용입니다.\n\n---\n${fileText}\n---\n\n위 내용을 분석하여 JSON으로만 응답해주세요 (마크다운 없이 JSON만):\n{\n  "attendees": "문서에서 추출한 참석자 이름 목록 (쉼표 구분, 없으면 빈 문자열)",\n  "summary": "회의 주요 안건과 논의 내용을 3~5문장으로 요약",\n  "implication": "핵심 결정사항, 액션아이템, 시사점을 항목별로 정리"\n}`
-    : `회의록 파일명: "${fileName}"\n\n파일 내용을 읽을 수 없습니다(HWP 등). JSON으로만 응답해주세요:\n{\n  "attendees": "",\n  "summary": "파일 내용을 직접 읽을 수 없어 자동 요약이 어렵습니다. 내용을 직접 입력해주세요.",\n  "implication": "파일을 직접 열어 핵심 결정사항을 확인해주세요."\n}`;
+    ? `다음은 회의록 파일("${fileName}")의 내용입니다.\n\n---\n${fileText}\n---\n\n위 내용을 분석하여 JSON으로만 응답해주세요 (마크다운·코드블록 없이 순수 JSON만):\n{\n  "attendees": "문서에서 추출한 참석자 이름 목록 (쉼표 구분, 없으면 빈 문자열)",\n  "summary": "회의 주요 안건과 논의 내용을 3~5문장으로 요약",\n  "implication": "핵심 결정사항, 액션아이템, 시사점을 항목별로 정리 (줄바꿈 구분)",\n  "tags": ["회의 핵심 키워드 태그 3~5개, 짧은 명사/명사구로"]\n}`
+    : `회의록 파일명: "${fileName}"\n\n파일 내용을 읽을 수 없습니다(HWP 등). JSON으로만 응답해주세요:\n{\n  "attendees": "",\n  "summary": "파일 내용을 직접 읽을 수 없어 자동 요약이 어렵습니다.",\n  "implication": "파일을 직접 열어 핵심 결정사항을 확인해주세요.",\n  "tags": []\n}`;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   const resp = await fetch(url, {
@@ -614,7 +617,7 @@ function render() {
 
   cl.innerHTML = list.map(r => {
     const ft = r.fileType||'other';
-    return `<div class="mcard">
+    return `<div class="mcard" data-id="${r.id}">
       <div class="mcard-top">
         <div class="mcard-badges">
           ${r.category?`<span class="badge badge-cat">${esc(r.category)}</span>`:''}
@@ -630,7 +633,9 @@ function render() {
       <div class="mcard-title" onclick="viewRecord('${r.id}')">${esc(r.title)}</div>
       ${r.attendees?`<div class="mcard-meta">👥 ${esc(r.attendees)}</div>`:''}
       ${r.summary?`<div class="mcard-summary">${esc(r.summary)}</div>`:''}
-      ${r.implication?`<div class="implication"><div class="implication-label">💡 시사점</div><div class="implication-text">${esc(r.implication)}</div></div>`:''}
+      ${r.tags&&r.tags.length?`<div class="mcard-tags">${r.tags.map(t=>`<span class="mtag">${esc(t)}</span>`).join('')}</div>`:''}
+      ${r.implication?`<div class="implication"><div class="implication-label">💡 시사점 · 핵심결정사항</div><div class="implication-text">${esc(r.implication)}</div></div>`:''}
+      ${!r.aiGenerated&&r.fileId?`<div class="no-ai-notice"><span>AI 분석 전</span><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();reanalyze('${r.id}')">✨ AI 재분석</button></div>`:''}
       <div class="mcard-footer">
         <div class="mcard-file-info">${r.fileName?`${fileEmoji(ft)} ${esc(r.fileName)}` :'파일 없음'}</div>
         ${r.fileId?`<button class="btn btn-view btn-sm" onclick="viewRecord('${r.id}')">보기 ↗</button>`:''}
@@ -796,6 +801,9 @@ async function saveMeta() {
         meta.attendees = result.attendees;
         document.getElementById('m-attendees').value = result.attendees;
       }
+      if (result.tags && Array.isArray(result.tags)) {
+        meta.tags = result.tags.map(t => String(t).trim()).filter(Boolean).slice(0, 8);
+      }
       meta.aiGenerated = true;
     } catch (e) {
       console.warn('AI 분석 실패:', e);
@@ -832,6 +840,36 @@ function editRecord(id) {
   document.getElementById('save-btn').disabled=false;
   renderCatChips(r.category||'');
   openModal('upload-modal');
+}
+
+// ── AI 재분석 ──
+async function reanalyze(id) {
+  if (!getApiKey()) { alert('⚙️ 설정에서 Google AI API 키를 먼저 입력해주세요.'); return; }
+  const r = records.find(x=>x.id===id); if (!r||!r.fileId) return;
+  const stored = await dbGet('files', r.fileId).catch(()=>null);
+  if (!stored||!stored.data) { alert('파일 데이터를 찾을 수 없습니다.'); return; }
+
+  // 카드에 로딩 표시
+  const cardEl = document.querySelector(`[data-id="${id}"]`);
+  const notice = cardEl ? cardEl.querySelector('.no-ai-notice') : null;
+  if (notice) notice.innerHTML = '<span style="color:var(--teal)">✨ AI 분석 중…</span>';
+
+  try {
+    const text = await extractText(stored.data, r.fileName);
+    const result = await callClaude(text, r.fileName, r.attendees);
+    r.summary = result.summary || r.summary;
+    r.implication = result.implication || r.implication;
+    if (!r.attendees && result.attendees) r.attendees = result.attendees;
+    if (result.tags && Array.isArray(result.tags)) {
+      r.tags = result.tags.map(t=>String(t).trim()).filter(Boolean).slice(0,8);
+    }
+    r.aiGenerated = true;
+    await dbPut('meta', r);
+    render();
+  } catch(e) {
+    alert('AI 분석 실패: ' + e.message);
+    render();
+  }
 }
 
 async function deleteRecord(id) {
