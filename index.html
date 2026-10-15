@@ -94,11 +94,12 @@
     @media(max-width:1100px){.card-list{grid-template-columns:repeat(2,1fr);}}
     @media(max-width:620px){.card-list{grid-template-columns:1fr;}}
 
-    .mcard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;display:flex;flex-direction:column;height:380px;transition:border-color .15s,box-shadow .15s;cursor:default;overflow:hidden;}
+    /* 카드: 상단 고정 + 중간 스크롤 없이 클립 + 하단 고정 */
+    .mcard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;height:400px;transition:border-color .15s,box-shadow .15s;cursor:default;}
     .mcard:hover{border-color:var(--accent);box-shadow:var(--shadow);}
 
-    /* 배지 행 — 고정 */
-    .mcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;min-height:26px;}
+    /* 배지 행 — 절대 줄어들지 않음 */
+    .mcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;flex-shrink:0;}
     .mcard-badges{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
     .badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.03em;white-space:nowrap;}
     .badge-cat{background:var(--accent-lt);color:var(--accent);}
@@ -111,24 +112,30 @@
     .badge-file-other{background:var(--bg-card2);color:var(--fg-muted);}
     .card-actions{display:flex;gap:4px;align-items:center;flex-shrink:0;}
 
-    /* 제목 — 2줄 클램프 */
-    .mcard-title{font-size:15px;font-weight:700;letter-spacing:-.3px;line-height:1.45;margin-bottom:8px;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    /* 제목 — 절대 줄어들지 않음, 2줄 클램프 */
+    .mcard-title{font-size:15px;font-weight:700;letter-spacing:-.3px;line-height:1.45;margin-bottom:6px;cursor:pointer;flex-shrink:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
     .mcard-title:hover{color:var(--accent);}
 
-    /* 참석자 — 1줄 말줄임 */
-    .mcard-meta{font-size:12px;color:var(--fg-subtle);margin-bottom:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    /* 참석자 — 절대 줄어들지 않음, 1줄 말줄임 */
+    .mcard-meta{font-size:12px;color:var(--fg-subtle);margin-bottom:8px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
-    /* 요약 — 4줄 클램프 */
-    .mcard-summary{font-size:13px;color:var(--fg-muted);line-height:1.75;margin-bottom:10px;white-space:pre-line;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;}
+    /* 중간 콘텐츠 영역 — 남은 공간 차지, 넘치면 숨김 */
+    .mcard-body{flex:1;overflow:hidden;display:flex;flex-direction:column;gap:0;}
 
-    /* 시사점 박스 — 3줄 클램프 */
-    .implication{background:var(--teal-lt);border-left:3px solid var(--teal);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:9px 12px;margin-bottom:10px;overflow:hidden;}
+    /* 요약 — 3줄 클램프 */
+    .mcard-summary{font-size:13px;color:var(--fg-muted);line-height:1.7;margin-bottom:8px;white-space:pre-line;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;flex-shrink:0;}
+
+    /* 태그 */
+    .mcard-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;flex-shrink:0;}
+
+    /* 시사점 박스 */
+    .implication{background:var(--teal-lt);border-left:3px solid var(--teal);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:8px 12px;overflow:hidden;flex-shrink:0;}
     :root[data-theme="light"] .implication{background:#f0fdfa;}
-    .implication-label{font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.05em;margin-bottom:4px;}
-    .implication-text{font-size:13px;color:var(--fg-muted);line-height:1.75;white-space:pre-line;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+    .implication-label{font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.05em;margin-bottom:3px;}
+    .implication-text{font-size:13px;color:var(--fg-muted);line-height:1.7;white-space:pre-line;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
 
-    /* 푸터 — 항상 바닥에 */
-    .mcard-footer{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border);gap:6px;}
+    /* 푸터 — 절대 줄어들지 않음, 항상 바닥에 */
+    .mcard-footer{flex-shrink:0;margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);gap:6px;}
     .mcard-file-info{font-size:12px;color:var(--fg-subtle);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 
     .mcard-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
@@ -642,10 +649,12 @@ function render() {
       </div>
       <div class="mcard-title" onclick="viewRecord('${r.id}')">${esc(r.title)}</div>
       ${r.attendees?`<div class="mcard-meta">👥 ${esc(r.attendees)}</div>`:''}
-      ${r.summary?`<div class="mcard-summary">${esc(r.summary)}</div>`:''}
-      ${r.tags&&r.tags.length?`<div class="mcard-tags">${r.tags.map(t=>`<span class="mtag">${esc(t)}</span>`).join('')}</div>`:''}
-      ${r.implication?`<div class="implication"><div class="implication-label">💡 시사점 · 핵심결정사항</div><div class="implication-text">${esc(r.implication)}</div></div>`:''}
-      ${!r.aiGenerated&&r.fileId?`<div class="no-ai-notice"><span>AI 분석 전</span><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();reanalyze('${r.id}')">✨ AI 재분석</button></div>`:''}
+      <div class="mcard-body">
+        ${r.summary?`<div class="mcard-summary">${esc(r.summary)}</div>`:''}
+        ${r.tags&&r.tags.length?`<div class="mcard-tags">${r.tags.map(t=>`<span class="mtag">${esc(t)}</span>`).join('')}</div>`:''}
+        ${r.implication?`<div class="implication"><div class="implication-label">💡 시사점 · 핵심결정사항</div><div class="implication-text">${esc(r.implication)}</div></div>`:''}
+        ${!r.aiGenerated&&r.fileId?`<div class="no-ai-notice"><span>AI 분석 전</span><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();reanalyze('${r.id}')">✨ AI 재분석</button></div>`:''}
+      </div>
       <div class="mcard-footer">
         <div class="mcard-file-info">${r.fileName?`${fileEmoji(ft)} ${esc(r.fileName)}` :'파일 없음'}</div>
         ${r.fileId?`<button class="btn btn-view btn-sm" onclick="viewRecord('${r.id}')">보기 ↗</button>`:''}
