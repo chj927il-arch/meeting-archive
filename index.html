@@ -94,11 +94,11 @@
     @media(max-width:1100px){.card-list{grid-template-columns:repeat(2,1fr);}}
     @media(max-width:620px){.card-list{grid-template-columns:1fr;}}
 
-    .mcard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:0;transition:border-color .15s,box-shadow .15s;cursor:default;}
+    .mcard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;display:flex;flex-direction:column;transition:border-color .15s,box-shadow .15s;cursor:default;overflow:hidden;}
     .mcard:hover{border-color:var(--accent);box-shadow:var(--shadow);}
 
-    /* 상단 배지 + 액션 */
-    .mcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;}
+    /* 배지 행 — 고정 */
+    .mcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;min-height:26px;}
     .mcard-badges{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
     .badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.03em;white-space:nowrap;}
     .badge-cat{background:var(--accent-lt);color:var(--accent);}
@@ -111,23 +111,26 @@
     .badge-file-other{background:var(--bg-card2);color:var(--fg-muted);}
     .card-actions{display:flex;gap:4px;align-items:center;flex-shrink:0;}
 
-    /* 제목 */
-    .mcard-title{font-size:16px;font-weight:700;letter-spacing:-.3px;line-height:1.45;margin-bottom:8px;cursor:pointer;}
+    /* 제목 — 2줄 고정 */
+    .mcard-title{font-size:15px;font-weight:700;letter-spacing:-.3px;line-height:1.45;margin-bottom:8px;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.9em;}
     .mcard-title:hover{color:var(--accent);}
 
-    /* 참석자 */
-    .mcard-meta{font-size:13px;color:var(--fg-subtle);margin-bottom:10px;}
+    /* 참석자 — 1줄 고정 */
+    .mcard-meta{font-size:12px;color:var(--fg-subtle);margin-bottom:10px;height:1.5em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 
-    /* 요약 — 전체 표시 (클램프 없음) */
-    .mcard-summary{font-size:14px;color:var(--fg-muted);line-height:1.75;margin-bottom:10px;}
+    /* 구분선 */
+    .mcard-divider{border:none;border-top:1px solid var(--border);margin:0 0 10px;}
 
-    /* 시사점 박스 — 전체 표시 (클램프 없음) */
-    .implication{background:var(--teal-lt);border-left:3px solid var(--teal);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:10px 12px;margin-bottom:12px;}
+    /* 요약 — 3줄 고정 */
+    .mcard-summary{font-size:13px;color:var(--fg-muted);line-height:1.7;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:4.5em;}
+
+    /* 시사점 박스 — 3줄 고정 */
+    .implication{background:var(--teal-lt);border-left:3px solid var(--teal);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:9px 12px;margin-bottom:10px;overflow:hidden;}
     :root[data-theme="light"] .implication{background:#f0fdfa;}
-    .implication-label{font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.04em;margin-bottom:5px;}
-    .implication-text{font-size:13px;color:var(--fg-muted);line-height:1.7;white-space:pre-wrap;}
+    .implication-label{font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.05em;margin-bottom:4px;}
+    .implication-text{font-size:13px;color:var(--fg-muted);line-height:1.65;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;min-height:4em;}
 
-    /* 푸터 */
+    /* 푸터 — 항상 바닥에 */
     .mcard-footer{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border);gap:6px;}
     .mcard-file-info{font-size:12px;color:var(--fg-subtle);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 
@@ -527,8 +530,8 @@ async function callClaude(fileText, fileName, attendees) {
 
   const hasText = fileText && fileText.trim().length > 100;
   const prompt = hasText
-    ? `다음은 회의록 파일("${fileName}")의 내용입니다.\n\n---\n${fileText}\n---\n\n위 내용을 분석하여 JSON으로만 응답해주세요 (마크다운·코드블록 없이 순수 JSON만):\n{\n  "attendees": "문서에서 추출한 참석자 이름 목록 (쉼표 구분, 없으면 빈 문자열)",\n  "summary": "회의 주요 안건과 논의 내용을 3~5문장으로 요약",\n  "implication": "핵심 결정사항, 액션아이템, 시사점을 항목별로 정리 (줄바꿈 구분)",\n  "tags": ["회의 핵심 키워드 태그 3~5개, 짧은 명사/명사구로"]\n}`
-    : `회의록 파일명: "${fileName}"\n\n파일 내용을 읽을 수 없습니다(HWP 등). JSON으로만 응답해주세요:\n{\n  "attendees": "",\n  "summary": "파일 내용을 직접 읽을 수 없어 자동 요약이 어렵습니다.",\n  "implication": "파일을 직접 열어 핵심 결정사항을 확인해주세요.",\n  "tags": []\n}`;
+    ? `다음은 회의록 파일("${fileName}")의 내용입니다.\n\n---\n${fileText}\n---\n\n위 내용을 분석하여 JSON으로만 응답해주세요 (마크다운·코드블록 없이 순수 JSON만):\n{\n  "attendees": "문서에서 추출한 참석자 이름 목록 (쉼표 구분, 없으면 빈 문자열)",\n  "summary": "회의 핵심 안건을 2문장 이내로 매우 간결하게 요약 (50자 이내 권장)",\n  "implication": "핵심 결정사항·액션아이템을 ・ 기호로 구분해 3줄 이내로 정리 (예: ・항목1 ・항목2 ・항목3)",\n  "tags": ["핵심 키워드 태그 3~5개, 짧은 명사/명사구로"]\n}`
+    : `회의록 파일명: "${fileName}"\n\nJSON으로만 응답:\n{\n  "attendees": "",\n  "summary": "파일을 읽을 수 없습니다.",\n  "implication": "・파일을 직접 열어 확인해주세요.",\n  "tags": []\n}`;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   const resp = await fetch(url, {
