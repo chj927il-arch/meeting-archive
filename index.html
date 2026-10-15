@@ -547,9 +547,19 @@ async function callClaude(fileText, fileName, attendees) {
 
   const data = await resp.json();
   const raw = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('응답 파싱 실패');
-  return JSON.parse(jsonMatch[0]);
+  // 마크다운 코드블록 제거 후 JSON 추출
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/,'');
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    console.error('Gemini raw response:', raw);
+    throw new Error('응답 파싱 실패 — 원시 응답: ' + raw.slice(0, 200));
+  }
+  try {
+    return JSON.parse(jsonMatch[0]);
+  } catch(e) {
+    console.error('JSON parse error:', jsonMatch[0]);
+    throw new Error('JSON 파싱 오류: ' + e.message);
+  }
 }
 
 // ── 렌더 ──
