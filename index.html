@@ -90,17 +90,17 @@
     .sort-sel{padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--fg);font-family:inherit;font-size:13px;outline:none;}
 
     /* ── 카드 그리드 ── */
-    .card-list{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start;}
-    @media(max-width:1000px){.card-list{grid-template-columns:repeat(2,1fr);}}
+    .card-list{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:stretch;}
+    @media(max-width:1100px){.card-list{grid-template-columns:repeat(2,1fr);}}
     @media(max-width:620px){.card-list{grid-template-columns:1fr;}}
 
-    .mcard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:0;transition:border-color .15s,box-shadow .15s;cursor:default;}
+    .mcard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:0;transition:border-color .15s,box-shadow .15s;cursor:default;}
     .mcard:hover{border-color:var(--accent);box-shadow:var(--shadow);}
 
     /* 상단 배지 + 액션 */
-    .mcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;}
+    .mcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px;}
     .mcard-badges{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
-    .badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.03em;white-space:nowrap;}
+    .badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.03em;white-space:nowrap;}
     .badge-cat{background:var(--accent-lt);color:var(--accent);}
     .badge-date{background:var(--bg-card2);color:var(--fg-muted);border:1px solid var(--border);}
     .badge-ai{background:var(--teal-lt);color:var(--teal);}
@@ -112,24 +112,24 @@
     .card-actions{display:flex;gap:4px;align-items:center;flex-shrink:0;}
 
     /* 제목 */
-    .mcard-title{font-size:14px;font-weight:700;letter-spacing:-.2px;line-height:1.4;margin-bottom:6px;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .mcard-title{font-size:16px;font-weight:700;letter-spacing:-.3px;line-height:1.45;margin-bottom:8px;cursor:pointer;}
     .mcard-title:hover{color:var(--accent);}
 
     /* 참석자 */
-    .mcard-meta{font-size:11px;color:var(--fg-subtle);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .mcard-meta{font-size:13px;color:var(--fg-subtle);margin-bottom:10px;}
 
-    /* 요약 */
-    .mcard-summary{font-size:12px;color:var(--fg-muted);line-height:1.6;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+    /* 요약 — 전체 표시 (클램프 없음) */
+    .mcard-summary{font-size:14px;color:var(--fg-muted);line-height:1.75;margin-bottom:10px;}
 
-    /* 시사점 박스 */
-    .implication{background:var(--teal-lt);border-left:3px solid var(--teal);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:7px 10px;margin-bottom:10px;}
+    /* 시사점 박스 — 전체 표시 (클램프 없음) */
+    .implication{background:var(--teal-lt);border-left:3px solid var(--teal);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:10px 12px;margin-bottom:12px;}
     :root[data-theme="light"] .implication{background:#f0fdfa;}
-    .implication-label{font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.04em;margin-bottom:3px;}
-    .implication-text{font-size:11px;color:var(--fg-muted);line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .implication-label{font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.04em;margin-bottom:5px;}
+    .implication-text{font-size:13px;color:var(--fg-muted);line-height:1.7;white-space:pre-wrap;}
 
     /* 푸터 */
-    .mcard-footer{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);gap:6px;}
-    .mcard-file-info{font-size:11px;color:var(--fg-subtle);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+    .mcard-footer{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding-top:12px;border-top:1px solid var(--border);gap:6px;}
+    .mcard-file-info{font-size:12px;color:var(--fg-subtle);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 
     .mcard-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
     .mtag{font-size:11px;padding:3px 8px;border-radius:20px;background:var(--accent-lt);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);font-weight:600;}
