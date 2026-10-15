@@ -58,14 +58,14 @@
     .hdr-actions{display:flex;gap:8px;align-items:center;}
 
     /* ── 페이지 ── */
-    .page{max-width:900px;margin:0 auto;padding:32px 20px 60px;width:100%;}
+    .page{max-width:1280px;margin:0 auto;padding:24px 24px 60px;width:100%;}
 
-    .page-head{margin-bottom:24px;}
-    .page-head h1{font-size:27px;font-weight:800;letter-spacing:-.5px;line-height:1.2;margin-bottom:6px;}
-    .page-head p{font-size:15px;color:var(--fg-muted);}
-    .stats-row{display:flex;gap:16px;margin-top:16px;flex-wrap:wrap;}
-    .stat-chip{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 16px;display:flex;flex-direction:column;gap:2px;}
-    .stat-num{font-size:22px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;}
+    .page-head{margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+    .page-head-left h1{font-size:22px;font-weight:800;letter-spacing:-.5px;line-height:1.2;margin-bottom:2px;}
+    .page-head-left p{font-size:13px;color:var(--fg-muted);}
+    .stats-row{display:flex;gap:10px;flex-wrap:wrap;}
+    .stat-chip{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 14px;display:flex;align-items:baseline;gap:8px;}
+    .stat-num{font-size:18px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;}
     .stat-label{font-size:11px;color:var(--fg-muted);letter-spacing:.03em;}
 
     /* ── 검색/필터 ── */
@@ -89,34 +89,49 @@
     .result-count strong{color:var(--fg);font-weight:600;}
     .sort-sel{padding:6px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--fg);font-family:inherit;font-size:13px;outline:none;}
 
-    /* ── 카드 ── */
-    .card-list{display:flex;flex-direction:column;gap:12px;}
-    .mcard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;transition:border-color .15s,box-shadow .15s;}
-    .mcard:hover{border-color:var(--border2);box-shadow:var(--shadow);}
-    .mcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px;}
-    .mcard-badges{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
-    .badge{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.02em;white-space:nowrap;}
+    /* ── 카드 그리드 ── */
+    .card-list{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start;}
+    @media(max-width:1000px){.card-list{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:620px){.card-list{grid-template-columns:1fr;}}
+
+    .mcard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:0;transition:border-color .15s,box-shadow .15s;cursor:default;}
+    .mcard:hover{border-color:var(--accent);box-shadow:var(--shadow);}
+
+    /* 상단 배지 + 액션 */
+    .mcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;}
+    .mcard-badges{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
+    .badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.03em;white-space:nowrap;}
     .badge-cat{background:var(--accent-lt);color:var(--accent);}
     .badge-date{background:var(--bg-card2);color:var(--fg-muted);border:1px solid var(--border);}
     .badge-ai{background:var(--teal-lt);color:var(--teal);}
     .badge-file-pdf{background:var(--rose-lt);color:var(--rose);}
     .badge-file-word{background:#1a2840;color:#5a90d9;}
+    :root[data-theme="light"] .badge-file-word{background:#dbeafe;color:#1d4ed8;}
     .badge-file-hwp{background:var(--green-lt);color:var(--green);}
     .badge-file-other{background:var(--bg-card2);color:var(--fg-muted);}
-    .mcard-title{font-size:18.5px;font-weight:700;letter-spacing:-.3px;line-height:1.45;margin-bottom:8px;cursor:pointer;}
+    .card-actions{display:flex;gap:4px;align-items:center;flex-shrink:0;}
+
+    /* 제목 */
+    .mcard-title{font-size:14px;font-weight:700;letter-spacing:-.2px;line-height:1.4;margin-bottom:6px;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
     .mcard-title:hover{color:var(--accent);}
-    .mcard-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--fg-muted);margin-bottom:10px;}
-    .mcard-meta span{display:flex;align-items:center;gap:4px;}
-    .mcard-summary{font-size:15px;color:var(--fg-muted);line-height:1.7;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
-    .mcard-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px;}
-    .mtag{font-size:11px;padding:2px 8px;border-radius:20px;background:var(--bg-card2);color:var(--fg-subtle);border:1px solid var(--border);}
-    .implication{background:var(--teal-lt);border:1px solid color-mix(in srgb,var(--teal) 30%,transparent);border-radius:var(--r-sm);padding:12px 14px;margin-bottom:14px;}
-    :root[data-theme="light"] .implication{background:#f0fdfa;border-color:#99f6e4;}
-    .implication-label{font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.04em;margin-bottom:4px;display:flex;align-items:center;gap:5px;}
-    .implication-text{font-size:15px;color:var(--fg-muted);line-height:1.7;}
-    .mcard-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding-top:12px;border-top:1px solid var(--border);}
-    .mcard-file-info{font-size:12px;color:var(--fg-subtle);display:flex;align-items:center;gap:6px;}
-    .card-actions{display:flex;gap:6px;align-items:center;}
+
+    /* 참석자 */
+    .mcard-meta{font-size:11px;color:var(--fg-subtle);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+    /* 요약 */
+    .mcard-summary{font-size:12px;color:var(--fg-muted);line-height:1.6;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+
+    /* 시사점 박스 */
+    .implication{background:var(--teal-lt);border-left:3px solid var(--teal);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:7px 10px;margin-bottom:10px;}
+    :root[data-theme="light"] .implication{background:#f0fdfa;}
+    .implication-label{font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.04em;margin-bottom:3px;}
+    .implication-text{font-size:11px;color:var(--fg-muted);line-height:1.55;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+
+    /* 푸터 */
+    .mcard-footer{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);gap:6px;}
+    .mcard-file-info{font-size:11px;color:var(--fg-subtle);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+
+    .mtag{font-size:10px;padding:2px 7px;border-radius:20px;background:var(--bg-card2);color:var(--fg-subtle);border:1px solid var(--border);}
 
     /* ── 버튼 ── */
     .btn{display:inline-flex;align-items:center;gap:5px;padding:7px 16px;border-radius:var(--r-sm);border:none;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;transition:opacity .12s,background .12s;}
@@ -133,12 +148,12 @@
     .btn-icon{padding:6px 10px;font-size:15px;}
 
     /* ── 드롭존 ── */
-    .drop-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:24px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;margin-bottom:20px;background:var(--bg-card);}
+    .drop-zone{border:2px dashed var(--border2);border-radius:var(--r);padding:14px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;margin-bottom:14px;background:var(--bg-card);display:flex;align-items:center;justify-content:center;gap:12px;}
     .drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:var(--accent-lt);}
-    .drop-icon{font-size:28px;margin-bottom:8px;}
-    .drop-text{font-size:14px;color:var(--fg-muted);}
+    .drop-icon{font-size:22px;}
+    .drop-text{font-size:13px;color:var(--fg-muted);}
     .drop-text strong{color:var(--accent);}
-    .drop-sub{font-size:11px;color:var(--fg-subtle);margin-top:4px;}
+    .drop-sub{font-size:11px;color:var(--fg-subtle);margin-top:2px;}
     #file-input{display:none;}
 
     /* ── 빈 상태 ── */
@@ -214,11 +229,9 @@
     .docx-preview strong{font-weight:700;}
 
     @media(max-width:640px){
-      .page{padding:20px 14px 40px;}
+      .page{padding:16px 12px 40px;}
+      .page-head{flex-direction:column;align-items:flex-start;}
       .frow{grid-template-columns:1fr;}
-      .stats-row{gap:10px;}
-      .mcard{padding:16px;}
-      .mcard-title{font-size:16px;}
       .search-row{flex-direction:column;}
     }
     ::-webkit-scrollbar{width:5px;}
@@ -241,8 +254,10 @@
 
 <div class="page">
   <div class="page-head">
-    <h1>대표이사 주재 회의록</h1>
-    <p>회의 파일을 업로드하면 AI가 요약과 시사점을 자동으로 정리합니다</p>
+    <div class="page-head-left">
+      <h1>대표이사 주재 회의록</h1>
+      <p>파일 업로드 시 AI가 요약·시사점을 자동으로 정리합니다</p>
+    </div>
     <div class="stats-row">
       <div class="stat-chip"><span class="stat-num" id="stat-total">0</span><span class="stat-label">전체 회의록</span></div>
       <div class="stat-chip"><span class="stat-num" id="stat-recent">—</span><span class="stat-label">최근 회의</span></div>
@@ -277,8 +292,10 @@
        onclick="document.getElementById('file-input').click()"
        ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
     <div class="drop-icon">📂</div>
-    <div class="drop-text"><strong>클릭하거나 파일을 드래그</strong>해서 회의록을 추가하세요</div>
-    <div class="drop-sub">PDF · Word(.docx) · 한글(.hwp) 지원 · 저장 시 AI가 자동으로 요약합니다</div>
+    <div>
+      <div class="drop-text"><strong>클릭 또는 드래그</strong>하여 회의록 파일 추가</div>
+      <div class="drop-sub">PDF · Word(.docx) · HWP — 저장 시 AI가 자동 요약</div>
+    </div>
   </div>
   <input type="file" id="file-input" accept=".pdf,.doc,.docx,.hwp,.hwpx,.ppt,.pptx,.xls,.xlsx" multiple onchange="onFileSelect(event)" />
 
@@ -611,10 +628,12 @@ function render() {
         </div>
       </div>
       <div class="mcard-title" onclick="viewRecord('${r.id}')">${esc(r.title)}</div>
-      ${r.attendees?`<div class="mcard-meta"><span>👥 ${esc(r.attendees)}</span></div>`:''}
+      ${r.attendees?`<div class="mcard-meta">👥 ${esc(r.attendees)}</div>`:''}
+      ${r.summary?`<div class="mcard-summary">${esc(r.summary)}</div>`:''}
+      ${r.implication?`<div class="implication"><div class="implication-label">💡 시사점</div><div class="implication-text">${esc(r.implication)}</div></div>`:''}
       <div class="mcard-footer">
-        <div class="mcard-file-info">${r.fileName?`${fileEmoji(ft)} ${esc(r.fileName)}${r.fileSize?' · '+fmtSize(r.fileSize):''}` :'파일 없음'}</div>
-        ${r.fileId?`<button class="btn btn-view btn-sm" onclick="viewRecord('${r.id}')">미리보기 · 원문 ↗</button>`:''}
+        <div class="mcard-file-info">${r.fileName?`${fileEmoji(ft)} ${esc(r.fileName)}` :'파일 없음'}</div>
+        ${r.fileId?`<button class="btn btn-view btn-sm" onclick="viewRecord('${r.id}')">보기 ↗</button>`:''}
       </div>
     </div>`;
   }).join('');
