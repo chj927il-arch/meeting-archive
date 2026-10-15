@@ -745,7 +745,10 @@ function cardHtml(m) {
     <div class="mc-spacer"></div>
     <div class="mc-footer">
       <span>회의 ${displayDate}</span>
-      <span>${m.uploadedAt.slice(0,10)} 등록</span>
+      ${m.fileType === 'audio' && m.hasDoc
+        ? `<a href="/api/doc/${m.id}" onclick="event.stopPropagation()" title="회의록 Word 다운로드"
+             style="font-size:11.5px;color:var(--accent2);text-decoration:none;display:flex;align-items:center;gap:3px">📄 Word</a>`
+        : `<span>${m.uploadedAt.slice(0,10)} 등록</span>`}
     </div>
   </div>`;
 }
@@ -856,9 +859,17 @@ function renderDetail(m) {
   document.getElementById('dpBody').innerHTML = bodyHtml;
 
   // 액션 버튼
-  let actions = `<a href="/api/file/${m.id}" download="${esc(m.fileName)}" class="btn btn-primary btn-sm">⬇️ 원문 다운로드</a>`;
-  if (m.analysisStatus !== 'ok' && ext !== 'hwp' && ext !== 'hwpx') {
-    actions += `<button class="btn btn-ghost btn-sm" onclick="reanalyze('${m.id}')">🔄 재분석</button>`;
+  let actions = '';
+  if (m.fileType === 'audio') {
+    // 음성 파일: 원본 없음 / Word 회의록만 다운로드
+    if (m.hasDoc) {
+      actions += `<a href="/api/doc/${m.id}" class="btn btn-primary btn-sm">📄 회의록 Word 다운로드</a>`;
+    }
+  } else {
+    actions += `<a href="/api/file/${m.id}" download="${esc(m.fileName)}" class="btn btn-primary btn-sm">⬇️ 원문 다운로드</a>`;
+    if (m.analysisStatus !== 'ok' && ext !== 'hwp' && ext !== 'hwpx') {
+      actions += `<button class="btn btn-ghost btn-sm" onclick="reanalyze('${m.id}')">🔄 재분석</button>`;
+    }
   }
   actions += `<button class="btn btn-danger btn-sm" onclick="deleteMeeting('${m.id}')">🗑️ 삭제</button>`;
   document.getElementById('dpActions').innerHTML = actions;

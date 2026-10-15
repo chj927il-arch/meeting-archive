@@ -154,6 +154,48 @@ async function analyzeWithGemini(env, fileBuffer, mimeType, fileName, textConten
   return callGemini(env, parts, 2048);
 }
 
+// ── 회의록 Word(HTML) 문서 생성 ──────────────────────────────────────
+function generateMeetingDoc(meta) {
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const listHtml = (items) => (items||[]).map(i => `<li>${esc(i)}</li>`).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: '맑은 고딕', 'Malgun Gothic', Arial, sans-serif; font-size: 11pt; margin: 2.5cm 3cm; line-height: 1.8; color: #111; }
+  h1 { font-size: 17pt; font-weight: bold; border-bottom: 2.5px solid #1a1a1a; padding-bottom: 8pt; margin-bottom: 10pt; }
+  h2 { font-size: 12pt; font-weight: bold; color: #1a56a0; margin-top: 18pt; margin-bottom: 6pt; padding-left: 8pt; border-left: 3.5px solid #1a56a0; }
+  .meta-table { border-collapse: collapse; margin-bottom: 16pt; width: 100%; }
+  .meta-table td { padding: 5pt 10pt; font-size: 10.5pt; border: 1px solid #ccc; }
+  .meta-table td:first-child { background: #f0f4fa; font-weight: bold; width: 20%; color: #333; }
+  ul { margin: 4pt 0 4pt 16pt; padding: 0; }
+  li { margin: 4pt 0; font-size: 11pt; }
+  .oneliner { background: #f5f7fa; border-left: 4px solid #1a56a0; padding: 8pt 12pt; font-size: 11pt; color: #333; margin-bottom: 16pt; font-style: italic; }
+  .tags { margin-top: 18pt; font-size: 10pt; color: #666; }
+  .footer { margin-top: 24pt; font-size: 9pt; color: #999; border-top: 1px solid #ddd; padding-top: 6pt; }
+</style>
+</head>
+<body>
+<h1>${esc(meta.meetingTitle)}</h1>
+${meta.oneLiner ? `<div class="oneliner">${esc(meta.oneLiner)}</div>` : ''}
+<table class="meta-table">
+  <tr><td>회의 일자</td><td>${esc(meta.meetingDate || '—')}</td></tr>
+  <tr><td>참석자</td><td>${esc((meta.attendees||[]).join(', ') || '—')}</td></tr>
+  <tr><td>파일명</td><td>${esc(meta.fileName)}</td></tr>
+  <tr><td>등록일</td><td>${esc(meta.uploadedAt?.slice(0,10) || '')}</td></tr>
+</table>
+${meta.summary?.result?.length ? `<h2>📊 회의 결과</h2><ul>${listHtml(meta.summary.result)}</ul>` : ''}
+${meta.summary?.implications?.length ? `<h2>💡 시사점</h2><ul>${listHtml(meta.summary.implications)}</ul>` : ''}
+${meta.summary?.decisions?.length ? `<h2>✅ 핵심 결정사항</h2><ul>${listHtml(meta.summary.decisions)}</ul>` : ''}
+${meta.summary?.actionItems?.length ? `<h2>📋 후속 조치</h2><ul>${listHtml(meta.summary.actionItems)}</ul>` : ''}
+${meta.tags?.length ? `<div class="tags">🏷️ 키워드: ${meta.tags.map(t=>esc(t)).join(' · ')}</div>` : ''}
+<div class="footer">본 문서는 AI(Gemini 2.5 Flash)가 회의 녹음을 분석하여 자동 생성한 회의록입니다.</div>
+</body>
+</html>`;
+}
+
 // ── 오디오 분석 (fileUri 방식) ────────────────────────────────────────
 async function analyzeAudioWithGemini(env, fileUri, fileName, mimeType) {
   const prompt = makePrompt(fileName, true);
@@ -310,8 +352,22 @@ async function handleAudioUpload(request, env) {
     attendees:    analysis?.attendees    || [],
     oneLiner:     analysis?.oneLiner     || '',
     tags:         analysis?.tags         || [],
-    summary:      analysis?.summary      || null
+    summary:      analysis?.summary      || null,
+    hasDoc: false
   };
+
+  // 분석 성공 시 Word 문서 생성 후 KV 저장
+  if (analysis) {
+    const docHtml = generateMeetingDoc(meta);
+    const encoder = new TextEncoder();
+    const docBytes = encoder.encode(docHtml);
+    let binary = '';
+    for (let i = 0; i < docBytes.length; i += 8192)
+      binary += String.fromCharCode(...docBytes.slice(i, i + 8192));
+    await env.MEETING_KV.put(`doc-${id}`, btoa(binary));
+    meta.hasDoc = true;
+  }
+
   await env.MEETING_KV.put(`meeting-${id}`, JSON.stringify(meta));
 
   const idx = await getIndex(env);
@@ -320,6 +376,28 @@ async function handleAudioUpload(request, env) {
   await saveIndex(env, idx);
 
   return json({ ok: true, id, analysisStatus, meta });
+}
+
+// ── Word 문서 다운로드 ────────────────────────────────────────────────
+async function handleDoc(request, env, id) {
+  if (!isAuthed(request, env)) return authResponse();
+  const raw = await env.MEETING_KV.get(`meeting-${id}`);
+  if (!raw) return json({ ok: false, error: '없음' }, 404);
+  const meta   = JSON.parse(raw);
+  const base64 = await env.MEETING_KV.get(`doc-${id}`);
+  if (!base64) return json({ ok: false, error: '문서 없음' }, 404);
+
+  const binary = atob(base64);
+  const uint8  = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) uint8[i] = binary.charCodeAt(i);
+
+  const docName = encodeURIComponent(meta.meetingTitle.replace(/[/\\:*?"<>|]/g, '_') + '.doc');
+  return new Response(uint8, {
+    headers: {
+      'Content-Type': 'application/msword',
+      'Content-Disposition': `attachment; filename="${docName}"`,
+    }
+  });
 }
 
 // ── 목록 ─────────────────────────────────────────────────────────────
@@ -484,6 +562,9 @@ export default {
 
     const fileMatch = pathname.match(/^\/api\/file\/([^/]+)$/);
     if (fileMatch && method === 'GET') return handleFile(request, env, fileMatch[1]);
+
+    const docMatch = pathname.match(/^\/api\/doc\/([^/]+)$/);
+    if (docMatch && method === 'GET') return handleDoc(request, env, docMatch[1]);
 
     const reMatch = pathname.match(/^\/api\/reanalyze\/([^/]+)$/);
     if (reMatch && method === 'POST') return handleReanalyze(request, env, reMatch[1]);
