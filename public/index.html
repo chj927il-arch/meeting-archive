@@ -703,7 +703,7 @@ function cardHtml(m) {
   return `<div class="meeting-card ${CURRENT_ID===m.id?'selected':''}" onclick="openDetail('${m.id}')">
     <div class="mc-header">
       <span class="mc-ext ${ext}">${ext.toUpperCase()}</span>
-      <span style="font-size:11.5px;color:var(--text2)">${statusIcon} ${formatSize(m.fileSize)}</span>
+      <span style="font-size:11.5px;color:var(--text2)">${statusIcon}</span>
     </div>
     <div class="mc-title">${esc(m.meetingTitle)}</div>
     <div class="mc-attendees">👥 ${esc(attendeeStr)}</div>
@@ -711,7 +711,7 @@ function cardHtml(m) {
     <div class="mc-tags">${tagsHtml}</div>
     <div class="mc-spacer"></div>
     <div class="mc-footer">
-      <span>📅 ${displayDate}</span>
+      <span>회의 ${displayDate}</span>
       <span>${m.uploadedAt.slice(0,10)} 등록</span>
     </div>
   </div>`;
