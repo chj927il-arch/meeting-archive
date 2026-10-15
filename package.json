@@ -1,0 +1,22 @@
+{
+  "name": "meeting-archive",
+  "version": "1.0.0",
+  "description": "회의록 아카이브 - AI 자동 요약",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.2",
+    "jszip": "^3.10.2",
+    "multer": "^1.4.5-lts.1",
+    "uuid": "^11.0.3"
+  },
+  "devDependencies": {
+    "wrangler": "^3.101.0"
+  }
+}

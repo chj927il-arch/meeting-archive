@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>회의록 아카이브</title>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── 리셋 & 변수 ─────────────────────────────────────────────────────── */
+:root {
+  --bg:       #0e1117;
+  --bg2:      #161b22;
+  --bg3:      #1c2333;
+  --border:   rgba(255,255,255,.08);
+  --text:     #e6edf3;
+  --text2:    #8b949e;
+  --accent:   #3b82f6;
+  --accent2:  #60a5fa;
+  --grad:     linear-gradient(135deg,#3b82f6,#8b5cf6);
+  --green:    #22c55e;
+  --yellow:   #eab308;
+  --red:      #ef4444;
+  --font:     'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+  --radius:   12px;
+  --sidebar-w: 260px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;font-family:var(--font)}
+input,textarea{font-family:var(--font)}
+
+/* ── 레이아웃 ──────────────────────────────────────────────────────── */
+.app{display:flex;min-height:100vh}
+.sidebar{
+  width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--bg2);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;
+  position:sticky;top:0;height:100vh;overflow-y:auto;z-index:10;
+}
+.main{flex:1;padding:32px 36px;max-width:1200px;overflow-x:hidden}
+
+/* ── 사이드바 ──────────────────────────────────────────────────────── */
+.sb-head{padding:20px 18px 14px;border-bottom:1px solid var(--border)}
+.sb-logo{font-size:22px;margin-bottom:2px}
+.sb-title{font-size:15px;font-weight:700;color:var(--text)}
+.sb-sub{font-size:11px;color:var(--text2);margin-top:2px}
+.sb-nav{padding:12px 8px;flex:1}
+.nav-btn{
+  display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;
+  border-radius:8px;border:none;background:none;color:var(--text2);
+  font-size:13.5px;text-align:left;transition:all .15s;
+}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.active{background:rgba(59,130,246,.15);color:var(--accent2)}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+.sb-bottom{padding:12px 8px;border-top:1px solid var(--border)}
+.sb-user{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:12px;color:var(--text2)}
+.logout-btn{
+  width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);
+  background:none;color:var(--text2);font-size:12.5px;display:flex;align-items:center;gap:8px;
+  margin-top:4px;
+}
+.logout-btn:hover{background:var(--bg3);color:var(--text)}
+
+/* ── 모바일 탑바 ────────────────────────────────────────────────────── */
+.mobile-topbar{
+  display:none;align-items:center;gap:12px;
+  padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+}
+.mtb-menu{font-size:20px;background:none;border:none;color:var(--text);padding:4px 6px;border-radius:6px}
+.mtb-logo{font-size:18px}
+.mtb-title{font-size:14px;font-weight:600;color:var(--text)}
+.nav-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:150}
+
+/* ── 카드 공통 ───────────────────────────────────────────────────────── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px}
+.card-sm{padding:14px 16px}
+.glass{background:rgba(22,27,34,.7);backdrop-filter:blur(12px)}
+
+/* ── 버튼 ────────────────────────────────────────────────────────────── */
+.btn{padding:9px 18px;border-radius:8px;border:none;font-size:13.5px;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--grad);color:#fff}
+.btn-primary:hover{opacity:.88;transform:translateY(-1px)}
+.btn-ghost{background:none;border:1px solid var(--border);color:var(--text2)}
+.btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.btn-danger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+.btn-danger:hover{background:rgba(239,68,68,.22)}
+.btn-sm{padding:6px 12px;font-size:12.5px}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+
+/* ── 배지 / 태그 ─────────────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:999px;font-size:11.5px;font-weight:500}
+.badge-blue{background:rgba(59,130,246,.15);color:var(--accent2)}
+.badge-green{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-yellow{background:rgba(234,179,8,.15);color:var(--yellow)}
+.badge-red{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-gray{background:rgba(139,148,158,.12);color:var(--text2)}
+.tag{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11.5px;background:rgba(59,130,246,.1);color:var(--accent2);border:1px solid rgba(59,130,246,.2);margin:2px 3px 2px 0}
+
+/* ── 로그인 화면 ─────────────────────────────────────────────────────── */
+#loginScreen{
+  display:none;position:fixed;inset:0;background:var(--bg);z-index:999;
+  align-items:center;justify-content:center;flex-direction:column;gap:24px;
+}
+#loginScreen.show{display:flex}
+.login-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:36px 40px;width:360px;text-align:center}
+.login-logo{font-size:48px;margin-bottom:8px}
+.login-title{font-size:20px;font-weight:700;margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
+.login-input{
+  width:100%;padding:11px 14px;border-radius:8px;border:1px solid var(--border);
+  background:var(--bg3);color:var(--text);font-size:14px;margin-bottom:12px;
+}
+.login-input:focus{outline:none;border-color:var(--accent)}
+.login-err{color:var(--red);font-size:12.5px;margin-top:6px;display:none}
+
+/* ── 뷰 래퍼 ─────────────────────────────────────────────────────────── */
+.view{display:none}
+.view.active{display:block}
+
+/* ── 업로드 뷰 ───────────────────────────────────────────────────────── */
+.page-title{font-size:24px;font-weight:700;margin-bottom:6px}
+.page-sub{font-size:14px;color:var(--text2);margin-bottom:28px}
+
+.drop-zone{
+  border:2px dashed rgba(59,130,246,.35);border-radius:var(--radius);
+  padding:48px 24px;text-align:center;transition:all .2s;cursor:pointer;
+  background:rgba(59,130,246,.04);
+}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:rgba(59,130,246,.08)}
+.drop-icon{font-size:48px;margin-bottom:12px}
+.drop-title{font-size:16px;font-weight:600;margin-bottom:6px}
+.drop-sub{font-size:13px;color:var(--text2)}
+.drop-sub span{color:var(--accent2);cursor:pointer}
+.drop-sub span:hover{text-decoration:underline}
+#uploadFileInput{display:none}
+
+.upload-progress{margin-top:20px;display:none}
+.progress-bar-wrap{height:6px;background:var(--bg3);border-radius:999px;overflow:hidden;margin-bottom:8px}
+.progress-bar{height:100%;background:var(--grad);border-radius:999px;width:0;transition:width .3s}
+.progress-label{font-size:13px;color:var(--text2)}
+
+.upload-result{margin-top:24px;display:none}
+.upload-ok{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:var(--radius);padding:20px}
+.upload-warn{background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.25);border-radius:var(--radius);padding:16px;margin-bottom:12px;font-size:13px;color:var(--yellow)}
+.upload-err{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);padding:16px;color:var(--red);font-size:13px}
+
+/* ── 목록 뷰 ─────────────────────────────────────────────────────────── */
+.list-toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.search-wrap{flex:1;min-width:180px;position:relative}
+.search-wrap input{
+  width:100%;padding:9px 14px 9px 36px;border-radius:8px;
+  border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13.5px;
+}
+.search-wrap input:focus{outline:none;border-color:var(--accent)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text2)}
+.filter-select{
+  padding:9px 12px;border-radius:8px;border:1px solid var(--border);
+  background:var(--bg2);color:var(--text);font-size:13px;
+}
+.filter-select:focus{outline:none;border-color:var(--accent)}
+
+.meeting-list{display:flex;flex-direction:column;gap:10px}
+.meeting-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 20px;cursor:pointer;transition:all .15s;display:flex;gap:16px;align-items:flex-start;
+  border-left:4px solid transparent;
+}
+.meeting-card:hover{border-color:var(--accent);background:var(--bg3);transform:translateX(2px)}
+.meeting-card.selected{border-left-color:var(--accent);background:rgba(59,130,246,.05)}
+.mc-left{flex:1;min-width:0}
+.mc-title{font-size:15px;font-weight:600;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-one{font-size:13px;color:var(--text2);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--text2)}
+.mc-meta .sep{color:var(--border)}
+.mc-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.mc-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;white-space:nowrap;min-width:90px}
+.mc-date{font-size:12px;color:var(--text2)}
+.mc-ext{
+  font-size:11px;font-weight:700;padding:3px 7px;border-radius:5px;
+  background:rgba(139,148,158,.15);color:var(--text2);text-transform:uppercase;
+}
+.mc-ext.pdf{background:rgba(239,68,68,.15);color:#fb7185}
+.mc-ext.docx,.mc-ext.doc{background:rgba(59,130,246,.15);color:var(--accent2)}
+.mc-ext.hwp,.mc-ext.hwpx{background:rgba(234,179,8,.15);color:var(--yellow)}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--text2)}
+.empty-icon{font-size:52px;margin-bottom:12px}
+.empty-title{font-size:16px;font-weight:600;margin-bottom:6px}
+
+/* ── 상세 패널 ───────────────────────────────────────────────────────── */
+.detail-panel{
+  position:fixed;top:0;right:0;width:min(680px,100vw);height:100vh;
+  background:var(--bg2);border-left:1px solid var(--border);
+  z-index:200;display:flex;flex-direction:column;overflow:hidden;
+  transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);
+}
+.detail-panel.open{transform:translateX(0)}
+.detail-backdrop{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:190;
+}
+.detail-backdrop.open{display:block}
+
+.dp-head{
+  padding:18px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;gap:12px;
+}
+.dp-close{
+  margin-left:auto;padding:6px 10px;border-radius:6px;border:none;
+  background:none;color:var(--text2);font-size:18px;flex-shrink:0;
+}
+.dp-close:hover{background:var(--bg3);color:var(--text)}
+.dp-title{font-size:17px;font-weight:700;line-height:1.3}
+.dp-sub{font-size:12.5px;color:var(--text2);margin-top:3px}
+
+.dp-body{flex:1;overflow-y:auto;padding:20px}
+.dp-section{margin-bottom:22px}
+.dp-section-title{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.dp-row{display:flex;gap:8px;margin-bottom:8px;font-size:13.5px}
+.dp-row-label{color:var(--text2);min-width:64px;flex-shrink:0}
+.dp-row-val{flex:1}
+
+.summary-box{background:var(--bg3);border-radius:10px;padding:16px;margin-bottom:12px}
+.sb-label{font-size:11.5px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px}
+.sb-text{font-size:13.5px;line-height:1.7;color:var(--text)}
+.sb-list{list-style:none;margin:0;padding:0}
+.sb-list li{
+  padding:5px 0 5px 18px;position:relative;font-size:13.5px;line-height:1.6;color:var(--text);
+  border-bottom:1px solid var(--border);
+}
+.sb-list li:last-child{border-bottom:none}
+.sb-list li::before{content:'▸';position:absolute;left:0;color:var(--accent2)}
+
+.no-analysis-box{
+  background:rgba(234,179,8,.06);border:1px solid rgba(234,179,8,.2);
+  border-radius:10px;padding:16px;font-size:13px;color:var(--yellow);line-height:1.6;
+}
+
+.dp-actions{display:flex;gap:8px;flex-wrap:wrap;padding:14px 20px;border-top:1px solid var(--border);background:var(--bg2)}
+
+/* PDF 미리보기 */
+.pdf-preview{width:100%;height:480px;border-radius:8px;border:none;background:var(--bg3)}
+.docx-preview{
+  background:var(--bg3);border-radius:8px;padding:16px;font-size:13px;
+  line-height:1.8;max-height:400px;overflow-y:auto;color:var(--text);white-space:pre-wrap;
+  font-family:'Courier New',monospace;
+}
+.hwp-notice{
+  background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.25);border-radius:8px;
+  padding:16px;font-size:13.5px;color:var(--yellow);line-height:1.6;text-align:center;
+}
+
+/* ── 반응형 ──────────────────────────────────────────────────────────── */
+@media(max-width:900px){
+  .mobile-topbar{display:flex}
+  .sidebar{
+    position:fixed;top:0;left:0;height:100dvh;
+    width:min(280px,85vw);z-index:200;
+    transform:translateX(-101%);transition:transform .25s ease;
+    border-right:1px solid var(--border);
+  }
+  .app.navopen .sidebar{transform:none}
+  .app.navopen .nav-backdrop{display:block}
+  .main{padding:20px 16px 80px}
+  .detail-panel{width:100vw}
+}
+@media(max-width:520px){
+  .list-toolbar{flex-direction:column}
+  .search-wrap{width:100%}
+  .filter-select{width:100%}
+  .mc-tags{display:none}
+}
+
+/* ── 로딩 스피너 ─────────────────────────────────────────────────────── */
+.spinner{
+  width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);
+  border-radius:50%;animation:spin .7s linear infinite;margin:0 auto;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── 토스트 ──────────────────────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:#1e2a3a;color:var(--text);padding:12px 22px;border-radius:8px;
+  font-size:13.5px;z-index:9999;opacity:0;transition:all .3s;
+  border:1px solid var(--border);box-shadow:0 4px 24px rgba(0,0,0,.4);
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- 로그인 -->
+<div id="loginScreen" class="show">
+  <div class="login-box">
+    <div class="login-logo">📋</div>
+    <div class="login-title">회의록 아카이브</div>
+    <div class="login-sub">팀 공유 회의록 관리 시스템</div>
+    <input type="password" class="login-input" id="loginPw" placeholder="비밀번호 입력" autocomplete="current-password">
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">로그인</button>
+    <div class="login-err" id="loginErr">비밀번호가 틀렸습니다.</div>
+  </div>
+</div>
+
+<!-- 앱 -->
+<div class="app" id="mainApp" style="display:none">
+  <!-- 모바일 탑바 -->
+  <div class="mobile-topbar">
+    <button class="mtb-menu" id="navToggle">☰</button>
+    <span class="mtb-logo">📋</span>
+    <span class="mtb-title">회의록 아카이브</span>
+  </div>
+  <div class="nav-backdrop" id="navBackdrop"></div>
+
+  <!-- 사이드바 -->
+  <nav class="sidebar">
+    <div class="sb-head">
+      <div class="sb-logo">📋</div>
+      <div class="sb-title">회의록 아카이브</div>
+      <div class="sb-sub">AI 자동 요약 시스템</div>
+    </div>
+    <div class="sb-nav">
+      <button class="nav-btn active" onclick="showView('list')" id="nav-list">
+        <span class="nav-icon">📂</span> 회의록 목록
+      </button>
+      <button class="nav-btn" onclick="showView('upload')" id="nav-upload">
+        <span class="nav-icon">➕</span> 회의록 등록
+      </button>
+    </div>
+    <div class="sb-bottom">
+      <div class="sb-user">
+        <span>🏢</span><span>팀 계정</span>
+        <span id="meetingCount" style="margin-left:auto;font-size:11px;background:rgba(59,130,246,.15);color:var(--accent2);padding:2px 7px;border-radius:999px">0건</span>
+      </div>
+      <button class="logout-btn" onclick="doLogout()">
+        <span>🔓</span><span>로그아웃</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- 메인 -->
+  <main class="main">
+
+    <!-- 목록 뷰 -->
+    <div class="view active" id="view-list">
+      <div class="page-title">📂 회의록 목록</div>
+      <div class="page-sub">업로드된 회의록을 검색하고 열람하세요.</div>
+
+      <div class="list-toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="제목, 참석자, 태그 검색..." oninput="renderList()">
+        </div>
+        <select class="filter-select" id="filterYear" onchange="renderList()">
+          <option value="">연도 전체</option>
+        </select>
+        <select class="filter-select" id="filterType" onchange="renderList()">
+          <option value="">형식 전체</option>
+          <option value="pdf">PDF</option>
+          <option value="docx">DOCX / DOC</option>
+          <option value="hwp">HWP</option>
+        </select>
+      </div>
+
+      <div id="listArea"><div class="empty-state"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- 업로드 뷰 -->
+    <div class="view" id="view-upload">
+      <div class="page-title">➕ 회의록 등록</div>
+      <div class="page-sub">PDF, DOCX, DOC, HWP 파일을 올리면 AI가 자동으로 분석·요약합니다.<br>HWP는 AI 분석 없이 저장만 됩니다. PDF로 저장 후 올리시면 더 정확합니다.</div>
+
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('uploadFileInput').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+        <div class="drop-icon">📁</div>
+        <div class="drop-title">파일을 드래그하거나 클릭해서 선택</div>
+        <div class="drop-sub">PDF, DOCX, DOC, HWP — 최대 20MB<br><span onclick="event.stopPropagation();document.getElementById('uploadFileInput').click()">파일 선택</span></div>
+      </div>
+      <input type="file" id="uploadFileInput" accept=".pdf,.docx,.doc,.hwp,.hwpx" onchange="onFileSelected(this.files[0])">
+
+      <div class="upload-progress" id="uploadProgress">
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+        <div class="progress-label" id="progressLabel">분석 중...</div>
+      </div>
+      <div class="upload-result" id="uploadResult"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- 상세 패널 -->
+<div class="detail-backdrop" id="detailBackdrop" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-head">
+    <div>
+      <div class="dp-title" id="dpTitle">—</div>
+      <div class="dp-sub" id="dpSub">—</div>
+    </div>
+    <button class="dp-close" onclick="closeDetail()">✕</button>
+  </div>
+  <div class="dp-body" id="dpBody"></div>
+  <div class="dp-actions" id="dpActions"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── 상태 ───────────────────────────────────────────────────────────────
+let MEETINGS = [];
+let CURRENT_ID = null;
+
+// ── 로그인 ──────────────────────────────────────────────────────────────
+async function doLogin() {
+  const pw = document.getElementById('loginPw').value;
+  const err = document.getElementById('loginErr');
+  err.style.display = 'none';
+  try {
+    const res = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pw })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('loginScreen').classList.remove('show');
+      document.getElementById('mainApp').style.display = 'flex';
+      await loadMeetings();
+      showView('list');
+    } else {
+      err.style.display = 'block';
+    }
+  } catch {
+    err.style.display = 'block';
+  }
+}
+
+document.getElementById('loginPw').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+async function doLogout() {
+  await fetch('/api/logout', { method: 'POST' });
+  document.getElementById('loginScreen').classList.add('show');
+  document.getElementById('mainApp').style.display = 'none';
+}
+
+// ── 뷰 전환 ─────────────────────────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const nb = document.getElementById('nav-' + name);
+  if (nb) nb.classList.add('active');
+  document.querySelector('.app').classList.remove('navopen');
+  if (name === 'upload') {
+    // 업로드 화면 초기화
+    document.getElementById('uploadResult').style.display = 'none';
+    document.getElementById('uploadProgress').style.display = 'none';
+  }
+}
+
+// ── 모바일 사이드바 ──────────────────────────────────────────────────────
+(function(){
+  const app = document.querySelector('.app');
+  const nt = document.getElementById('navToggle');
+  const nb = document.getElementById('navBackdrop');
+  if (nt) nt.addEventListener('click', () => app.classList.toggle('navopen'));
+  if (nb) nb.addEventListener('click', () => app.classList.remove('navopen'));
+})();
+
+// ── 데이터 로드 ──────────────────────────────────────────────────────────
+async function loadMeetings() {
+  try {
+    const res = await fetch('/api/meetings');
+    if (!res.ok) { if (res.status === 401) { showLoginScreen(); return; } }
+    const data = await res.json();
+    MEETINGS = data.meetings || [];
+    document.getElementById('meetingCount').textContent = MEETINGS.length + '건';
+    buildYearFilter();
+    renderList();
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function buildYearFilter() {
+  const years = [...new Set(MEETINGS.map(m => m.meetingDate ? m.meetingDate.slice(0,4) : m.uploadedAt.slice(0,4)).filter(Boolean))].sort().reverse();
+  const sel = document.getElementById('filterYear');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">연도 전체</option>' +
+    years.map(y => `<option value="${y}" ${y===cur?'selected':''}>${y}년</option>`).join('');
+}
+
+// ── 목록 렌더 ────────────────────────────────────────────────────────────
+function renderList() {
+  const q    = document.getElementById('searchInput').value.toLowerCase();
+  const yr   = document.getElementById('filterYear').value;
+  const type = document.getElementById('filterType').value;
+
+  let filtered = MEETINGS.filter(m => {
+    if (q) {
+      const hay = [m.meetingTitle, m.oneLiner, ...(m.attendees||[]), ...(m.tags||[])].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (yr) {
+      const d = m.meetingDate || m.uploadedAt;
+      if (!d.startsWith(yr)) return false;
+    }
+    if (type) {
+      const ext = m.fileName.split('.').pop().toLowerCase();
+      if (type === 'pdf' && ext !== 'pdf') return false;
+      if (type === 'docx' && ext !== 'docx' && ext !== 'doc') return false;
+      if (type === 'hwp' && ext !== 'hwp' && ext !== 'hwpx') return false;
+    }
+    return true;
+  });
+
+  const area = document.getElementById('listArea');
+  if (!filtered.length) {
+    area.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📄</div>
+      <div class="empty-title">${MEETINGS.length ? '검색 결과가 없습니다' : '등록된 회의록이 없습니다'}</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:6px">${MEETINGS.length ? '검색어나 필터를 바꿔보세요' : '회의록 등록 메뉴에서 첫 파일을 올려보세요'}</div>
+    </div>`;
+    return;
+  }
+
+  area.innerHTML = `<div class="meeting-list">${filtered.map(m => cardHtml(m)).join('')}</div>`;
+}
+
+function cardHtml(m) {
+  const ext = m.fileName.split('.').pop().toLowerCase();
+  const displayDate = m.meetingDate || m.uploadedAt.slice(0,10);
+  const attendeeStr = m.attendees?.length ? m.attendees.slice(0,3).join(', ') + (m.attendees.length > 3 ? ' 외' : '') : '—';
+  const statusBadge = m.analysisStatus === 'ok'
+    ? '<span class="badge badge-green" style="font-size:10px">✅ AI분석</span>'
+    : m.analysisStatus === 'hwp_no_analysis'
+      ? '<span class="badge badge-yellow" style="font-size:10px">📄 저장만</span>'
+      : '<span class="badge badge-gray" style="font-size:10px">⚠️ 미분석</span>';
+
+  return `<div class="meeting-card ${CURRENT_ID===m.id?'selected':''}" onclick="openDetail('${m.id}')">
+    <div class="mc-left">
+      <div class="mc-title">${esc(m.meetingTitle)}</div>
+      ${m.oneLiner ? `<div class="mc-one">${esc(m.oneLiner)}</div>` : ''}
+      <div class="mc-meta">
+        ${statusBadge}
+        <span class="sep">·</span>
+        <span>📅 ${displayDate}</span>
+        ${attendeeStr !== '—' ? `<span class="sep">·</span><span>👥 ${esc(attendeeStr)}</span>` : ''}
+      </div>
+      ${m.tags?.length ? `<div class="mc-tags">${m.tags.slice(0,5).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
+    </div>
+    <div class="mc-right">
+      <span class="mc-date">${m.uploadedAt.slice(0,10)} 등록</span>
+      <span class="mc-ext ${ext}">${ext.toUpperCase()}</span>
+      <span style="font-size:11px;color:var(--text2)">${formatSize(m.fileSize)}</span>
+    </div>
+  </div>`;
+}
+
+// ── 상세 패널 ────────────────────────────────────────────────────────────
+async function openDetail(id) {
+  CURRENT_ID = id;
+  renderList(); // 선택 하이라이트
+
+  document.getElementById('detailPanel').classList.add('open');
+  document.getElementById('detailBackdrop').classList.add('open');
+  document.getElementById('dpBody').innerHTML = '<div style="padding:40px;text-align:center"><div class="spinner"></div></div>';
+  document.getElementById('dpActions').innerHTML = '';
+  document.getElementById('dpTitle').textContent = '불러오는 중...';
+  document.getElementById('dpSub').textContent = '';
+
+  try {
+    const res = await fetch(`/api/meetings/${id}`);
+    const data = await res.json();
+    if (!data.ok) { showToast('불러오기 실패'); return; }
+    renderDetail(data.meeting);
+  } catch (e) {
+    showToast('오류: ' + e.message);
+  }
+}
+
+function closeDetail() {
+  CURRENT_ID = null;
+  document.getElementById('detailPanel').classList.remove('open');
+  document.getElementById('detailBackdrop').classList.remove('open');
+  renderList();
+}
+
+function renderDetail(m) {
+  const ext = m.fileName.split('.').pop().toLowerCase();
+
+  document.getElementById('dpTitle').textContent = m.meetingTitle;
+  document.getElementById('dpSub').textContent = `${ext.toUpperCase()} · ${formatSize(m.fileSize)} · ${m.uploadedAt.slice(0,10)} 등록`;
+
+  let bodyHtml = '';
+
+  // 기본 정보
+  const displayDate = m.meetingDate || '—';
+  const attendeeStr = m.attendees?.length ? m.attendees.join(', ') : '—';
+  bodyHtml += `<div class="dp-section">
+    <div class="dp-section-title">📌 기본 정보</div>
+    <div class="dp-row"><span class="dp-row-label">회의 일자</span><span class="dp-row-val">${esc(displayDate)}</span></div>
+    <div class="dp-row"><span class="dp-row-label">참석자</span><span class="dp-row-val">${esc(attendeeStr)}</span></div>
+    <div class="dp-row"><span class="dp-row-label">파일명</span><span class="dp-row-val" style="font-size:12.5px;color:var(--text2)">${esc(m.fileName)}</span></div>
+  </div>`;
+
+  // 태그
+  if (m.tags?.length) {
+    bodyHtml += `<div class="dp-section">
+      <div class="dp-section-title">🏷️ 키워드 태그</div>
+      <div>${m.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+    </div>`;
+  }
+
+  // AI 요약
+  if (m.summary) {
+    bodyHtml += `<div class="dp-section">
+      <div class="dp-section-title">🤖 AI 핵심 요약</div>`;
+
+    if (m.summary.result) {
+      bodyHtml += `<div class="summary-box">
+        <div class="sb-label">📊 회의 결과</div>
+        <div class="sb-text">${esc(m.summary.result)}</div>
+      </div>`;
+    }
+    if (m.summary.implications) {
+      bodyHtml += `<div class="summary-box">
+        <div class="sb-label">💡 시사점</div>
+        <div class="sb-text">${esc(m.summary.implications)}</div>
+      </div>`;
+    }
+    if (m.summary.decisions?.length) {
+      bodyHtml += `<div class="summary-box">
+        <div class="sb-label">✅ 핵심 결정사항</div>
+        <ul class="sb-list">${m.summary.decisions.map(d => `<li>${esc(d)}</li>`).join('')}</ul>
+      </div>`;
+    }
+    if (m.summary.actionItems?.length) {
+      bodyHtml += `<div class="summary-box">
+        <div class="sb-label">📋 후속 조치</div>
+        <ul class="sb-list">${m.summary.actionItems.map(a => `<li>${esc(a)}</li>`).join('')}</ul>
+      </div>`;
+    }
+    bodyHtml += `</div>`;
+  } else if (m.analysisStatus === 'hwp_no_analysis' || m.analysisStatus === 'hwp') {
+    bodyHtml += `<div class="dp-section">
+      <div class="no-analysis-box">
+        ⚠️ <strong>HWP 파일은 AI 분석이 지원되지 않습니다.</strong><br>
+        한글(HWP)에서 "다른 이름으로 저장 → PDF"로 변환 후 다시 업로드하시면<br>
+        AI 자동 요약을 이용하실 수 있습니다.
+      </div>
+    </div>`;
+  } else if (m.analysisStatus !== 'ok') {
+    bodyHtml += `<div class="dp-section">
+      <div class="no-analysis-box">
+        ⚠️ AI 분석에 실패했습니다. "재분석" 버튼을 눌러 다시 시도해보세요.
+      </div>
+    </div>`;
+  }
+
+  // 원문 미리보기
+  bodyHtml += `<div class="dp-section">
+    <div class="dp-section-title">📄 원문 미리보기</div>`;
+  if (ext === 'pdf') {
+    bodyHtml += `<iframe class="pdf-preview" id="pdfPreview" src="/api/file/${m.id}?preview=1" title="PDF 미리보기"></iframe>`;
+  } else if (ext === 'hwp' || ext === 'hwpx') {
+    bodyHtml += `<div class="hwp-notice">🗂️ HWP 파일은 웹 미리보기가 지원되지 않습니다.<br>원문 다운로드 버튼으로 파일을 저장한 후 한글에서 여세요.</div>`;
+  } else {
+    bodyHtml += `<div class="docx-preview" id="docxPreviewArea">불러오는 중...</div>`;
+    // DOCX/DOC 텍스트 미리보기는 별도 로드
+    setTimeout(() => loadDocxPreview(m.id), 100);
+  }
+  bodyHtml += `</div>`;
+
+  document.getElementById('dpBody').innerHTML = bodyHtml;
+
+  // 액션 버튼
+  let actions = `<a href="/api/file/${m.id}" download="${esc(m.fileName)}" class="btn btn-primary btn-sm">⬇️ 원문 다운로드</a>`;
+  if (m.analysisStatus !== 'ok' && ext !== 'hwp' && ext !== 'hwpx') {
+    actions += `<button class="btn btn-ghost btn-sm" onclick="reanalyze('${m.id}')">🔄 재분석</button>`;
+  }
+  actions += `<button class="btn btn-danger btn-sm" onclick="deleteMeeting('${m.id}')">🗑️ 삭제</button>`;
+  document.getElementById('dpActions').innerHTML = actions;
+}
+
+async function loadDocxPreview(id) {
+  // DOCX 미리보기: 파일 다운로드 후 텍스트 추출 (클라이언트 사이드)
+  const el = document.getElementById('docxPreviewArea');
+  if (!el) return;
+  try {
+    const res = await fetch(`/api/file/${id}?preview=1`);
+    const buf = await res.arrayBuffer();
+    const text = await extractDocxText(buf);
+    if (el) el.textContent = text || '(텍스트 추출 실패 — 원문을 다운로드해서 확인하세요)';
+  } catch {
+    if (el) el.textContent = '(미리보기 불가 — 원문을 다운로드해서 확인하세요)';
+  }
+}
+
+// 클라이언트 사이드 DOCX 텍스트 추출
+async function extractDocxText(arrayBuffer) {
+  try {
+    const uint8 = new Uint8Array(arrayBuffer);
+    let pos = 0;
+    const texts = [];
+    while (pos < uint8.length - 4) {
+      if (uint8[pos]===0x50 && uint8[pos+1]===0x4b && uint8[pos+2]===0x03 && uint8[pos+3]===0x04) {
+        const compression = uint8[pos+8] | (uint8[pos+9]<<8);
+        const compSize    = uint8[pos+18]|(uint8[pos+19]<<8)|(uint8[pos+20]<<16)|(uint8[pos+21]<<24);
+        const nameLen     = uint8[pos+26]|(uint8[pos+27]<<8);
+        const extraLen    = uint8[pos+28]|(uint8[pos+29]<<8);
+        const name        = new TextDecoder().decode(uint8.slice(pos+30, pos+30+nameLen));
+        const dataStart   = pos+30+nameLen+extraLen;
+        if (name === 'word/document.xml') {
+          let xmlBytes;
+          if (compression === 0) {
+            xmlBytes = uint8.slice(dataStart, dataStart+compSize);
+          } else if (compression === 8) {
+            const ds = new DecompressionStream('deflate-raw');
+            const w = ds.writable.getWriter();
+            w.write(uint8.slice(dataStart, dataStart+compSize)); w.close();
+            const chunks = []; const r = ds.readable.getReader();
+            while(true){const {done,value}=await r.read();if(done)break;chunks.push(value);}
+            const tot = chunks.reduce((a,c)=>a+c.length,0);
+            xmlBytes = new Uint8Array(tot); let off=0;
+            for(const c of chunks){xmlBytes.set(c,off);off+=c.length;}
+          }
+          if (xmlBytes) {
+            const xml = new TextDecoder('utf-8').decode(xmlBytes);
+            (xml.match(/<w:t[^>]*>([^<]*)<\/w:t>/g)||[]).forEach(m=>{
+              const t=m.replace(/<[^>]+>/g,'').trim();if(t)texts.push(t);
+            });
+          }
+          break;
+        }
+        pos = dataStart+compSize;
+      } else { pos++; }
+    }
+    return texts.join(' ').substring(0, 8000);
+  } catch { return null; }
+}
+
+// ── 재분석 ──────────────────────────────────────────────────────────────
+async function reanalyze(id) {
+  if (!confirm('재분석을 실행하시겠습니까? (Gemini AI 비용이 발생합니다)')) return;
+  showToast('재분석 중...');
+  try {
+    const res = await fetch(`/api/reanalyze/${id}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok && data.analysisStatus === 'ok') {
+      showToast('✅ 재분석 완료!');
+      await loadMeetings();
+      openDetail(id);
+    } else {
+      showToast('⚠️ 재분석 실패 — Gemini 오류');
+    }
+  } catch (e) {
+    showToast('오류: ' + e.message);
+  }
+}
+
+// ── 삭제 ──────────────────────────────────────────────────────────────
+async function deleteMeeting(id) {
+  if (!confirm('이 회의록을 삭제하시겠습니까?\n원본 파일과 AI 분석 결과가 모두 삭제되며 복구되지 않습니다.')) return;
+  try {
+    const res = await fetch(`/api/meetings/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (data.ok) {
+      showToast('🗑️ 삭제되었습니다');
+      closeDetail();
+      await loadMeetings();
+    } else {
+      showToast('삭제 실패');
+    }
+  } catch (e) {
+    showToast('오류: ' + e.message);
+  }
+}
+
+// ── 파일 업로드 ──────────────────────────────────────────────────────────
+function onDragOver(e)  { e.preventDefault(); document.getElementById('dropZone').classList.add('dragover'); }
+function onDragLeave(e) { document.getElementById('dropZone').classList.remove('dragover'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) onFileSelected(file);
+}
+
+function onFileSelected(file) {
+  if (!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const allowed = ['pdf','docx','doc','hwp','hwpx'];
+  if (!allowed.includes(ext)) { showToast('⚠️ PDF, DOCX, DOC, HWP 파일만 가능합니다'); return; }
+  if (file.size > 20*1024*1024) { showToast('⚠️ 20MB 이하 파일만 가능합니다'); return; }
+  startUpload(file);
+}
+
+async function startUpload(file) {
+  const progWrap = document.getElementById('uploadProgress');
+  const progBar  = document.getElementById('progressBar');
+  const progLabel= document.getElementById('progressLabel');
+  const result   = document.getElementById('uploadResult');
+
+  progWrap.style.display = 'block';
+  result.style.display   = 'none';
+  progBar.style.width    = '15%';
+  progLabel.textContent  = `📤 "${file.name}" 업로드 중...`;
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    progBar.style.width = '40%';
+    progLabel.textContent = '🤖 AI 분석 중... (최대 30초)';
+
+    const res = await fetch('/api/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    progBar.style.width = '100%';
+
+    if (!data.ok) {
+      progWrap.style.display = 'none';
+      result.style.display = 'block';
+      result.innerHTML = `<div class="upload-err">❌ 업로드 실패: ${esc(data.error)}</div>`;
+      return;
+    }
+
+    const m = data.meta;
+    const ext = file.name.split('.').pop().toLowerCase();
+
+    let warnHtml = '';
+    if (data.analysisStatus === 'hwp_no_analysis') {
+      warnHtml = `<div class="upload-warn">⚠️ HWP 파일은 AI 분석이 지원되지 않습니다. 파일은 저장되었습니다.<br>한글에서 PDF로 변환 후 다시 올리시면 AI 요약을 받을 수 있습니다.</div>`;
+    } else if (data.analysisStatus !== 'ok') {
+      warnHtml = `<div class="upload-warn">⚠️ AI 분석에 실패했습니다. 파일은 저장되었습니다. 상세 화면에서 재분석하세요.</div>`;
+    }
+
+    let summaryHtml = '';
+    if (m.summary) {
+      summaryHtml = `
+        <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">🤖 AI 요약 결과</div>
+          <div style="font-size:13.5px;color:var(--text);line-height:1.6;margin-bottom:8px"><strong>회의 일자:</strong> ${esc(m.meetingDate||'—')}</div>
+          <div style="font-size:13.5px;color:var(--text);line-height:1.6;margin-bottom:8px"><strong>참석자:</strong> ${esc((m.attendees||[]).join(', ')||'—')}</div>
+          ${m.oneLiner ? `<div style="font-size:13.5px;color:var(--text2);line-height:1.6;margin-bottom:8px;font-style:italic">"${esc(m.oneLiner)}"</div>` : ''}
+          ${m.summary.decisions?.length ? `<div style="font-size:12.5px;color:var(--text2);margin-top:4px">핵심 결정: ${m.summary.decisions.slice(0,2).map(d=>`<em>${esc(d)}</em>`).join(' / ')}</div>` : ''}
+        </div>`;
+    }
+
+    result.innerHTML = `${warnHtml}
+      <div class="upload-ok">
+        <div style="font-size:15px;font-weight:700;margin-bottom:6px">✅ "${esc(file.name)}" 등록 완료</div>
+        <div style="font-size:13px;color:var(--text2)">${ext.toUpperCase()} · ${formatSize(file.size)}</div>
+        ${summaryHtml}
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="openDetail('${data.id}');showView('list')">상세 보기</button>
+          <button class="btn btn-ghost btn-sm" onclick="showView('list')">목록으로</button>
+        </div>
+      </div>`;
+
+    progWrap.style.display = 'none';
+    result.style.display   = 'block';
+    document.getElementById('uploadFileInput').value = '';
+
+    await loadMeetings();
+  } catch (e) {
+    progWrap.style.display = 'none';
+    result.style.display = 'block';
+    result.innerHTML = `<div class="upload-err">❌ 오류: ${esc(e.message)}</div>`;
+  }
+}
+
+// ── 유틸 ──────────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatSize(bytes) {
+  if (!bytes) return '—';
+  if (bytes < 1024)       return bytes + 'B';
+  if (bytes < 1024*1024)  return (bytes/1024).toFixed(1) + 'KB';
+  return (bytes/(1024*1024)).toFixed(1) + 'MB';
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ── 초기화 ──────────────────────────────────────────────────────────────
+(async function init() {
+  // 이미 로그인된 경우 쿠키 확인
+  try {
+    const res = await fetch('/api/meetings');
+    if (res.ok) {
+      const data = await res.json();
+      MEETINGS = data.meetings || [];
+      document.getElementById('meetingCount').textContent = MEETINGS.length + '건';
+      document.getElementById('loginScreen').classList.remove('show');
+      document.getElementById('mainApp').style.display = 'flex';
+      buildYearFilter();
+      renderList();
+      showView('list');
+    }
+  } catch {}
+})();
+</script>
+</body>
+</html>
