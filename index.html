@@ -133,7 +133,7 @@
     .mcard{
       background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);
       padding:16px 18px;display:flex;flex-direction:column;
-      height:480px;            /* 고정 높이 — 같은 행 카드 높이 통일 */
+      height:480px;overflow:hidden;  /* 고정 높이 + 넘침 차단 */
       transition:border-color .15s,box-shadow .15s;cursor:default;
     }
     .mcard:hover{border-color:var(--accent);box-shadow:var(--shadow);}
