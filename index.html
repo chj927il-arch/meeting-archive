@@ -667,7 +667,7 @@ async function viewRecord(id) {
 
   document.getElementById('view-tags').innerHTML = (r.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('');
   document.getElementById('view-edit-btn').onclick = () => { closeModal('view-modal'); editRecord(id); };
-  document.getElementById('view-modal').hidden = false;
+  openModal('view-modal');
 }
 
 // ────────────────────────────────────────────
@@ -714,7 +714,7 @@ async function prepareUploadModal(file) {
   document.getElementById('m-attendees').value = '';
   document.getElementById('m-note').value = '';
   renderTagChips();
-  document.getElementById('upload-modal').hidden = false;
+  openModal('upload-modal');
 }
 
 // ────────────────────────────────────────────
@@ -788,7 +788,7 @@ function editRecord(id) {
   document.getElementById('m-attendees').value = r.attendees || '';
   document.getElementById('m-note').value = r.note || '';
   renderTagChips();
-  document.getElementById('upload-modal').hidden = false;
+  openModal('upload-modal');
 }
 
 async function deleteRecord(id) {
@@ -835,11 +835,12 @@ function setYear(y) { filterYear = filterYear===y?'all':y; render(); }
 // ────────────────────────────────────────────
 // 모달 헬퍼
 // ────────────────────────────────────────────
+const MODALS = ['upload-modal', 'view-modal'];
+function closeAllModals() { MODALS.forEach(id => { document.getElementById(id).hidden = true; }); }
 function closeModal(id) { document.getElementById(id).hidden = true; }
+function openModal(id) { closeAllModals(); document.getElementById(id).hidden = false; }
 function overlayClose(e, id) { if (e.target.classList.contains('overlay')) closeModal(id); }
-document.addEventListener('keydown', e => {
-  if (e.key==='Escape') { closeModal('upload-modal'); closeModal('view-modal'); }
-});
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeAllModals(); });
 
 // ────────────────────────────────────────────
 // 테마
