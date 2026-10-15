@@ -104,7 +104,7 @@
       .search-row{flex-direction:column;gap:8px;}
       .search-wrap{min-width:unset;}
       .filter-sel{width:100%;}
-      .mcard{padding:14px 14px;}
+      .mcard{padding:14px 14px;height:420px;}
       .mcard-title{font-size:14px;}
       .mcard-summary,.implication-text{font-size:13px;}
       .btn-sm{padding:6px 10px;font-size:12px;}
@@ -112,16 +112,34 @@
     }
 
     /* ── 카드 그리드 ── */
-    .card-list{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start;}
+    .card-list{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:stretch;}
     @media(max-width:1100px){.card-list{grid-template-columns:repeat(2,1fr);}}
     @media(max-width:620px){.card-list{grid-template-columns:1fr;gap:12px;}}
 
-    /* 카드: 내용에 맞게 자연스럽게 늘어남, 자르지 않음 */
-    .mcard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;transition:border-color .15s,box-shadow .15s;cursor:default;}
+    /*
+     * 카드 레이아웃 — 법률대시보드 방식:
+     *  ┌─────────────────────────────┐ ← 고정 높이 480px
+     *  │ [배지] [편집] [삭제]        │ flex-shrink:0
+     *  │ 제목 (2줄까지)              │ flex-shrink:0
+     *  │ 👥 참석자 (2줄까지)         │ flex-shrink:0
+     *  ├─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─┤
+     *  │ 요약 불릿                   │ flex:1, overflow:hidden
+     *  │ 태그                        │ ← 아래부터 자연스럽게 잘림
+     *  │ 시사점 박스                 │
+     *  ├─────────────────────────────┤
+     *  │ 파일명              보기 ↗  │ flex-shrink:0
+     *  └─────────────────────────────┘
+     */
+    .mcard{
+      background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);
+      padding:16px 18px;display:flex;flex-direction:column;
+      height:480px;            /* 고정 높이 — 같은 행 카드 높이 통일 */
+      transition:border-color .15s,box-shadow .15s;cursor:default;
+    }
     .mcard:hover{border-color:var(--accent);box-shadow:var(--shadow);}
 
-    /* 배지 행 */
-    .mcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;}
+    /* 배지 행 — 줄어들지 않음 */
+    .mcard-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;flex-shrink:0;}
     .mcard-badges{display:flex;gap:5px;flex-wrap:wrap;align-items:center;}
     .badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.03em;white-space:nowrap;}
     .badge-cat{background:var(--accent-lt);color:var(--accent);}
@@ -134,30 +152,34 @@
     .badge-file-other{background:var(--bg-card2);color:var(--fg-muted);}
     .card-actions{display:flex;gap:4px;align-items:center;flex-shrink:0;}
 
-    /* 제목 — 2줄 클램프 */
-    .mcard-title{font-size:15px;font-weight:700;letter-spacing:-.3px;line-height:1.45;margin-bottom:6px;cursor:pointer;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    /* 제목 — 줄어들지 않음, 최대 2줄 */
+    .mcard-title{font-size:15px;font-weight:700;letter-spacing:-.3px;line-height:1.45;margin-bottom:6px;cursor:pointer;
+      flex-shrink:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
     .mcard-title:hover{color:var(--accent);}
 
-    /* 참석자 — 최대 2줄, 그 이상이면 말줄임 */
-    .mcard-meta{font-size:12px;color:var(--fg-subtle);margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;}
+    /* 참석자 — 줄어들지 않음, 최대 2줄 */
+    .mcard-meta{font-size:12px;color:var(--fg-subtle);margin-bottom:10px;line-height:1.55;
+      flex-shrink:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 
-    /* 중간 콘텐츠 영역 */
-    .mcard-body{display:flex;flex-direction:column;}
+    /* 중간 콘텐츠 — 남은 높이 채우고 아래쪽부터 자연스럽게 잘림 */
+    .mcard-body{flex:1;overflow:hidden;display:flex;flex-direction:column;}
 
     /* 요약 */
-    .mcard-summary{font-size:13px;color:var(--fg-muted);line-height:1.75;margin-bottom:8px;white-space:pre-line;}
+    .mcard-summary{font-size:13px;color:var(--fg-muted);line-height:1.75;margin-bottom:8px;white-space:pre-line;flex-shrink:0;}
 
     /* 태그 */
-    .mcard-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;}
+    .mcard-tags{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;flex-shrink:0;}
 
     /* 시사점 박스 */
-    .implication{background:var(--teal-lt);border-left:3px solid var(--teal);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:8px 12px;margin-bottom:8px;}
+    .implication{background:var(--teal-lt);border-left:3px solid var(--teal);border-radius:0 var(--r-sm) var(--r-sm) 0;
+      padding:8px 12px;flex-shrink:0;}
     :root[data-theme="light"] .implication{background:#f0fdfa;}
     .implication-label{font-size:10px;font-weight:700;color:var(--teal);letter-spacing:.05em;margin-bottom:3px;}
     .implication-text{font-size:13px;color:var(--fg-muted);line-height:1.75;white-space:pre-line;}
 
-    /* 푸터 */
-    .mcard-footer{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--border);gap:6px;margin-top:12px;}
+    /* 푸터 — 줄어들지 않음, 항상 카드 맨 아래 */
+    .mcard-footer{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+      padding-top:10px;margin-top:auto;border-top:1px solid var(--border);gap:6px;}
     .mcard-file-info{font-size:12px;color:var(--fg-subtle);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 
     .mtag{font-size:11px;padding:3px 8px;border-radius:20px;background:var(--accent-lt);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);font-weight:600;}
