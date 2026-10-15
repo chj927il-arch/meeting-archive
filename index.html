@@ -536,7 +536,7 @@ async function callClaude(fileText, fileName, attendees) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: 1024, temperature: 0.3 },
+      generationConfig: { maxOutputTokens: 4096, temperature: 0.3 },
     }),
   });
 
@@ -547,8 +547,8 @@ async function callClaude(fileText, fileName, attendees) {
 
   const data = await resp.json();
   const raw = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-  // 마크다운 코드블록 제거 후 JSON 추출
-  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/,'');
+  // 마크다운 코드블록 제거 후 JSON 추출 (앞뒤 ``` 모두 제거)
+  const cleaned = raw.replace(/```(?:json)?/gi, '').trim();
   const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     console.error('Gemini raw response:', raw);
