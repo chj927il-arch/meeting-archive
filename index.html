@@ -4,620 +4,430 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>회의록 아카이브</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@400;600;700&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@600;700&display=swap" />
   <style>
-    /* === 토큰 시스템 === */
     :root {
-      --bg: #f7f6f3;
+      --bg: #f5f4f0;
       --bg-card: #ffffff;
-      --bg-sidebar: #f0ede8;
+      --bg-side: #edeae4;
       --fg: #1a1916;
       --fg-muted: #6b6760;
       --fg-subtle: #9c9890;
-      --border: #e2ddd6;
+      --border: #e0dbd2;
       --accent: #1e4d8c;
-      --accent-light: #e8eef7;
-      --accent-muted: #5a7fb5;
-      --tag-bg: #e8eef7;
-      --tag-fg: #1e4d8c;
-      --danger: #c0392b;
-      --success: #1a7a4a;
-      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
-      --shadow-md: 0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
-      --radius: 8px;
-      --font-display: 'Noto Serif KR', serif;
-      --font-body: 'Noto Sans KR', sans-serif;
+      --accent-lt: #e8eef7;
+      --accent-dim: #5a7fb5;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.06);
+      --shadow-md: 0 4px 16px rgba(0,0,0,.10);
+      --r: 8px;
+      --drop-border: #93b4de;
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --bg: #13120f;
-        --bg-card: #1d1c18;
-        --bg-sidebar: #181713;
-        --fg: #f0ede8;
-        --fg-muted: #a09d97;
-        --fg-subtle: #6b6760;
-        --border: #2e2c27;
-        --accent: #5a90d9;
-        --accent-light: #1a2840;
-        --accent-muted: #4a78b8;
-        --tag-bg: #1a2840;
-        --tag-fg: #7eb3f0;
-        --shadow: 0 1px 3px rgba(0,0,0,.3);
-        --shadow-md: 0 4px 12px rgba(0,0,0,.4);
+        --bg: #131210; --bg-card: #1c1b17; --bg-side: #171612;
+        --fg: #f0ede8; --fg-muted: #a09d97; --fg-subtle: #6b6760;
+        --border: #2d2c27; --accent: #5a90d9; --accent-lt: #182438; --accent-dim: #4a78b8;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,.3); --shadow-md: 0 4px 16px rgba(0,0,0,.4);
+        --drop-border: #3a6090;
         color-scheme: dark;
       }
     }
     :root[data-theme="dark"] {
-      --bg: #13120f;
-      --bg-card: #1d1c18;
-      --bg-sidebar: #181713;
-      --fg: #f0ede8;
-      --fg-muted: #a09d97;
-      --fg-subtle: #6b6760;
-      --border: #2e2c27;
-      --accent: #5a90d9;
-      --accent-light: #1a2840;
-      --accent-muted: #4a78b8;
-      --tag-bg: #1a2840;
-      --tag-fg: #7eb3f0;
-      --shadow: 0 1px 3px rgba(0,0,0,.3);
-      --shadow-md: 0 4px 12px rgba(0,0,0,.4);
+      --bg: #131210; --bg-card: #1c1b17; --bg-side: #171612;
+      --fg: #f0ede8; --fg-muted: #a09d97; --fg-subtle: #6b6760;
+      --border: #2d2c27; --accent: #5a90d9; --accent-lt: #182438; --accent-dim: #4a78b8;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.3); --shadow-md: 0 4px 16px rgba(0,0,0,.4);
+      --drop-border: #3a6090;
       color-scheme: dark;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+    html, body { height: 100%; }
     body {
-      font-family: var(--font-body);
-      background: var(--bg);
-      color: var(--fg);
-      font-size: 14px;
-      line-height: 1.6;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg); color: var(--fg);
+      font-size: 14px; line-height: 1.6;
+      display: flex; flex-direction: column;
     }
 
-    /* === 헤더 === */
-    .app-header {
-      background: var(--bg-card);
-      border-bottom: 1px solid var(--border);
-      padding: 0 24px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: sticky;
-      top: env(safe-area-inset-top, 0px);
-      z-index: 100;
-      box-shadow: var(--shadow);
+    /* ── 헤더 ── */
+    .hdr {
+      height: 54px; padding: 0 24px;
+      background: var(--bg-card); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top: env(safe-area-inset-top,0); z-index: 100;
+      box-shadow: var(--shadow-sm);
     }
-    .app-header h1 {
-      font-family: var(--font-display);
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--fg);
-      letter-spacing: -0.3px;
-    }
-    .app-header h1 span {
-      color: var(--accent);
-    }
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
+    .hdr-logo { font-family: 'Noto Serif KR', serif; font-size: 17px; font-weight: 700; }
+    .hdr-logo span { color: var(--accent); }
+    .hdr-right { display: flex; gap: 8px; align-items: center; }
 
-    /* === 레이아웃 === */
-    .app-body {
-      display: flex;
-      flex: 1;
-      min-height: 0;
-    }
+    /* ── 레이아웃 ── */
+    .layout { display: flex; flex: 1; min-height: 0; overflow: hidden; }
 
-    /* === 사이드바 === */
-    .sidebar {
-      width: 280px;
-      background: var(--bg-sidebar);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-      overflow-y: auto;
+    /* ── 사이드바 ── */
+    .side {
+      width: 240px; flex-shrink: 0;
+      background: var(--bg-side); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow-y: auto; padding: 16px 12px;
+      gap: 20px;
     }
-    .sidebar-section {
-      padding: 20px 16px 12px;
+    .side-sec-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--fg-subtle); margin-bottom: 6px;
     }
-    .sidebar-label {
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      color: var(--fg-subtle);
-      margin-bottom: 10px;
-    }
-    .search-wrap {
+    .search-box {
       position: relative;
     }
-    .search-wrap input {
-      width: 100%;
-      padding: 8px 12px 8px 34px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--bg-card);
-      color: var(--fg);
-      font-family: var(--font-body);
-      font-size: 13px;
-      outline: none;
-      transition: border-color .15s;
+    .search-box svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--fg-subtle); pointer-events: none; }
+    .search-box input {
+      width: 100%; padding: 7px 10px 7px 30px;
+      border: 1px solid var(--border); border-radius: var(--r);
+      background: var(--bg-card); color: var(--fg);
+      font-family: inherit; font-size: 13px; outline: none;
     }
-    .search-wrap input:focus { border-color: var(--accent-muted); }
-    .search-icon {
-      position: absolute;
-      left: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--fg-subtle);
-      pointer-events: none;
-    }
+    .search-box input:focus { border-color: var(--accent-dim); }
 
-    .filter-group { display: flex; flex-direction: column; gap: 4px; }
-    .filter-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 10px;
-      border-radius: 6px;
-      border: none;
-      background: none;
-      color: var(--fg-muted);
-      font-family: var(--font-body);
-      font-size: 13px;
-      cursor: pointer;
-      text-align: left;
+    .filter-list { display: flex; flex-direction: column; gap: 2px; }
+    .fbtn {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 10px; border-radius: 6px; border: none;
+      background: none; color: var(--fg-muted); font-family: inherit;
+      font-size: 13px; cursor: pointer; text-align: left; width: 100%;
       transition: background .12s, color .12s;
-      width: 100%;
     }
-    .filter-btn:hover { background: var(--border); color: var(--fg); }
-    .filter-btn.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
-    .filter-btn .count {
-      margin-left: auto;
-      font-size: 11px;
-      background: var(--border);
-      color: var(--fg-muted);
-      border-radius: 20px;
-      padding: 1px 7px;
+    .fbtn:hover { background: var(--border); color: var(--fg); }
+    .fbtn.on { background: var(--accent-lt); color: var(--accent); font-weight: 600; }
+    .fbtn .cnt {
+      font-size: 11px; padding: 1px 6px; border-radius: 20px;
+      background: var(--border); color: var(--fg-subtle);
       font-variant-numeric: tabular-nums;
     }
-    .filter-btn.active .count { background: var(--accent); color: #fff; }
+    .fbtn.on .cnt { background: var(--accent); color: #fff; }
 
-    .year-list { display: flex; flex-direction: column; gap: 2px; }
+    /* ── 메인 ── */
+    .main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* === 메인 콘텐츠 === */
-    .main {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
+    .toolbar {
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
     }
-    .main-toolbar {
-      padding: 16px 24px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg);
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .toolbar-left {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .result-count {
-      font-size: 13px;
-      color: var(--fg-muted);
-    }
-    .sort-select {
-      padding: 6px 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: var(--bg-card);
-      color: var(--fg);
-      font-family: var(--font-body);
-      font-size: 13px;
-      outline: none;
-      cursor: pointer;
+    .result-info { font-size: 13px; color: var(--fg-muted); }
+    .sort-sel {
+      padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px;
+      background: var(--bg-card); color: var(--fg); font-family: inherit; font-size: 13px; outline: none;
     }
 
-    .meeting-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px 24px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
+    /* ── 드롭존 ── */
+    .drop-zone {
+      margin: 16px 20px; border: 2px dashed var(--drop-border);
+      border-radius: 10px; padding: 20px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      text-align: center; cursor: pointer; transition: background .15s, border-color .15s;
+      background: var(--accent-lt);
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      background: var(--accent-lt); border-color: var(--accent);
+    }
+    .drop-zone.dragover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+    .drop-icon { font-size: 28px; }
+    .drop-text { font-size: 13px; color: var(--fg-muted); }
+    .drop-text strong { color: var(--accent); }
+    .drop-sub { font-size: 11px; color: var(--fg-subtle); }
+    #file-input { display: none; }
+
+    /* ── 파일 카드 목록 ── */
+    .card-list {
+      flex: 1; overflow-y: auto; padding: 0 20px 20px;
+      display: flex; flex-direction: column; gap: 10px;
     }
 
-    /* === 회의록 카드 === */
-    .meeting-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px 20px;
-      cursor: pointer;
-      transition: box-shadow .15s, border-color .15s;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 8px 16px;
-      align-items: start;
+    .fcard {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--r); padding: 14px 16px;
+      display: grid; grid-template-columns: auto 1fr auto;
+      gap: 12px; align-items: start;
+      cursor: pointer; transition: box-shadow .15s, border-color .15s;
     }
-    .meeting-card:hover {
-      box-shadow: var(--shadow-md);
-      border-color: var(--accent-muted);
+    .fcard:hover { box-shadow: var(--shadow-md); border-color: var(--accent-dim); }
+
+    .file-icon {
+      width: 40px; height: 48px; border-radius: 5px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; letter-spacing: .03em;
+      flex-shrink: 0;
     }
-    .card-main { min-width: 0; }
-    .card-meta {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 5px;
-      flex-wrap: wrap;
+    .fi-pdf  { background: #fde8e8; color: #c0392b; }
+    .fi-word { background: #dbeafe; color: #1d4ed8; }
+    .fi-hwp  { background: #dcfce7; color: #166534; }
+    .fi-other{ background: var(--bg-side); color: var(--fg-muted); }
+
+    .fcard-body { min-width: 0; }
+    .fcard-title {
+      font-family: 'Noto Serif KR', serif; font-size: 15px; font-weight: 600;
+      margin-bottom: 3px; line-height: 1.4;
     }
-    .card-date {
-      font-size: 12px;
-      color: var(--fg-subtle);
-      font-variant-numeric: tabular-nums;
-      font-weight: 500;
-    }
-    .card-title {
-      font-family: var(--font-display);
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--fg);
-      margin-bottom: 6px;
-      line-height: 1.4;
-    }
-    .card-summary {
-      font-size: 13px;
-      color: var(--fg-muted);
-      line-height: 1.6;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-    .card-tags {
-      display: flex;
-      gap: 5px;
-      flex-wrap: wrap;
-      margin-top: 10px;
-    }
+    .fcard-meta { font-size: 12px; color: var(--fg-muted); display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+    .fcard-meta span { display: flex; align-items: center; gap: 3px; }
+    .fcard-tags { display: flex; gap: 4px; flex-wrap: wrap; }
     .tag {
-      font-size: 11px;
-      font-weight: 600;
-      padding: 2px 8px;
-      border-radius: 20px;
-      background: var(--tag-bg);
-      color: var(--tag-fg);
-      letter-spacing: .02em;
+      font-size: 11px; font-weight: 600; padding: 2px 7px;
+      border-radius: 20px; background: var(--accent-lt); color: var(--accent);
     }
-    .card-actions {
-      display: flex;
-      gap: 6px;
-      flex-direction: column;
-      align-items: flex-end;
+    .cat-tag {
+      font-size: 11px; font-weight: 700; padding: 2px 8px;
+      border-radius: 20px; background: var(--border); color: var(--fg-muted);
     }
 
-    /* === 버튼 === */
+    .fcard-actions { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; flex-shrink: 0; }
+
     .btn {
-      padding: 8px 16px;
-      border-radius: var(--radius);
-      border: none;
-      cursor: pointer;
-      font-family: var(--font-body);
-      font-size: 13px;
-      font-weight: 600;
-      transition: opacity .12s, background .12s;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 14px; border-radius: 6px; border: none;
+      cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600;
+      transition: opacity .12s;
     }
-    .btn:active { opacity: .85; }
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-    }
-    .btn-primary:hover { background: var(--accent-muted); }
-    .btn-ghost {
-      background: transparent;
-      color: var(--fg-muted);
-      border: 1px solid var(--border);
-    }
-    .btn-ghost:hover { background: var(--bg-sidebar); color: var(--fg); }
-    .btn-danger-ghost {
-      background: transparent;
-      color: var(--danger);
-      border: 1px solid transparent;
-      padding: 4px 8px;
-      font-size: 12px;
-    }
-    .btn-danger-ghost:hover { background: #fef2f2; border-color: #fecaca; }
-    .btn-edit {
-      background: transparent;
-      color: var(--fg-muted);
-      border: 1px solid transparent;
-      padding: 4px 8px;
-      font-size: 12px;
-    }
-    .btn-edit:hover { background: var(--accent-light); color: var(--accent); border-color: var(--accent-muted); }
+    .btn:active { opacity: .8; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-dim); }
+    .btn-ghost { background: transparent; color: var(--fg-muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--bg-side); }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn-del { color: #c0392b; border: 1px solid transparent; background: none; }
+    .btn-del:hover { background: #fef2f2; border-color: #fecaca; }
 
-    /* === 빈 상태 === */
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      flex: 1;
-      gap: 12px;
-      color: var(--fg-subtle);
-      padding: 60px 24px;
-      text-align: center;
+    /* ── 빈 상태 ── */
+    .empty {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 10px;
+      color: var(--fg-subtle); padding: 40px; text-align: center;
     }
-    .empty-icon { font-size: 48px; opacity: .4; }
-    .empty-state h3 { font-size: 16px; color: var(--fg-muted); font-weight: 600; }
-    .empty-state p { font-size: 13px; }
+    .empty-icon { font-size: 44px; opacity: .35; }
+    .empty h3 { font-size: 15px; color: var(--fg-muted); }
+    .empty p { font-size: 13px; }
 
-    /* === 모달 === */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,.45);
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      z-index: 200;
-      padding: 24px 16px;
-      overflow-y: auto;
+    /* ── 모달 공통 ── */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      display: flex; align-items: flex-start; justify-content: center;
+      z-index: 300; padding: 32px 16px; overflow-y: auto;
     }
     .modal {
-      background: var(--bg-card);
-      border-radius: 12px;
-      width: 100%;
-      max-width: 680px;
+      background: var(--bg-card); border-radius: 12px;
+      width: 100%; max-width: 600px; margin: auto;
       box-shadow: var(--shadow-md);
-      display: flex;
-      flex-direction: column;
-      margin: auto;
     }
-    .modal-header {
-      padding: 20px 24px 16px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .modal-hd {
+      padding: 18px 22px 14px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
     }
-    .modal-header h2 {
-      font-family: var(--font-display);
-      font-size: 17px;
-      font-weight: 700;
+    .modal-hd h2 { font-family: 'Noto Serif KR', serif; font-size: 16px; font-weight: 700; }
+    .modal-x {
+      width: 28px; height: 28px; border-radius: 50%; border: none;
+      background: var(--bg-side); color: var(--fg-muted);
+      cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center;
     }
-    .modal-close {
-      width: 30px;
-      height: 30px;
-      border-radius: 50%;
-      border: none;
-      background: var(--bg-sidebar);
-      color: var(--fg-muted);
-      cursor: pointer;
-      font-size: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal-close:hover { background: var(--border); }
-    .modal-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
-    .modal-footer {
-      padding: 16px 24px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-    }
+    .modal-x:hover { background: var(--border); }
+    .modal-bd { padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; }
+    .modal-ft { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
 
-    /* === 폼 === */
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-label {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--fg-muted);
-      letter-spacing: .04em;
-      text-transform: uppercase;
+    /* ── 폼 ── */
+    .fg { display: flex; flex-direction: column; gap: 5px; }
+    .fl { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--fg-muted); }
+    .fi, .fta {
+      padding: 8px 11px; border: 1px solid var(--border); border-radius: var(--r);
+      background: var(--bg); color: var(--fg); font-family: inherit; font-size: 14px; outline: none;
+      transition: border-color .15s; width: 100%;
     }
-    .form-input, .form-textarea {
-      padding: 9px 12px;
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+    .fi:focus, .fta:focus { border-color: var(--accent-dim); }
+    .fta { resize: vertical; min-height: 80px; line-height: 1.6; }
+    .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* 태그 입력 */
+    .tag-wrap {
+      display: flex; flex-wrap: wrap; gap: 5px; align-items: center;
+      border: 1px solid var(--border); border-radius: var(--r);
+      padding: 5px 9px; background: var(--bg); min-height: 38px; cursor: text;
+    }
+    .tag-wrap:focus-within { border-color: var(--accent-dim); }
+    .tchip { display: flex; align-items: center; gap: 3px; background: var(--accent-lt); color: var(--accent); font-size: 12px; font-weight: 600; padding: 2px 7px; border-radius: 20px; }
+    .tchip button { border: none; background: none; color: inherit; cursor: pointer; font-size: 13px; line-height: 1; padding: 0; opacity: .6; }
+    .tchip button:hover { opacity: 1; }
+    .tag-in { border: none; outline: none; background: transparent; color: var(--fg); font-family: inherit; font-size: 13px; min-width: 70px; flex: 1; }
+
+    /* 파일 선택 표시 */
+    .file-chosen {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: var(--r); background: var(--bg);
+    }
+    .file-chosen .fc-name { flex: 1; font-size: 13px; color: var(--fg); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-chosen .fc-size { font-size: 12px; color: var(--fg-subtle); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+    /* ── 뷰어 모달 ── */
+    .viewer-modal { max-width: 860px; }
+    .viewer-meta { display: flex; gap: 20px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+    .vm-item { display: flex; flex-direction: column; gap: 2px; }
+    .vm-label { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-subtle); }
+    .vm-value { font-size: 13px; font-weight: 500; }
+    .viewer-note { font-size: 13px; color: var(--fg-muted); line-height: 1.7; white-space: pre-wrap; }
+    .pdf-frame { width: 100%; height: 520px; border: 1px solid var(--border); border-radius: var(--r); }
+    .download-box {
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      padding: 32px; border: 1px solid var(--border); border-radius: var(--r);
       background: var(--bg);
-      color: var(--fg);
-      font-family: var(--font-body);
-      font-size: 14px;
-      outline: none;
-      transition: border-color .15s;
-      width: 100%;
     }
-    .form-input:focus, .form-textarea:focus { border-color: var(--accent-muted); }
-    .form-textarea {
-      resize: vertical;
-      min-height: 120px;
-      line-height: 1.6;
-    }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .tag-input-wrap { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 10px; background: var(--bg); min-height: 40px; cursor: text; }
-    .tag-input-wrap:focus-within { border-color: var(--accent-muted); }
-    .tag-chip { display: flex; align-items: center; gap: 4px; background: var(--tag-bg); color: var(--tag-fg); font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
-    .tag-chip button { border: none; background: none; color: inherit; cursor: pointer; font-size: 13px; line-height: 1; padding: 0; opacity: .6; }
-    .tag-chip button:hover { opacity: 1; }
-    .tag-input { border: none; outline: none; background: transparent; color: var(--fg); font-family: var(--font-body); font-size: 13px; min-width: 80px; flex: 1; }
+    .download-box .dl-icon { font-size: 40px; }
+    .download-box p { font-size: 13px; color: var(--fg-muted); }
 
-    /* === 상세보기 모달 === */
-    .detail-meta {
-      display: flex;
-      gap: 16px;
-      flex-wrap: wrap;
-      padding: 16px 0;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 4px;
-    }
-    .detail-meta-item { display: flex; flex-direction: column; gap: 2px; }
-    .detail-meta-label { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-subtle); }
-    .detail-meta-value { font-size: 14px; font-weight: 500; color: var(--fg); }
-    .detail-content {
-      font-size: 14px;
-      color: var(--fg);
-      line-height: 1.8;
-      white-space: pre-wrap;
-      font-family: var(--font-body);
-    }
-    .detail-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
-
-    /* === 반응형 === */
-    @media (max-width: 768px) {
-      .sidebar { display: none; }
-      .main-toolbar { padding: 12px 16px; }
-      .meeting-list { padding: 14px 16px; }
-      .app-header { padding: 0 16px; }
-      .form-row { grid-template-columns: 1fr; }
+    /* 반응형 */
+    @media (max-width: 700px) {
+      .side { display: none; }
+      .frow { grid-template-columns: 1fr; }
+      .drop-zone { margin: 12px; }
+      .card-list { padding: 0 12px 16px; }
+      .toolbar { padding: 10px 12px; }
     }
 
-    /* 스크롤바 */
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar { width: 5px; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--fg-subtle); }
   </style>
 </head>
 <body>
 
-<!-- 헤더 -->
-<header class="app-header">
-  <h1>회의록 <span>아카이브</span></h1>
-  <div class="header-actions">
-    <button class="btn btn-ghost" onclick="toggleTheme()" title="테마 전환">
-      <span id="theme-icon">🌙</span>
-    </button>
-    <button class="btn btn-primary" onclick="openAddModal()">
-      + 회의록 추가
-    </button>
+<header class="hdr">
+  <div class="hdr-logo">회의록 <span>아카이브</span></div>
+  <div class="hdr-right">
+    <button class="btn btn-ghost btn-sm" onclick="toggleTheme()" id="theme-btn">🌙</button>
+    <button class="btn btn-primary btn-sm" onclick="openUploadModal()">+ 파일 추가</button>
   </div>
 </header>
 
-<div class="app-body">
+<div class="layout">
   <!-- 사이드바 -->
-  <aside class="sidebar">
-    <div class="sidebar-section">
-      <div class="sidebar-label">검색</div>
-      <div class="search-wrap">
-        <svg class="search-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="text" id="search-input" placeholder="제목, 내용, 참석자 검색…" oninput="onSearch()" />
+  <aside class="side">
+    <div>
+      <div class="side-sec-label">검색</div>
+      <div class="search-box">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="q" type="text" placeholder="제목, 참석자 검색…" oninput="render()" />
       </div>
     </div>
-
-    <div class="sidebar-section">
-      <div class="sidebar-label">필터</div>
-      <div class="filter-group" id="category-filters">
-        <button class="filter-btn active" data-cat="all" onclick="setFilter('all')">
-          <span>전체</span>
-          <span class="count" id="cnt-all">0</span>
-        </button>
+    <div>
+      <div class="side-sec-label">카테고리</div>
+      <div class="filter-list" id="cat-list"></div>
+    </div>
+    <div>
+      <div class="side-sec-label">파일 유형</div>
+      <div class="filter-list" id="type-list">
+        <button class="fbtn on" data-type="all" onclick="setType('all')">전체<span class="cnt" id="cnt-all">0</span></button>
+        <button class="fbtn" data-type="pdf" onclick="setType('pdf')">PDF<span class="cnt" id="cnt-pdf">0</span></button>
+        <button class="fbtn" data-type="word" onclick="setType('word')">Word<span class="cnt" id="cnt-word">0</span></button>
+        <button class="fbtn" data-type="hwp" onclick="setType('hwp')">한글(HWP)<span class="cnt" id="cnt-hwp">0</span></button>
       </div>
     </div>
-
-    <div class="sidebar-section">
-      <div class="sidebar-label">연도별</div>
-      <div class="year-list" id="year-filters"></div>
+    <div>
+      <div class="side-sec-label">연도</div>
+      <div class="filter-list" id="year-list"></div>
     </div>
   </aside>
 
   <!-- 메인 -->
   <main class="main">
-    <div class="main-toolbar">
-      <div class="toolbar-left">
-        <span class="result-count" id="result-count">0건</span>
-      </div>
-      <select class="sort-select" id="sort-select" onchange="renderList()">
+    <div class="toolbar">
+      <span class="result-info" id="result-info">0건</span>
+      <select class="sort-sel" id="sort" onchange="render()">
         <option value="newest">최신순</option>
         <option value="oldest">오래된순</option>
         <option value="title">제목순</option>
       </select>
     </div>
 
-    <div class="meeting-list" id="meeting-list"></div>
+    <!-- 드롭존 -->
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()"
+         ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <div class="drop-icon">📂</div>
+      <div class="drop-text"><strong>클릭하거나 파일을 여기에 드래그</strong>해서 올려주세요</div>
+      <div class="drop-sub">PDF · Word(.docx) · 한글(.hwp) · 모든 문서 파일 지원</div>
+    </div>
+    <input type="file" id="file-input" accept=".pdf,.doc,.docx,.hwp,.hwpx,.ppt,.pptx,.xls,.xlsx" multiple onchange="onFileSelect(event)" />
+
+    <div class="card-list" id="card-list"></div>
   </main>
 </div>
 
-<!-- 추가/편집 모달 -->
-<div class="modal-overlay" id="add-modal" hidden onclick="onOverlayClick(event,'add-modal')">
-  <div class="modal" role="dialog" aria-modal="true">
-    <div class="modal-header">
-      <h2 id="modal-title">회의록 추가</h2>
-      <button class="modal-close" onclick="closeModal('add-modal')">✕</button>
+<!-- ── 업로드 메타 입력 모달 ── -->
+<div class="overlay" id="upload-modal" hidden onclick="overlayClose(event,'upload-modal')">
+  <div class="modal">
+    <div class="modal-hd">
+      <h2 id="upload-modal-title">회의록 파일 추가</h2>
+      <button class="modal-x" onclick="closeModal('upload-modal')">✕</button>
     </div>
-    <div class="modal-body">
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label" for="f-date">날짜</label>
-          <input class="form-input" type="date" id="f-date" />
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="f-category">카테고리</label>
-          <input class="form-input" type="text" id="f-category" placeholder="예: 경영회의, 기획회의…" list="cat-datalist" />
-          <datalist id="cat-datalist"></datalist>
+    <div class="modal-bd">
+      <!-- 선택된 파일 표시 -->
+      <div class="fg">
+        <div class="fl">선택된 파일</div>
+        <div class="file-chosen">
+          <span id="chosen-icon" style="font-size:20px">📄</span>
+          <span class="fc-name" id="chosen-name">-</span>
+          <span class="fc-size" id="chosen-size">-</span>
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label" for="f-title">회의 제목</label>
-        <input class="form-input" type="text" id="f-title" placeholder="회의 제목을 입력하세요" />
+      <div class="frow">
+        <div class="fg">
+          <label class="fl" for="m-date">날짜</label>
+          <input class="fi" type="date" id="m-date" />
+        </div>
+        <div class="fg">
+          <label class="fl" for="m-cat">카테고리</label>
+          <input class="fi" type="text" id="m-cat" placeholder="예: 경영회의" list="cat-dl" />
+          <datalist id="cat-dl"></datalist>
+        </div>
       </div>
-      <div class="form-group">
-        <label class="form-label" for="f-attendees">참석자</label>
-        <input class="form-input" type="text" id="f-attendees" placeholder="예: 대표이사, 기획팀장, 마케팅팀…" />
+      <div class="fg">
+        <label class="fl" for="m-title">회의 제목</label>
+        <input class="fi" type="text" id="m-title" placeholder="회의 제목 (비워두면 파일명 사용)" />
       </div>
-      <div class="form-group">
-        <label class="form-label">태그</label>
-        <div class="tag-input-wrap" id="tag-wrap" onclick="document.getElementById('tag-input').focus()">
+      <div class="fg">
+        <label class="fl" for="m-attendees">참석자</label>
+        <input class="fi" type="text" id="m-attendees" placeholder="예: 대표이사, 기획팀장, 마케팅팀장" />
+      </div>
+      <div class="fg">
+        <div class="fl">태그</div>
+        <div class="tag-wrap" onclick="document.getElementById('tag-in').focus()">
           <span id="tag-chips"></span>
-          <input class="tag-input" id="tag-input" placeholder="태그 입력 후 Enter" onkeydown="onTagKey(event)" />
+          <input class="tag-in" id="tag-in" placeholder="입력 후 Enter" onkeydown="onTagKey(event)" />
         </div>
       </div>
-      <div class="form-group">
-        <label class="form-label" for="f-content">회의 내용</label>
-        <textarea class="form-textarea" id="f-content" placeholder="회의 내용, 결정사항, 액션아이템 등을 자유롭게 기록하세요…" style="min-height:160px"></textarea>
+      <div class="fg">
+        <label class="fl" for="m-note">메모</label>
+        <textarea class="fta" id="m-note" placeholder="회의 요약, 결정사항, 액션아이템 등…"></textarea>
       </div>
     </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('add-modal')">취소</button>
-      <button class="btn btn-primary" onclick="saveRecord()">저장</button>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="closeModal('upload-modal')">취소</button>
+      <button class="btn btn-primary" onclick="saveMeta()">저장</button>
     </div>
   </div>
 </div>
 
-<!-- 상세보기 모달 -->
-<div class="modal-overlay" id="view-modal" hidden onclick="onOverlayClick(event,'view-modal')">
-  <div class="modal" role="dialog" aria-modal="true">
-    <div class="modal-header">
-      <h2 id="view-title" style="font-size:18px"></h2>
-      <button class="modal-close" onclick="closeModal('view-modal')">✕</button>
+<!-- ── 뷰어 모달 ── -->
+<div class="overlay" id="view-modal" hidden onclick="overlayClose(event,'view-modal')">
+  <div class="modal viewer-modal">
+    <div class="modal-hd">
+      <h2 id="view-title" style="max-width:480px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></h2>
+      <button class="modal-x" onclick="closeModal('view-modal')">✕</button>
     </div>
-    <div class="modal-body">
-      <div class="detail-meta" id="view-meta"></div>
-      <div class="detail-content" id="view-content"></div>
-      <div class="detail-tags" id="view-tags"></div>
+    <div class="modal-bd">
+      <div class="viewer-meta" id="view-meta"></div>
+      <div id="view-file-area"></div>
+      <div class="fg" id="view-note-wrap" hidden>
+        <div class="fl">메모</div>
+        <div class="viewer-note" id="view-note"></div>
+      </div>
+      <div class="fcard-tags" id="view-tags"></div>
     </div>
-    <div class="modal-footer">
+    <div class="modal-ft">
       <button class="btn btn-ghost" onclick="closeModal('view-modal')">닫기</button>
       <button class="btn btn-ghost" id="view-edit-btn">편집</button>
     </div>
@@ -625,289 +435,441 @@
 </div>
 
 <script>
-  // ===== 데이터 =====
-  const STORAGE_KEY = 'meeting_archive_v1';
-  let records = [];
-  let editingId = null;
-  let currentFilter = 'all';
-  let currentYear = 'all';
-  let searchQuery = '';
-  let currentTags = [];
+// ────────────────────────────────────────────
+// DB
+// ────────────────────────────────────────────
+const DB_NAME = 'meeting_archive', DB_VER = 1;
+let db;
 
-  function load() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      records = raw ? JSON.parse(raw) : sampleData();
-    } catch { records = sampleData(); }
-  }
-
-  function save() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch {}
-  }
-
-  function sampleData() {
-    return [
-      {
-        id: uid(), date: '2026-10-10', title: '4분기 사업계획 검토',
-        category: '경영회의', attendees: '대표이사, 기획팀장, 재무팀장, 영업팀장',
-        content: '■ 안건\n- 4분기 매출 목표 재검토\n- 신규 사업 진행 현황\n\n■ 결정사항\n- 4분기 매출 목표 120억 유지\n- 신규 사업 TF 구성 10월 내 완료\n\n■ 액션아이템\n- 기획팀: TF 구성안 10/20까지 제출\n- 재무팀: 예산 재배분 안 작성',
-        tags: ['4분기', '사업계획', '목표']
-      },
-      {
-        id: uid(), date: '2026-09-25', title: '마케팅 전략 브리핑',
-        category: '기획회의', attendees: '대표이사, 마케팅팀장, 기획팀',
-        content: '■ 안건\n- SNS 광고 집행 현황 보고\n- 브랜드 리뉴얼 방향 논의\n\n■ 결정사항\n- 인스타그램 광고비 월 500만원 증액\n- 브랜드 BI 리뉴얼은 내년 1분기로 이월\n\n■ 액션아이템\n- 마케팅팀: 10월 광고 집행 계획서 제출',
-        tags: ['마케팅', 'SNS', '브랜드']
-      },
-      {
-        id: uid(), date: '2026-09-12', title: '하반기 인사 검토',
-        category: '경영회의', attendees: '대표이사, 인사팀장, 기획팀장',
-        content: '■ 안건\n- 하반기 조직 개편 방향\n- 승진 대상자 검토\n\n■ 결정사항\n- 영업본부 팀장급 1명 승진\n- 개발팀 인원 2명 추가 채용\n\n■ 액션아이템\n- 인사팀: 채용 공고 10월 1일 오픈',
-        tags: ['인사', '조직개편']
-      }
-    ];
-  }
-
-  function uid() {
-    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
-  }
-
-  // ===== 렌더 =====
-  function getFiltered() {
-    let result = [...records];
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(r =>
-        r.title.toLowerCase().includes(q) ||
-        r.content.toLowerCase().includes(q) ||
-        r.attendees.toLowerCase().includes(q) ||
-        (r.tags || []).some(t => t.toLowerCase().includes(q))
-      );
-    }
-    if (currentFilter !== 'all') result = result.filter(r => r.category === currentFilter);
-    if (currentYear !== 'all') result = result.filter(r => r.date.startsWith(currentYear));
-
-    const sort = document.getElementById('sort-select').value;
-    if (sort === 'newest') result.sort((a, b) => b.date.localeCompare(a.date));
-    else if (sort === 'oldest') result.sort((a, b) => a.date.localeCompare(b.date));
-    else result.sort((a, b) => a.title.localeCompare(b.title));
-
-    return result;
-  }
-
-  function renderList() {
-    const list = document.getElementById('meeting-list');
-    const filtered = getFiltered();
-    document.getElementById('result-count').textContent = `${filtered.length}건`;
-
-    if (!filtered.length) {
-      list.innerHTML = `<div class="empty-state">
-        <div class="empty-icon">📋</div>
-        <h3>${records.length === 0 ? '회의록이 없습니다' : '검색 결과가 없습니다'}</h3>
-        <p>${records.length === 0 ? '오른쪽 상단의 버튼으로 첫 회의록을 추가해보세요.' : '다른 검색어나 필터를 사용해보세요.'}</p>
-      </div>`;
-      return;
-    }
-
-    list.innerHTML = filtered.map(r => `
-      <div class="meeting-card" onclick="viewRecord('${r.id}')">
-        <div class="card-main">
-          <div class="card-meta">
-            <span class="card-date">${formatDate(r.date)}</span>
-            ${r.category ? `<span class="tag">${esc(r.category)}</span>` : ''}
-          </div>
-          <div class="card-title">${esc(r.title)}</div>
-          ${r.attendees ? `<div class="card-summary">👥 ${esc(r.attendees)}</div>` : ''}
-          ${r.content ? `<div class="card-summary" style="margin-top:4px">${esc(r.content).split('\n')[0]}</div>` : ''}
-          ${r.tags && r.tags.length ? `<div class="card-tags">${r.tags.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>` : ''}
-        </div>
-        <div class="card-actions" onclick="event.stopPropagation()">
-          <button class="btn btn-edit" onclick="editRecord('${r.id}')">편집</button>
-          <button class="btn btn-danger-ghost" onclick="deleteRecord('${r.id}')">삭제</button>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  function renderSidebar() {
-    const cats = {};
-    records.forEach(r => {
-      const c = r.category || '미분류';
-      cats[c] = (cats[c] || 0) + 1;
-    });
-    document.getElementById('cnt-all').textContent = records.length;
-
-    const catFilters = document.getElementById('category-filters');
-    const extraBtns = Object.entries(cats).map(([c, n]) =>
-      `<button class="filter-btn${currentFilter===c?' active':''}" data-cat="${esc(c)}" onclick="setFilter('${esc(c)}')">`+
-      `<span>${esc(c)}</span><span class="count">${n}</span></button>`
-    ).join('');
-    catFilters.innerHTML =
-      `<button class="filter-btn${currentFilter==='all'?' active':''}" data-cat="all" onclick="setFilter('all')">`+
-      `<span>전체</span><span class="count" id="cnt-all">${records.length}</span></button>` + extraBtns;
-
-    const years = [...new Set(records.map(r => r.date.slice(0,4)))].sort((a,b)=>b-a);
-    const yearEl = document.getElementById('year-filters');
-    yearEl.innerHTML = years.map(y =>
-      `<button class="filter-btn${currentYear===y?' active':''}" onclick="setYear('${y}')"><span>${y}년</span></button>`
-    ).join('');
-
-    const datalist = document.getElementById('cat-datalist');
-    datalist.innerHTML = Object.keys(cats).map(c=>`<option value="${esc(c)}">`).join('');
-  }
-
-  function renderAll() { renderSidebar(); renderList(); }
-
-  // ===== 필터 =====
-  function setFilter(cat) {
-    currentFilter = cat;
-    currentYear = 'all';
-    renderAll();
-  }
-  function setYear(y) {
-    currentYear = currentYear === y ? 'all' : y;
-    renderAll();
-  }
-  function onSearch() {
-    searchQuery = document.getElementById('search-input').value.trim();
-    renderList();
-  }
-
-  // ===== 모달 =====
-  function openAddModal() {
-    editingId = null;
-    currentTags = [];
-    document.getElementById('modal-title').textContent = '회의록 추가';
-    document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
-    document.getElementById('f-title').value = '';
-    document.getElementById('f-category').value = '';
-    document.getElementById('f-attendees').value = '';
-    document.getElementById('f-content').value = '';
-    renderTagChips();
-    document.getElementById('add-modal').hidden = false;
-    document.getElementById('f-title').focus();
-  }
-
-  function editRecord(id) {
-    const r = records.find(x => x.id === id);
-    if (!r) return;
-    editingId = id;
-    currentTags = [...(r.tags || [])];
-    document.getElementById('modal-title').textContent = '회의록 편집';
-    document.getElementById('f-date').value = r.date;
-    document.getElementById('f-title').value = r.title;
-    document.getElementById('f-category').value = r.category || '';
-    document.getElementById('f-attendees').value = r.attendees || '';
-    document.getElementById('f-content').value = r.content || '';
-    renderTagChips();
-    document.getElementById('add-modal').hidden = false;
-    closeModal('view-modal');
-  }
-
-  function viewRecord(id) {
-    const r = records.find(x => x.id === id);
-    if (!r) return;
-    document.getElementById('view-title').textContent = r.title;
-    document.getElementById('view-meta').innerHTML = [
-      `<div class="detail-meta-item"><div class="detail-meta-label">날짜</div><div class="detail-meta-value">${formatDate(r.date)}</div></div>`,
-      r.category ? `<div class="detail-meta-item"><div class="detail-meta-label">카테고리</div><div class="detail-meta-value">${esc(r.category)}</div></div>` : '',
-      r.attendees ? `<div class="detail-meta-item"><div class="detail-meta-label">참석자</div><div class="detail-meta-value">${esc(r.attendees)}</div></div>` : '',
-    ].join('');
-    document.getElementById('view-content').textContent = r.content || '';
-    document.getElementById('view-tags').innerHTML = (r.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('');
-    document.getElementById('view-edit-btn').onclick = () => editRecord(id);
-    document.getElementById('view-modal').hidden = false;
-  }
-
-  function closeModal(id) { document.getElementById(id).hidden = true; }
-  function onOverlayClick(e, id) { if (e.target.classList.contains('modal-overlay')) closeModal(id); }
-
-  function saveRecord() {
-    const date = document.getElementById('f-date').value;
-    const title = document.getElementById('f-title').value.trim();
-    if (!title) { document.getElementById('f-title').focus(); return; }
-    if (!date) { document.getElementById('f-date').focus(); return; }
-
-    const data = {
-      date, title,
-      category: document.getElementById('f-category').value.trim(),
-      attendees: document.getElementById('f-attendees').value.trim(),
-      content: document.getElementById('f-content').value.trim(),
-      tags: [...currentTags]
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('files'))
+        d.createObjectStore('files', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('meta'))
+        d.createObjectStore('meta', { keyPath: 'id' });
     };
+    req.onsuccess = e => { db = e.target.result; res(db); };
+    req.onerror = () => rej(req.error);
+  });
+}
+function dbPut(store, obj) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).put(obj).onsuccess = e => res(e.target.result);
+    tx.onerror = () => rej(tx.error);
+  });
+}
+function dbGetAll(store) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+function dbGet(store, key) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readonly');
+    const req = tx.objectStore(store).get(key);
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+function dbDelete(store, key) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).delete(key).onsuccess = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
 
-    if (editingId) {
-      const idx = records.findIndex(r => r.id === editingId);
-      if (idx >= 0) records[idx] = { ...records[idx], ...data };
-    } else {
-      records.unshift({ id: uid(), ...data });
+// ────────────────────────────────────────────
+// 상태
+// ────────────────────────────────────────────
+let records = [];   // 메타데이터 배열
+let pendingFile = null;  // 업로드 대기 파일 {id, name, size, type, arrayBuffer}
+let pendingFiles = [];   // 여러 파일 대기
+let editingId = null;
+let tags = [];
+let filterCat = 'all', filterType = 'all', filterYear = 'all';
+
+// ────────────────────────────────────────────
+// 유틸
+// ────────────────────────────────────────────
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+function fileType(name) {
+  const ext = (name || '').split('.').pop().toLowerCase();
+  if (ext === 'pdf') return 'pdf';
+  if (['doc','docx'].includes(ext)) return 'word';
+  if (['hwp','hwpx'].includes(ext)) return 'hwp';
+  return 'other';
+}
+function fileTypeLabel(t) {
+  return { pdf:'PDF', word:'Word', hwp:'HWP', other:'기타' }[t] || '기타';
+}
+function fileIcon(t) {
+  const map = { pdf: { cls:'fi-pdf', lbl:'PDF' }, word: { cls:'fi-word', lbl:'DOC' }, hwp: { cls:'fi-hwp', lbl:'HWP' }, other: { cls:'fi-other', lbl:'FILE' } };
+  return map[t] || map.other;
+}
+function fileEmoji(t) { return { pdf:'📕', word:'📘', hwp:'📗', other:'📄' }[t] || '📄'; }
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const [y,m,dd] = d.split('-');
+  return `${y}년 ${+m}월 ${+dd}일`;
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ────────────────────────────────────────────
+// 렌더
+// ────────────────────────────────────────────
+function getFiltered() {
+  const q = (document.getElementById('q').value || '').toLowerCase().trim();
+  let list = records.filter(r => {
+    if (filterCat !== 'all' && r.category !== filterCat) return false;
+    if (filterType !== 'all' && r.fileType !== filterType) return false;
+    if (filterYear !== 'all' && !(r.date || '').startsWith(filterYear)) return false;
+    if (q) {
+      const hay = `${r.title} ${r.attendees} ${(r.tags||[]).join(' ')} ${r.note}`.toLowerCase();
+      if (!hay.includes(q)) return false;
     }
-    save();
-    renderAll();
-    closeModal('add-modal');
-  }
+    return true;
+  });
+  const sort = document.getElementById('sort').value;
+  if (sort === 'newest') list.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  else if (sort === 'oldest') list.sort((a,b) => (a.date||'').localeCompare(b.date||''));
+  else list.sort((a,b) => (a.title||'').localeCompare(b.title||''));
+  return list;
+}
 
-  function deleteRecord(id) {
-    if (!confirm('이 회의록을 삭제하시겠습니까?')) return;
-    records = records.filter(r => r.id !== id);
-    save();
-    renderAll();
-  }
+function renderSidebar() {
+  // 카테고리
+  const cats = {};
+  records.forEach(r => { const c = r.category||'미분류'; cats[c] = (cats[c]||0)+1; });
+  const catEl = document.getElementById('cat-list');
+  catEl.innerHTML =
+    `<button class="fbtn ${filterCat==='all'?'on':''}" onclick="setCat('all')">전체<span class="cnt">${records.length}</span></button>` +
+    Object.entries(cats).map(([c,n]) =>
+      `<button class="fbtn ${filterCat===c?'on':''}" onclick="setCat('${esc(c)}')">${esc(c)}<span class="cnt">${n}</span></button>`
+    ).join('');
 
-  // ===== 태그 =====
-  function renderTagChips() {
-    document.getElementById('tag-chips').innerHTML =
-      currentTags.map((t, i) =>
-        `<span class="tag-chip">${esc(t)}<button type="button" onclick="removeTag(${i})">×</button></span>`
-      ).join('');
-  }
-  function onTagKey(e) {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      const val = e.target.value.trim().replace(/,$/, '');
-      if (val && !currentTags.includes(val)) { currentTags.push(val); renderTagChips(); }
-      e.target.value = '';
-    }
-  }
-  function removeTag(i) { currentTags.splice(i, 1); renderTagChips(); }
-
-  // ===== 테마 =====
-  function toggleTheme() {
-    const current = document.documentElement.getAttribute('data-theme');
-    const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    document.getElementById('theme-icon').textContent = next === 'dark' ? '☀️' : '🌙';
-    try { localStorage.setItem('theme', next); } catch {}
-  }
-
-  // ===== 유틸 =====
-  function formatDate(d) {
-    if (!d) return '';
-    const [y, m, day] = d.split('-');
-    return `${y}년 ${parseInt(m)}월 ${parseInt(day)}일`;
-  }
-  function esc(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  // ===== 키보드 =====
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      closeModal('add-modal');
-      closeModal('view-modal');
-    }
+  // 파일 유형 카운트
+  const types = { pdf:0, word:0, hwp:0 };
+  records.forEach(r => { if (types[r.fileType] !== undefined) types[r.fileType]++; });
+  document.getElementById('cnt-all').textContent = records.length;
+  document.getElementById('cnt-pdf').textContent = types.pdf;
+  document.getElementById('cnt-word').textContent = types.word;
+  document.getElementById('cnt-hwp').textContent = types.hwp;
+  document.querySelectorAll('#type-list .fbtn').forEach(b => {
+    b.classList.toggle('on', b.dataset.type === filterType);
   });
 
-  // ===== 초기화 =====
-  load();
+  // 연도
+  const years = [...new Set(records.map(r => (r.date||'').slice(0,4)).filter(Boolean))].sort((a,b)=>b-a);
+  const yearEl = document.getElementById('year-list');
+  yearEl.innerHTML = years.map(y =>
+    `<button class="fbtn ${filterYear===y?'on':''}" onclick="setYear('${y}')">${y}년</button>`
+  ).join('');
+
+  // 카테고리 datalist
+  const dl = document.getElementById('cat-dl');
+  if (dl) dl.innerHTML = Object.keys(cats).map(c=>`<option value="${esc(c)}">`).join('');
+}
+
+function render() {
+  renderSidebar();
+  const list = getFiltered();
+  document.getElementById('result-info').textContent = `${list.length}건`;
+  const el = document.getElementById('card-list');
+
+  if (!list.length) {
+    el.innerHTML = `<div class="empty">
+      <div class="empty-icon">📋</div>
+      <h3>${records.length===0 ? '저장된 회의록이 없습니다' : '검색 결과가 없습니다'}</h3>
+      <p>${records.length===0 ? '위 영역에 파일을 드래그하거나 클릭해서 추가하세요.' : '다른 검색어나 필터를 사용해보세요.'}</p>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = list.map(r => {
+    const fi = fileIcon(r.fileType);
+    return `<div class="fcard" onclick="viewRecord('${r.id}')">
+      <div class="file-icon ${fi.cls}">${fi.lbl}</div>
+      <div class="fcard-body">
+        <div class="fcard-title">${esc(r.title)}</div>
+        <div class="fcard-meta">
+          ${r.date ? `<span>📅 ${fmtDate(r.date)}</span>` : ''}
+          ${r.attendees ? `<span>👥 ${esc(r.attendees)}</span>` : ''}
+          ${r.fileName ? `<span>📎 ${esc(r.fileName)} ${r.fileSize?'('+fmtSize(r.fileSize)+')':''}</span>` : ''}
+        </div>
+        ${r.category || (r.tags&&r.tags.length) ? `<div class="fcard-tags">
+          ${r.category ? `<span class="cat-tag">${esc(r.category)}</span>` : ''}
+          ${(r.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}
+        </div>` : ''}
+      </div>
+      <div class="fcard-actions" onclick="event.stopPropagation()">
+        <button class="btn btn-ghost btn-sm" onclick="editRecord('${r.id}')">편집</button>
+        <button class="btn btn-sm btn-del" onclick="deleteRecord('${r.id}')">삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ────────────────────────────────────────────
+// 뷰어
+// ────────────────────────────────────────────
+async function viewRecord(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('view-title').textContent = r.title;
+  document.getElementById('view-meta').innerHTML = [
+    r.date    ? `<div class="vm-item"><div class="vm-label">날짜</div><div class="vm-value">${fmtDate(r.date)}</div></div>` : '',
+    r.category? `<div class="vm-item"><div class="vm-label">카테고리</div><div class="vm-value">${esc(r.category)}</div></div>` : '',
+    r.attendees?`<div class="vm-item"><div class="vm-label">참석자</div><div class="vm-value">${esc(r.attendees)}</div></div>` : '',
+    r.fileName? `<div class="vm-item"><div class="vm-label">파일</div><div class="vm-value">${esc(r.fileName)}${r.fileSize?' · '+fmtSize(r.fileSize):''}</div></div>` : '',
+  ].join('');
+
+  // 파일 영역
+  const fileArea = document.getElementById('view-file-area');
+  fileArea.innerHTML = '';
+  if (r.fileId) {
+    const stored = await dbGet('files', r.fileId).catch(()=>null);
+    if (stored && stored.data) {
+      if (r.fileType === 'pdf') {
+        const blob = new Blob([stored.data], {type:'application/pdf'});
+        const url = URL.createObjectURL(blob);
+        fileArea.innerHTML = `<iframe class="pdf-frame" src="${url}"></iframe>`;
+      } else {
+        const blob = new Blob([stored.data]);
+        const url = URL.createObjectURL(blob);
+        fileArea.innerHTML = `<div class="download-box">
+          <div class="dl-icon">${fileEmoji(r.fileType)}</div>
+          <p>${esc(r.fileName)} (${fmtSize(r.fileSize)})</p>
+          <a class="btn btn-primary" href="${url}" download="${esc(r.fileName)}">⬇ 파일 다운로드</a>
+        </div>`;
+      }
+    }
+  }
+
+  const noteWrap = document.getElementById('view-note-wrap');
+  if (r.note) { noteWrap.hidden = false; document.getElementById('view-note').textContent = r.note; }
+  else noteWrap.hidden = true;
+
+  document.getElementById('view-tags').innerHTML = (r.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('');
+  document.getElementById('view-edit-btn').onclick = () => { closeModal('view-modal'); editRecord(id); };
+  document.getElementById('view-modal').hidden = false;
+}
+
+// ────────────────────────────────────────────
+// 파일 드롭 / 선택
+// ────────────────────────────────────────────
+function onDragOver(e) { e.preventDefault(); document.getElementById('drop-zone').classList.add('dragover'); }
+function onDragLeave() { document.getElementById('drop-zone').classList.remove('dragover'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('dragover');
+  const files = [...e.dataTransfer.files];
+  if (files.length) handleFiles(files);
+}
+function onFileSelect(e) {
+  const files = [...e.target.files];
+  e.target.value = '';
+  if (files.length) handleFiles(files);
+}
+
+async function handleFiles(files) {
+  if (files.length === 1) {
+    await prepareUploadModal(files[0]);
+  } else {
+    // 여러 파일: 순서대로 처리
+    pendingFiles = files.slice(1);
+    await prepareUploadModal(files[0]);
+  }
+}
+
+async function prepareUploadModal(file) {
+  const buf = await file.arrayBuffer();
+  pendingFile = { id: uid(), name: file.name, size: file.size, type: file.type, buffer: buf };
+  editingId = null;
+  tags = [];
+
+  const ft = fileType(file.name);
+  document.getElementById('upload-modal-title').textContent = '회의록 파일 추가';
+  document.getElementById('chosen-icon').textContent = fileEmoji(ft);
+  document.getElementById('chosen-name').textContent = file.name;
+  document.getElementById('chosen-size').textContent = fmtSize(file.size);
+  document.getElementById('m-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('m-title').value = file.name.replace(/\.[^/.]+$/, '');
+  document.getElementById('m-cat').value = '';
+  document.getElementById('m-attendees').value = '';
+  document.getElementById('m-note').value = '';
+  renderTagChips();
+  document.getElementById('upload-modal').hidden = false;
+}
+
+// ────────────────────────────────────────────
+// 저장
+// ────────────────────────────────────────────
+async function saveMeta() {
+  const title = document.getElementById('m-title').value.trim() || (pendingFile ? pendingFile.name : '제목 없음');
+  const meta = {
+    id: editingId || (pendingFile ? pendingFile.id : uid()),
+    title,
+    date: document.getElementById('m-date').value,
+    category: document.getElementById('m-cat').value.trim(),
+    attendees: document.getElementById('m-attendees').value.trim(),
+    note: document.getElementById('m-note').value.trim(),
+    tags: [...tags],
+  };
+
+  if (pendingFile) {
+    meta.fileId = pendingFile.id;
+    meta.fileName = pendingFile.name;
+    meta.fileSize = pendingFile.size;
+    meta.fileType = fileType(pendingFile.name);
+    await dbPut('files', { id: pendingFile.id, data: pendingFile.buffer });
+  } else if (editingId) {
+    const existing = records.find(r => r.id === editingId) || {};
+    meta.fileId = existing.fileId;
+    meta.fileName = existing.fileName;
+    meta.fileSize = existing.fileSize;
+    meta.fileType = existing.fileType;
+  }
+
+  await dbPut('meta', meta);
+
+  if (editingId) {
+    const idx = records.findIndex(r => r.id === editingId);
+    if (idx >= 0) records[idx] = meta;
+  } else {
+    records.unshift(meta);
+  }
+
+  pendingFile = null;
+  editingId = null;
+  closeModal('upload-modal');
+  render();
+
+  // 다음 파일 처리
+  if (pendingFiles.length) {
+    const next = pendingFiles.shift();
+    setTimeout(() => prepareUploadModal(next), 150);
+  }
+}
+
+// ────────────────────────────────────────────
+// 편집 / 삭제
+// ────────────────────────────────────────────
+function editRecord(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+  pendingFile = null;
+  tags = [...(r.tags||[])];
+
+  const ft = r.fileType || 'other';
+  document.getElementById('upload-modal-title').textContent = '회의록 편집';
+  document.getElementById('chosen-icon').textContent = fileEmoji(ft);
+  document.getElementById('chosen-name').textContent = r.fileName || '파일 없음';
+  document.getElementById('chosen-size').textContent = r.fileSize ? fmtSize(r.fileSize) : '';
+  document.getElementById('m-date').value = r.date || '';
+  document.getElementById('m-title').value = r.title || '';
+  document.getElementById('m-cat').value = r.category || '';
+  document.getElementById('m-attendees').value = r.attendees || '';
+  document.getElementById('m-note').value = r.note || '';
+  renderTagChips();
+  document.getElementById('upload-modal').hidden = false;
+}
+
+async function deleteRecord(id) {
+  if (!confirm('이 회의록을 삭제하시겠습니까?')) return;
+  const r = records.find(x => x.id === id);
+  if (r && r.fileId) await dbDelete('files', r.fileId).catch(()=>{});
+  await dbDelete('meta', id).catch(()=>{});
+  records = records.filter(x => x.id !== id);
+  render();
+}
+
+// ────────────────────────────────────────────
+// 업로드 모달 열기 (파일 선택 없이)
+// ────────────────────────────────────────────
+function openUploadModal() {
+  document.getElementById('file-input').click();
+}
+
+// ────────────────────────────────────────────
+// 태그
+// ────────────────────────────────────────────
+function renderTagChips() {
+  document.getElementById('tag-chips').innerHTML = tags.map((t,i) =>
+    `<span class="tchip">${esc(t)}<button type="button" onclick="removeTag(${i})">×</button></span>`
+  ).join('');
+}
+function onTagKey(e) {
+  if (e.key==='Enter'||e.key===',') {
+    e.preventDefault();
+    const v = e.target.value.trim().replace(/,$/,'');
+    if (v && !tags.includes(v)) { tags.push(v); renderTagChips(); }
+    e.target.value = '';
+  }
+}
+function removeTag(i) { tags.splice(i,1); renderTagChips(); }
+
+// ────────────────────────────────────────────
+// 필터
+// ────────────────────────────────────────────
+function setCat(c) { filterCat = c; render(); }
+function setType(t) { filterType = t; render(); }
+function setYear(y) { filterYear = filterYear===y?'all':y; render(); }
+
+// ────────────────────────────────────────────
+// 모달 헬퍼
+// ────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).hidden = true; }
+function overlayClose(e, id) { if (e.target.classList.contains('overlay')) closeModal(id); }
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') { closeModal('upload-modal'); closeModal('view-modal'); }
+});
+
+// ────────────────────────────────────────────
+// 테마
+// ────────────────────────────────────────────
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  document.getElementById('theme-btn').textContent = next==='dark'?'☀️':'🌙';
+  try { localStorage.setItem('theme', next); } catch {}
+}
+
+// ────────────────────────────────────────────
+// 초기화
+// ────────────────────────────────────────────
+async function init() {
   try {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      document.documentElement.setAttribute('data-theme', savedTheme);
-      document.getElementById('theme-icon').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    const saved = localStorage.getItem('theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-theme', saved);
+      document.getElementById('theme-btn').textContent = saved==='dark'?'☀️':'🌙';
     }
   } catch {}
-  renderAll();
+
+  await openDB();
+  records = await dbGetAll('meta');
+  records.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  render();
+}
+init();
 </script>
 </body>
 </html>
