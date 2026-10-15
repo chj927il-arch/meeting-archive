@@ -1045,99 +1045,80 @@ async function startAudioUpload(file) {
 
   progWrap.style.display = 'block';
   result.style.display   = 'none';
-  progBar.style.width    = '5%';
-  progLabel.textContent  = `🎙️ "${file.name}" 업로드 준비 중...`;
 
-  try {
-    // ① Worker에서 Google 업로드 URL 발급
-    const initRes = await fetch('/api/audio/init', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileName: file.name, mimeType, fileSize: file.size })
-    });
-    const initData = await initRes.json();
-    if (!initData.ok) throw new Error(initData.error || '업로드 URL 발급 실패');
-
-    progBar.style.width  = '10%';
-    progLabel.textContent = `📤 Google 서버에 파일 업로드 중... (${formatSize(file.size)})`;
-
-    // ② 브라우저 → Google 직접 업로드 (XMLHttpRequest로 진행률 표시)
-    const fileUri = await uploadToGoogle(initData.uploadUrl, file, mimeType, (pct) => {
-      progBar.style.width  = (10 + pct * 0.6) + '%';
-      progLabel.textContent = `📤 업로드 중... ${Math.round(pct)}% (${formatSize(file.size)})`;
-    });
-
-    progBar.style.width  = '75%';
-    progLabel.textContent = '🤖 Gemini AI 전사·분석 중... (수 분 소요될 수 있습니다)';
-
-    // ③ Worker에 fileUri 전달 → 분석 + KV 저장
-    const analyzeRes = await fetch('/api/audio/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileUri, fileName: file.name, fileSize: file.size, mimeType })
-    });
-    const analyzeData = await analyzeRes.json();
-    if (!analyzeData.ok) throw new Error(analyzeData.error || '분석 실패');
-
-    progBar.style.width = '100%';
-
-    const m = analyzeData.meta;
-    let warnHtml = analyzeData.analysisStatus !== 'ok'
-      ? `<div class="upload-warn">⚠️ AI 분석에 실패했습니다. 파일은 등록되었습니다. 상세에서 재분석하세요.</div>`
-      : '';
-
-    result.innerHTML = `${warnHtml}
-      <div class="upload-ok">
-        <div style="font-size:15px;font-weight:700;margin-bottom:6px">✅ "${esc(file.name)}" 등록 완료</div>
-        <div style="font-size:13px;color:var(--text2)">🎙️ 음성 파일 · ${formatSize(file.size)}</div>
-        ${m.summary ? `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
-          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">🤖 AI 분석 결과</div>
-          <div style="font-size:13.5px;color:var(--text);margin-bottom:6px"><strong>회의 제목:</strong> ${esc(m.meetingTitle)}</div>
-          <div style="font-size:13.5px;color:var(--text);margin-bottom:6px"><strong>참석자:</strong> ${esc((m.attendees||[]).join(', ')||'—')}</div>
-          ${m.oneLiner ? `<div style="font-size:13px;color:var(--text2);font-style:italic">"${esc(m.oneLiner)}"</div>` : ''}
-        </div>` : ''}
-        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" onclick="openDetail('${analyzeData.id}');showView('list')">상세 보기</button>
-          <button class="btn btn-ghost btn-sm" onclick="showView('list')">목록으로</button>
-        </div>
-      </div>`;
-
-    progWrap.style.display = 'none';
-    result.style.display   = 'block';
-    document.getElementById('uploadAudioInput').value = '';
-    await loadMeetings();
-
-  } catch (e) {
-    progWrap.style.display = 'none';
-    result.style.display   = 'block';
-    result.innerHTML = `<div class="upload-err">❌ 오류: ${esc(e.message)}</div>`;
-  }
-}
-
-// Google resumable upload — XMLHttpRequest로 진행률 콜백
-function uploadToGoogle(uploadUrl, file, mimeType, onProgress) {
-  return new Promise((resolve, reject) => {
+  // XHR로 Worker에 직접 전송 — 진행률 표시 가능
+  // Worker가 내부적으로 Google File API → Gemini 분석까지 처리
+  return new Promise((resolve) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('PUT', uploadUrl, true);
+    xhr.open('POST', '/api/audio/upload', true);
+    xhr.setRequestHeader('X-File-Name', encodeURIComponent(file.name));
+    xhr.setRequestHeader('X-File-Size', String(file.size));
     xhr.setRequestHeader('Content-Type', mimeType);
-    xhr.setRequestHeader('X-Goog-Upload-Command', 'upload, finalize');
-    xhr.setRequestHeader('X-Goog-Upload-Offset', '0');
 
     xhr.upload.addEventListener('progress', e => {
-      if (e.lengthComputable) onProgress((e.loaded / e.total) * 100);
+      if (e.lengthComputable) {
+        const pct = (e.loaded / e.total) * 60; // 업로드 60%까지
+        progBar.style.width   = pct + '%';
+        progLabel.textContent = `📤 업로드 중... ${Math.round(e.loaded / e.total * 100)}% (${formatSize(e.loaded)} / ${formatSize(file.size)})`;
+      }
     });
 
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const data = JSON.parse(xhr.responseText);
-          resolve(data.file?.uri || data.uri);
-        } catch { reject(new Error('파일 URI 파싱 실패')); }
-      } else {
-        reject(new Error(`Google 업로드 실패 (${xhr.status}): ${xhr.responseText.slice(0,200)}`));
+    xhr.addEventListener('load', async () => {
+      progBar.style.width   = '85%';
+      progLabel.textContent = '🤖 Gemini AI 전사·분석 완료 중...';
+
+      try {
+        const data = JSON.parse(xhr.responseText);
+        if (!data.ok) throw new Error(data.error || '처리 실패');
+
+        progBar.style.width = '100%';
+        const m = data.meta;
+        let warnHtml = data.analysisStatus !== 'ok'
+          ? `<div class="upload-warn">⚠️ AI 분석에 실패했습니다. 파일은 등록되었습니다.</div>` : '';
+
+        result.innerHTML = `${warnHtml}
+          <div class="upload-ok">
+            <div style="font-size:15px;font-weight:700;margin-bottom:6px">✅ "${esc(file.name)}" 등록 완료</div>
+            <div style="font-size:13px;color:var(--text2)">🎙️ 음성 파일 · ${formatSize(file.size)}</div>
+            ${m.summary ? `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+              <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">🤖 AI 분석 결과</div>
+              <div style="font-size:13.5px;margin-bottom:5px"><strong>회의 제목:</strong> ${esc(m.meetingTitle)}</div>
+              <div style="font-size:13.5px;margin-bottom:5px"><strong>참석자:</strong> ${esc((m.attendees||[]).join(', ')||'—')}</div>
+              ${m.oneLiner ? `<div style="font-size:13px;color:var(--text2);font-style:italic">"${esc(m.oneLiner)}"</div>` : ''}
+            </div>` : ''}
+            <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-primary btn-sm" onclick="openDetail('${data.id}');showView('list')">상세 보기</button>
+              <button class="btn btn-ghost btn-sm" onclick="showView('list')">목록으로</button>
+            </div>
+          </div>`;
+
+        progWrap.style.display = 'none';
+        result.style.display   = 'block';
+        document.getElementById('uploadAudioInput').value = '';
+        await loadMeetings();
+      } catch (e) {
+        progWrap.style.display = 'none';
+        result.style.display   = 'block';
+        result.innerHTML = `<div class="upload-err">❌ 오류: ${esc(e.message)}</div>`;
       }
-    };
-    xhr.onerror = () => reject(new Error('네트워크 오류'));
+      resolve();
+    });
+
+    xhr.addEventListener('error', () => {
+      progWrap.style.display = 'none';
+      result.style.display   = 'block';
+      result.innerHTML = `<div class="upload-err">❌ 네트워크 오류가 발생했습니다. 인터넷 연결을 확인하세요.</div>`;
+      resolve();
+    });
+
+    xhr.addEventListener('timeout', () => {
+      progWrap.style.display = 'none';
+      result.style.display   = 'block';
+      result.innerHTML = `<div class="upload-err">❌ 시간 초과 — 파일이 너무 크거나 서버 응답이 늦습니다.</div>`;
+      resolve();
+    });
+
+    xhr.timeout = 10 * 60 * 1000; // 10분 타임아웃
     xhr.send(file);
   });
 }
