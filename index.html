@@ -206,6 +206,12 @@
     :root[data-theme="light"] .view-impl-box{background:#f0fdfa;border-color:#99f6e4;}
     .view-impl-label{font-size:11px;font-weight:700;color:var(--teal);letter-spacing:.04em;margin-bottom:6px;}
     .view-impl-text{font-size:15px;color:var(--fg-muted);line-height:1.8;white-space:pre-wrap;}
+    .docx-preview{max-height:480px;overflow-y:auto;padding:16px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg-card2);font-size:14px;line-height:1.8;color:var(--fg);}
+    .docx-preview h1,.docx-preview h2,.docx-preview h3{font-weight:700;margin:12px 0 6px;color:var(--fg);}
+    .docx-preview p{margin-bottom:8px;}
+    .docx-preview table{border-collapse:collapse;width:100%;margin-bottom:12px;}
+    .docx-preview td,.docx-preview th{border:1px solid var(--border2);padding:6px 10px;font-size:13px;}
+    .docx-preview strong{font-weight:700;}
 
     @media(max-width:640px){
       .page{padding:20px 14px 40px;}
@@ -366,6 +372,7 @@
     <div class="modal-ft">
       <button class="btn btn-ghost" onclick="closeModal('view-modal')">닫기</button>
       <button class="btn btn-ghost" id="view-edit-btn">편집</button>
+      <button class="btn btn-primary" id="view-dl-btn" hidden>⬇ 원본 다운로드</button>
     </div>
   </div>
 </div>
@@ -500,8 +507,8 @@ async function callClaude(fileText, fileName, attendees) {
 
   const hasText = fileText && fileText.trim().length > 100;
   const prompt = hasText
-    ? `다음은 회의록 파일("${fileName}")의 내용입니다.\n참석자: ${attendees || '미기재'}\n\n---\n${fileText}\n---\n\n위 내용을 분석하여 JSON으로만 응답해주세요 (다른 설명 없이 JSON만):\n{\n  "summary": "회의 주요 안건과 논의 내용을 3~5문장으로 요약",\n  "implication": "핵심 결정사항, 액션아이템, 시사점을 항목별로 정리"\n}`
-    : `회의록 파일명: "${fileName}"\n참석자: ${attendees || '미기재'}\n\n파일 내용을 읽을 수 없습니다(HWP 등). JSON으로만 응답해주세요:\n{\n  "summary": "파일 내용을 직접 읽을 수 없어 자동 요약이 어렵습니다. 내용을 직접 입력해주세요.",\n  "implication": "파일을 직접 열어 핵심 결정사항을 확인해주세요."\n}`;
+    ? `다음은 회의록 파일("${fileName}")의 내용입니다.\n\n---\n${fileText}\n---\n\n위 내용을 분석하여 JSON으로만 응답해주세요 (마크다운 없이 JSON만):\n{\n  "attendees": "문서에서 추출한 참석자 이름 목록 (쉼표 구분, 없으면 빈 문자열)",\n  "summary": "회의 주요 안건과 논의 내용을 3~5문장으로 요약",\n  "implication": "핵심 결정사항, 액션아이템, 시사점을 항목별로 정리"\n}`
+    : `회의록 파일명: "${fileName}"\n\n파일 내용을 읽을 수 없습니다(HWP 등). JSON으로만 응답해주세요:\n{\n  "attendees": "",\n  "summary": "파일 내용을 직접 읽을 수 없어 자동 요약이 어렵습니다. 내용을 직접 입력해주세요.",\n  "implication": "파일을 직접 열어 핵심 결정사항을 확인해주세요."\n}`;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
   const resp = await fetch(url, {
@@ -605,12 +612,9 @@ function render() {
       </div>
       <div class="mcard-title" onclick="viewRecord('${r.id}')">${esc(r.title)}</div>
       ${r.attendees?`<div class="mcard-meta"><span>👥 ${esc(r.attendees)}</span></div>`:''}
-      ${r.summary?`<div class="mcard-summary">${esc(r.summary)}</div>`:''}
-      ${r.tags&&r.tags.length?`<div class="mcard-tags">${r.tags.map(t=>`<span class="mtag">${esc(t)}</span>`).join('')}</div>`:''}
-      ${r.implication?`<div class="implication"><div class="implication-label">💡 시사점 · 핵심 결정사항</div><div class="implication-text">${esc(r.implication)}</div></div>`:''}
       <div class="mcard-footer">
         <div class="mcard-file-info">${r.fileName?`${fileEmoji(ft)} ${esc(r.fileName)}${r.fileSize?' · '+fmtSize(r.fileSize):''}` :'파일 없음'}</div>
-        ${r.fileId?`<button class="btn btn-view btn-sm" onclick="viewRecord('${r.id}')">원문 보기 ↗</button>`:''}
+        ${r.fileId?`<button class="btn btn-view btn-sm" onclick="viewRecord('${r.id}')">미리보기 · 원문 ↗</button>`:''}
       </div>
     </div>`;
   }).join('');
@@ -628,15 +632,31 @@ async function viewRecord(id) {
   ].join('');
 
   const fa = document.getElementById('view-file-area'); fa.innerHTML = '';
+  document.getElementById('view-dl-btn').hidden = true;
   if (r.fileId) {
     const stored = await dbGet('files', r.fileId).catch(()=>null);
     if (stored && stored.data) {
+      const dlBlob = r.fileType==='pdf'
+        ? new Blob([stored.data], {type:'application/pdf'})
+        : new Blob([stored.data]);
+      const dlUrl = URL.createObjectURL(dlBlob);
+      // 다운로드 버튼 설정
+      const dlBtn = document.getElementById('view-dl-btn');
+      dlBtn.hidden = false;
+      dlBtn.onclick = () => { const a=document.createElement('a'); a.href=dlUrl; a.download=r.fileName||'file'; a.click(); };
+
       if (r.fileType==='pdf') {
-        const blob = new Blob([stored.data], {type:'application/pdf'});
-        fa.innerHTML = `<iframe class="pdf-frame" src="${URL.createObjectURL(blob)}"></iframe>`;
+        fa.innerHTML = `<iframe class="pdf-frame" src="${dlUrl}"></iframe>`;
+      } else if (r.fileType==='word') {
+        // DOCX → HTML 렌더
+        try {
+          const result = await mammoth.convertToHtml({arrayBuffer: stored.data});
+          fa.innerHTML = `<div class="docx-preview">${result.value}</div>`;
+        } catch {
+          fa.innerHTML = `<div class="download-box"><div class="dl-icon">${fileEmoji(r.fileType)}</div><p>미리보기를 지원하지 않는 형식입니다</p></div>`;
+        }
       } else {
-        const blob = new Blob([stored.data]);
-        fa.innerHTML = `<div class="download-box"><div class="dl-icon">${fileEmoji(r.fileType)}</div><p>${esc(r.fileName)} (${fmtSize(r.fileSize)})</p><a class="btn btn-primary" href="${URL.createObjectURL(blob)}" download="${esc(r.fileName)}">⬇ 파일 다운로드</a></div>`;
+        fa.innerHTML = `<div class="download-box"><div class="dl-icon">${fileEmoji(r.fileType)}</div><p>${esc(r.fileName)} — 아래 버튼으로 다운로드하세요</p></div>`;
       }
     }
   }
@@ -752,6 +772,11 @@ async function saveMeta() {
       const result = await callClaude(text, pendingFile.name, meta.attendees);
       meta.summary = result.summary || '';
       meta.implication = result.implication || '';
+      // 참석자 필드가 비어있을 때만 AI 추출값 사용
+      if (!meta.attendees && result.attendees) {
+        meta.attendees = result.attendees;
+        document.getElementById('m-attendees').value = result.attendees;
+      }
       meta.aiGenerated = true;
     } catch (e) {
       console.warn('AI 분석 실패:', e);
