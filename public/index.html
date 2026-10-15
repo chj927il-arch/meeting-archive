@@ -227,15 +227,15 @@ input,textarea{font-family:var(--font)}
   display:flex;align-items:center;gap:4px;
 }
 .mc-bullets{
-  height:72px;            /* 3줄 고정 */
+  height:120px;           /* 항목당 최대 2줄 × 3항목 */
   overflow:hidden;
   margin-bottom:10px;
-  display:flex;flex-direction:column;gap:3px;
+  display:flex;flex-direction:column;gap:5px;
 }
 .mc-bullet{
-  font-size:12.5px;color:var(--text);line-height:1.4;
-  display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;
-  padding-left:12px;position:relative;
+  font-size:13px;color:var(--text);line-height:1.45;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  padding-left:12px;position:relative;flex-shrink:0;
 }
 .mc-bullet::before{content:'▸';position:absolute;left:0;color:var(--accent2);font-size:11px}
 .mc-bullet-label{
