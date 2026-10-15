@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>회의록 아카이브</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Noto+Serif+KR:wght@600;700&display=swap" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <style>
     [hidden] { display: none !important; }
 
@@ -62,9 +62,9 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
     body {
-      font-family: 'Noto Sans KR', sans-serif;
+      font-family: 'Pretendard', 'Pretendard Variable', 'Apple SD Gothic Neo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background: var(--bg); color: var(--fg);
-      font-size: 14px; line-height: 1.6;
+      font-size: 15px; line-height: 1.7;
       display: flex; flex-direction: column;
     }
 
@@ -78,7 +78,7 @@
     }
     .hdr-brand {
       display: flex; align-items: center; gap: 10px;
-      font-family: 'Noto Serif KR', serif; font-size: 16px; font-weight: 700;
+      font-size: 17px; font-weight: 800; letter-spacing: -.3px;
     }
     .brand-dot {
       width: 28px; height: 28px; border-radius: 8px;
@@ -93,10 +93,10 @@
     /* ══ 페이지 타이틀 ══ */
     .page-head { margin-bottom: 24px; }
     .page-head h1 {
-      font-family: 'Noto Serif KR', serif; font-size: 24px; font-weight: 700;
-      margin-bottom: 6px;
+      font-size: 27px; font-weight: 800; letter-spacing: -.5px;
+      line-height: 1.2; margin-bottom: 6px;
     }
-    .page-head p { font-size: 13px; color: var(--fg-muted); }
+    .page-head p { font-size: 15px; color: var(--fg-muted); }
     .stats-row {
       display: flex; gap: 16px; margin-top: 16px; flex-wrap: wrap;
     }
@@ -196,8 +196,8 @@
     .badge-file-other{ background: var(--bg-card2); color: var(--fg-muted); }
 
     .mcard-title {
-      font-family: 'Noto Serif KR', serif; font-size: 17px; font-weight: 700;
-      line-height: 1.4; margin-bottom: 8px; cursor: pointer;
+      font-size: 18.5px; font-weight: 700; letter-spacing: -.3px;
+      line-height: 1.45; margin-bottom: 8px; cursor: pointer;
     }
     .mcard-title:hover { color: var(--accent); }
 
@@ -208,7 +208,7 @@
     .mcard-meta span { display: flex; align-items: center; gap: 4px; }
 
     .mcard-summary {
-      font-size: 13px; color: var(--fg-muted); line-height: 1.7;
+      font-size: 15px; color: var(--fg-muted); line-height: 1.7;
       margin-bottom: 12px;
       display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
     }
@@ -233,7 +233,7 @@
       font-size: 11px; font-weight: 700; color: var(--teal);
       letter-spacing: .04em; margin-bottom: 4px; display: flex; align-items: center; gap: 5px;
     }
-    .implication-text { font-size: 13px; color: var(--fg-muted); line-height: 1.7; }
+    .implication-text { font-size: 15px; color: var(--fg-muted); line-height: 1.7; }
 
     /* 하단 액션 */
     .mcard-footer {
@@ -308,7 +308,7 @@
       padding: 18px 22px 14px; border-bottom: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
     }
-    .modal-hd h2 { font-family: 'Noto Serif KR', serif; font-size: 16px; font-weight: 700; }
+    .modal-hd h2 { font-size: 18px; font-weight: 700; letter-spacing: -.3px; }
     .modal-x {
       width: 28px; height: 28px; border-radius: 50%; border: none;
       background: var(--bg-card2); color: var(--fg-muted);
@@ -324,7 +324,7 @@
     .fi, .fta {
       padding: 9px 12px; border: 1px solid var(--border2); border-radius: var(--r-sm);
       background: var(--bg-card2); color: var(--fg);
-      font-family: inherit; font-size: 14px; outline: none;
+      font-family: inherit; font-size: 15px; outline: none;
       transition: border-color .15s; width: 100%;
     }
     .fi:focus, .fta:focus { border-color: var(--accent); }
@@ -367,7 +367,7 @@
     .vm-item { display: flex; flex-direction: column; gap: 2px; }
     .vm-label { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-subtle); }
     .vm-value { font-size: 13px; font-weight: 500; }
-    .view-summary { font-size: 13px; color: var(--fg-muted); line-height: 1.8; white-space: pre-wrap; }
+    .view-summary { font-size: 15px; color: var(--fg-muted); line-height: 1.8; white-space: pre-wrap; }
     .pdf-frame { width: 100%; height: 500px; border: 1px solid var(--border); border-radius: var(--r-sm); }
     .download-box {
       display: flex; flex-direction: column; align-items: center; gap: 12px;
@@ -382,7 +382,7 @@
     }
     :root[data-theme="light"] .view-impl { background: #f0fdfa; border-color: #99f6e4; }
     .view-impl-label { font-size: 11px; font-weight: 700; color: var(--teal); letter-spacing: .04em; margin-bottom: 6px; }
-    .view-impl-text { font-size: 13px; color: var(--fg-muted); line-height: 1.8; white-space: pre-wrap; }
+    .view-impl-text { font-size: 15px; color: var(--fg-muted); line-height: 1.8; white-space: pre-wrap; }
 
     /* 반응형 */
     @media (max-width: 640px) {
