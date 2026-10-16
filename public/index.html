@@ -171,12 +171,12 @@ input,textarea{font-family:var(--font)}
 .upload-err{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);padding:16px;color:var(--red);font-size:13px}
 
 /* ── 목록 뷰 ─────────────────────────────────────────────────────────── */
-.list-toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.list-toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;width:100%}
 
 /* 팀/태그 필터 공통 */
-.filter-section{margin-bottom:14px}
+.filter-section{margin-bottom:14px;width:100%}
 .filter-section-label{font-size:13px;color:var(--text2);margin-bottom:8px;font-weight:600}
-.filter-chip-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.filter-chip-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%}
 
 /* 실(department) 그룹 */
 .dept-group{
@@ -779,9 +779,11 @@ function buildTagChips() {
 
   const wrap = document.getElementById('tagChips');
   const list = document.getElementById('tagChipList');
-  if (!sorted.length) { wrap.style.display='none'; return; }
+  if (!sorted.length) {
+    list.innerHTML = `<span style="font-size:13px;color:var(--text2)">회의록 분석이 완료되면 자동으로 나타납니다.</span>`;
+    return;
+  }
 
-  wrap.style.display = 'block';
   const allBtn = `<button class="chip-btn ${ACTIVE_TAG===null?'active':''}" onclick="selectTag(null)">전체<span class="chip-count">${MEETINGS.length}</span></button>`;
   list.innerHTML = allBtn + sorted.map(([tag, cnt]) =>
     `<button class="chip-btn ${ACTIVE_TAG===tag?'active':''}" onclick="selectTag('${esc(tag)}')">${esc(tag)}<span class="chip-count">${cnt}</span></button>`
