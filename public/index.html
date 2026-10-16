@@ -977,9 +977,11 @@ function renderDetail(m) {
   // 액션 버튼
   let actions = '';
   if (m.fileType === 'audio') {
-    // 음성 파일: 원본 없음 / Word 회의록만 다운로드
     if (m.hasDoc) {
       actions += `<a href="/api/doc/${m.id}" class="btn btn-primary btn-sm">📄 회의록 Word 다운로드</a>`;
+    }
+    if (m.driveUrl) {
+      actions += `<a href="${esc(m.driveUrl)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">🔗 Google Drive 원본</a>`;
     }
   } else {
     actions += `<a href="/api/file/${m.id}" download="${esc(m.fileName)}" class="btn btn-primary btn-sm">⬇️ 원문 다운로드</a>`;

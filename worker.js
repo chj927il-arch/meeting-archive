@@ -1,5 +1,85 @@
 // meeting-archive worker.js — Cloudflare Worker
-// KV: MEETING_KV / Secrets: GEMINI_API_KEY, SITE_PW
+// KV: MEETING_KV / Secrets: GEMINI_API_KEY, SITE_PW, GDRIVE_SERVICE_ACCOUNT, GDRIVE_FOLDER_ID
+
+// ── Google Drive 서비스 계정 인증 ────────────────────────────────────────
+function pemToBuffer(pem) {
+  const b64 = pem.replace(/-----[^-]+-----/g, '').replace(/\s/g, '');
+  const bin = atob(b64);
+  const buf = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return buf.buffer;
+}
+
+async function getGDriveToken(serviceAccount) {
+  const now = Math.floor(Date.now() / 1000);
+  const b64url = s => btoa(JSON.stringify(s)).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+  const header  = b64url({ alg: 'RS256', typ: 'JWT' });
+  const payload = b64url({
+    iss: serviceAccount.client_email,
+    scope: 'https://www.googleapis.com/auth/drive.file',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600, iat: now
+  });
+  const input = `${header}.${payload}`;
+  const key = await crypto.subtle.importKey(
+    'pkcs8', pemToBuffer(serviceAccount.private_key),
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(input));
+  const jwt = `${input}.${btoa(String.fromCharCode(...new Uint8Array(sig))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_')}`;
+
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`
+  });
+  const data = await res.json();
+  return data.access_token;
+}
+
+async function uploadToGDrive(env, buffer, fileName) {
+  if (!env.GDRIVE_SERVICE_ACCOUNT) return null;
+  try {
+    const sa = JSON.parse(env.GDRIVE_SERVICE_ACCOUNT);
+    const token = await getGDriveToken(sa);
+    const folderId = env.GDRIVE_FOLDER_ID || null;
+    const metadata = { name: fileName, ...(folderId ? { parents: [folderId] } : {}) };
+
+    // 파일명에서 mimeType 추론
+    const ext = fileName.split('.').pop().toLowerCase();
+    const mimeMap = { mp3:'audio/mpeg', m4a:'audio/mp4', wav:'audio/wav', ogg:'audio/ogg', webm:'audio/webm', aac:'audio/aac', flac:'audio/flac' };
+    const mime = mimeMap[ext] || 'audio/mpeg';
+
+    // Drive 재개 가능 업로드 초기화
+    const initRes = await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,webViewLink,name',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json; charset=UTF-8',
+          'X-Upload-Content-Type': mime,
+          'X-Upload-Content-Length': String(buffer.byteLength),
+        },
+        body: JSON.stringify(metadata)
+      }
+    );
+    if (!initRes.ok) throw new Error('Drive 초기화 실패: ' + await initRes.text());
+    const uploadUrl = initRes.headers.get('Location');
+
+    // 파일 업로드
+    const upRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': mime, 'Content-Length': String(buffer.byteLength) },
+      body: buffer
+    });
+    if (!upRes.ok) throw new Error('Drive 업로드 실패: ' + await upRes.text());
+    return await upRes.json(); // { id, webViewLink, name }
+  } catch (e) {
+    console.error('GDrive 업로드 오류:', e.message);
+    return null;
+  }
+}
 
 const INDEX_KEY  = 'meetings-index';
 const AUTH_COOKIE = 'ma_auth';
@@ -313,7 +393,21 @@ async function handleAudioUpload(request, env) {
   const mimeType = request.headers.get('Content-Type') || 'audio/mpeg';
   const team     = decodeURIComponent(request.headers.get('X-Team') || '');
 
-  // ① Google File API resumable 업로드 초기화
+  // ① 음성 파일 버퍼링 (Drive + Gemini 둘 다 전송하기 위해)
+  const audioBuffer = await request.arrayBuffer();
+
+  // ② Google Drive 업로드 (설정된 경우)
+  let driveFileId  = null;
+  let driveUrl     = null;
+  if (env.GDRIVE_SERVICE_ACCOUNT) {
+    const driveResult = await uploadToGDrive(env, audioBuffer, fileName);
+    if (driveResult?.id) {
+      driveFileId = driveResult.id;
+      driveUrl    = driveResult.webViewLink || `https://drive.google.com/file/d/${driveResult.id}/view`;
+    }
+  }
+
+  // ③ Gemini File API resumable 업로드 초기화
   const initRes = await fetch(
     `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${env.GEMINI_API_KEY}&uploadType=resumable`,
     {
@@ -322,7 +416,7 @@ async function handleAudioUpload(request, env) {
         'Content-Type': 'application/json',
         'X-Goog-Upload-Protocol': 'resumable',
         'X-Goog-Upload-Command': 'start',
-        'X-Goog-Upload-Header-Content-Length': String(fileSize),
+        'X-Goog-Upload-Header-Content-Length': String(audioBuffer.byteLength),
         'X-Goog-Upload-Header-Content-Type': mimeType,
       },
       body: JSON.stringify({ file: { displayName: fileName } })
@@ -330,25 +424,25 @@ async function handleAudioUpload(request, env) {
   );
   if (!initRes.ok) {
     const err = await initRes.text();
-    return json({ ok: false, error: 'Google 업로드 초기화 실패: ' + err }, 500);
+    return json({ ok: false, error: 'Gemini 업로드 초기화 실패: ' + err }, 500);
   }
   const uploadUrl = initRes.headers.get('X-Goog-Upload-URL');
   if (!uploadUrl) return json({ ok: false, error: '업로드 URL 발급 실패' }, 500);
 
-  // ② request.body를 Google로 스트리밍 전달 (메모리 버퍼링 없음)
+  // ④ 버퍼를 Gemini로 전송
   const uploadRes = await fetch(uploadUrl, {
     method: 'PUT',
     headers: {
       'Content-Type': mimeType,
       'X-Goog-Upload-Command': 'upload, finalize',
       'X-Goog-Upload-Offset': '0',
-      'Content-Length': String(fileSize),
+      'Content-Length': String(audioBuffer.byteLength),
     },
-    body: request.body,
+    body: audioBuffer,
   });
   if (!uploadRes.ok) {
     const err = await uploadRes.text();
-    return json({ ok: false, error: 'Google 파일 업로드 실패: ' + err }, 500);
+    return json({ ok: false, error: 'Gemini 파일 업로드 실패: ' + err }, 500);
   }
   const fileData = await uploadRes.json();
   const fileUri  = fileData.file?.uri;
@@ -362,8 +456,9 @@ async function handleAudioUpload(request, env) {
   const id  = crypto.randomUUID();
   const now = new Date().toISOString();
   const meta = {
-    id, fileName, fileSize, mimeType, fileType: 'audio',
+    id, fileName, fileSize: audioBuffer.byteLength, mimeType, fileType: 'audio',
     uploadedAt: now, analysisStatus, team,
+    driveFileId, driveUrl,
     meetingTitle: analysis?.meetingTitle || fileName.replace(/\.[^.]+$/, ''),
     meetingDate:  analysis?.meetingDate  || '',
     attendees:    analysis?.attendees    || [],
