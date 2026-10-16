@@ -537,6 +537,60 @@ input,textarea{font-family:var(--font)}
   <div class="dp-actions" id="dpActions"></div>
 </div>
 
+<!-- 편집 모달 -->
+<div id="editBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500" onclick="closeEdit()"></div>
+<div id="editModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:min(620px,95vw);max-height:90vh;overflow-y:auto;
+  background:var(--bg2);border:1px solid var(--border);border-radius:14px;
+  padding:28px 28px 20px;z-index:510;box-shadow:0 20px 60px rgba(0,0,0,.5)">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div style="font-size:17px;font-weight:700">✏️ 회의록 편집</div>
+    <button onclick="closeEdit()" style="background:none;border:none;font-size:20px;color:var(--text2);cursor:pointer">✕</button>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div>
+      <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">회의 제목</label>
+      <input id="editTitle" type="text" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font)">
+    </div>
+    <div>
+      <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">회의 날짜</label>
+      <input id="editDate" type="date" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font)">
+    </div>
+    <div>
+      <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">참석자 <span style="font-weight:400;color:var(--text2)">(줄바꿈으로 구분)</span></label>
+      <textarea id="editAttendees" rows="4" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font);resize:vertical;line-height:1.6"></textarea>
+    </div>
+    <div>
+      <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">한 줄 요약</label>
+      <input id="editOneLiner" type="text" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font)">
+    </div>
+    <div>
+      <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">태그 <span style="font-weight:400;color:var(--text2)">(쉼표로 구분)</span></label>
+      <input id="editTags" type="text" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font)">
+    </div>
+    <div>
+      <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">회의 결과 <span style="font-weight:400;color:var(--text2)">(줄바꿈으로 구분)</span></label>
+      <textarea id="editResult" rows="3" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font);resize:vertical;line-height:1.6"></textarea>
+    </div>
+    <div>
+      <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">시사점 <span style="font-weight:400;color:var(--text2)">(줄바꿈으로 구분)</span></label>
+      <textarea id="editImplications" rows="3" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font);resize:vertical;line-height:1.6"></textarea>
+    </div>
+    <div>
+      <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">핵심 결정사항 <span style="font-weight:400;color:var(--text2)">(줄바꿈으로 구분)</span></label>
+      <textarea id="editDecisions" rows="3" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font);resize:vertical;line-height:1.6"></textarea>
+    </div>
+    <div>
+      <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">후속 조치 <span style="font-weight:400;color:var(--text2)">(줄바꿈으로 구분)</span></label>
+      <textarea id="editActionItems" rows="3" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font);resize:vertical;line-height:1.6"></textarea>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:20px;justify-content:flex-end">
+    <button class="btn btn-ghost btn-sm" onclick="closeEdit()">취소</button>
+    <button class="btn btn-primary btn-sm" onclick="saveEdit()" id="saveEditBtn">💾 저장</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -544,6 +598,7 @@ input,textarea{font-family:var(--font)}
 let MEETINGS = [];
 let CURRENT_ID = null;
 let ACTIVE_TAG = null;
+const DETAIL_CACHE = {};
 
 // ── 로그인 ──────────────────────────────────────────────────────────────
 async function doLogin() {
@@ -769,6 +824,7 @@ async function openDetail(id) {
     const res = await fetch(`/api/meetings/${id}`);
     const data = await res.json();
     if (!data.ok) { showToast('불러오기 실패'); return; }
+    DETAIL_CACHE[id] = data.meeting;
     renderDetail(data.meeting);
   } catch (e) {
     showToast('오류: ' + e.message);
@@ -871,8 +927,86 @@ function renderDetail(m) {
       actions += `<button class="btn btn-ghost btn-sm" onclick="reanalyze('${m.id}')">🔄 재분석</button>`;
     }
   }
+  actions += `<button class="btn btn-ghost btn-sm" onclick="openEdit('${m.id}')">✏️ 편집</button>`;
   actions += `<button class="btn btn-danger btn-sm" onclick="deleteMeeting('${m.id}')">🗑️ 삭제</button>`;
   document.getElementById('dpActions').innerHTML = actions;
+}
+
+// ── 편집 모달 ────────────────────────────────────────────────────────────
+let EDIT_ID = null;
+function openEdit(id) {
+  const m = MEETINGS.find(x => x.id === id);
+  if (!m) return;
+  EDIT_ID = id;
+
+  document.getElementById('editTitle').value = m.meetingTitle || '';
+  document.getElementById('editDate').value = m.meetingDate || '';
+  document.getElementById('editAttendees').value = (m.attendees || []).join('\n');
+  document.getElementById('editOneLiner').value = m.oneLiner || '';
+  document.getElementById('editTags').value = (m.tags || []).join(', ');
+
+  // summary 필드는 상세 데이터에서 가져와야 함 — 현재 캐시된 상세 meeting 사용
+  const detail = DETAIL_CACHE[id];
+  if (detail?.summary) {
+    document.getElementById('editResult').value = (detail.summary.result || []).join('\n');
+    document.getElementById('editImplications').value = (detail.summary.implications || []).join('\n');
+    document.getElementById('editDecisions').value = (detail.summary.decisions || []).join('\n');
+    document.getElementById('editActionItems').value = (detail.summary.actionItems || []).join('\n');
+  } else {
+    document.getElementById('editResult').value = '';
+    document.getElementById('editImplications').value = '';
+    document.getElementById('editDecisions').value = '';
+    document.getElementById('editActionItems').value = '';
+  }
+
+  document.getElementById('editBackdrop').style.display = 'block';
+  document.getElementById('editModal').style.display = 'block';
+}
+
+function closeEdit() {
+  document.getElementById('editBackdrop').style.display = 'none';
+  document.getElementById('editModal').style.display = 'none';
+  EDIT_ID = null;
+}
+
+async function saveEdit() {
+  if (!EDIT_ID) return;
+  const btn = document.getElementById('saveEditBtn');
+  btn.disabled = true;
+  btn.textContent = '저장 중...';
+
+  const toLines = s => s.split('\n').map(x=>x.trim()).filter(Boolean);
+
+  const body = {
+    meetingTitle: document.getElementById('editTitle').value.trim(),
+    meetingDate:  document.getElementById('editDate').value.trim(),
+    attendees:    toLines(document.getElementById('editAttendees').value),
+    oneLiner:     document.getElementById('editOneLiner').value.trim(),
+    tags:         document.getElementById('editTags').value.split(',').map(x=>x.trim()).filter(Boolean),
+    summary: {
+      result:      toLines(document.getElementById('editResult').value),
+      implications:toLines(document.getElementById('editImplications').value),
+      decisions:   toLines(document.getElementById('editDecisions').value),
+      actionItems: toLines(document.getElementById('editActionItems').value)
+    }
+  };
+
+  try {
+    const res = await fetch(`/api/meetings/${EDIT_ID}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '오류');
+    // 캐시 업데이트
+    if (DETAIL_CACHE[EDIT_ID]) Object.assign(DETAIL_CACHE[EDIT_ID], data.meta);
+    closeEdit();
+    showToast('✅ 저장 완료!');
+    await loadMeetings();
+    if (CURRENT_ID === EDIT_ID) openDetail(EDIT_ID);
+  } catch(e) {
+    showToast('❌ 저장 실패: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '💾 저장';
+  }
 }
 
 async function loadDocxPreview(id) {
