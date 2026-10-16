@@ -271,6 +271,40 @@ app.get('/api/file/:id', (req, res) => {
   fs.createReadStream(meta.filePath).pipe(res);
 });
 
+// ── 편집 ──────────────────────────────────────────────────────────────
+app.put('/api/meetings/:id', express.json(), async (req, res) => {
+  if (!isAuthed(req)) return res.status(401).json({ ok: false, error: '인증 필요' });
+  const metaFile = path.join(DATA_DIR, `meeting-${req.params.id}.json`);
+  if (!fs.existsSync(metaFile)) return res.status(404).json({ ok: false, error: '없음' });
+  const meta = JSON.parse(fs.readFileSync(metaFile));
+  const body = req.body;
+  if (body.meetingTitle !== undefined) meta.meetingTitle = body.meetingTitle;
+  if (body.meetingDate  !== undefined) meta.meetingDate  = body.meetingDate;
+  if (body.attendees    !== undefined) meta.attendees    = body.attendees;
+  if (body.oneLiner     !== undefined) meta.oneLiner     = body.oneLiner;
+  if (body.tags         !== undefined) meta.tags         = body.tags;
+  if (body.summary      !== undefined) meta.summary      = body.summary;
+  meta.editedAt = new Date().toISOString();
+  fs.writeFileSync(metaFile, JSON.stringify(meta, null, 2));
+
+  const idx = getIndex();
+  const item = idx.find(m => m.id === req.params.id);
+  if (item) {
+    Object.assign(item, {
+      meetingTitle: meta.meetingTitle,
+      meetingDate:  meta.meetingDate,
+      attendees:    meta.attendees,
+      oneLiner:     meta.oneLiner,
+      tags:         meta.tags,
+      previewResult:       (meta.summary?.result      || []).slice(0,1),
+      previewImplications: (meta.summary?.implications|| []).slice(0,1),
+      previewDecisions:    (meta.summary?.decisions   || []).slice(0,1),
+    });
+    saveIndex(idx);
+  }
+  res.json({ ok: true, meta });
+});
+
 // ── 삭제 ──────────────────────────────────────────────────────────────
 app.delete('/api/meetings/:id', (req, res) => {
   if (!isAuthed(req)) return res.status(401).json({ ok: false, error: '인증 필요' });
