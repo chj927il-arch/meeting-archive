@@ -185,22 +185,27 @@ input,textarea{font-family:var(--font)}
 }
 .filter-select:focus{outline:none;border-color:var(--accent)}
 
-/* ── 그리드 카드 ──────────────────────────────────────────────────────── */
+/* ── 목록형 카드 ──────────────────────────────────────────────────────── */
 .meeting-list{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
+  display:flex;
+  flex-direction:column;
+  grid-template-columns:unset;
   gap:14px;
   align-items:start;
 }
 .meeting-card{
   background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
-  padding:18px 18px 14px;cursor:pointer;transition:all .18s;
+  padding:16px 20px;cursor:pointer;transition:all .18s;
+  display:flex;align-items:flex-start;gap:16px;
   display:flex;flex-direction:column;
   border-top:3px solid transparent;
   height:100%;
 }
-.meeting-card:hover{border-top-color:var(--accent);background:var(--bg3);transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.18)}
-.meeting-card.selected{border-top-color:var(--accent);background:rgba(59,130,246,.05)}
+.meeting-card:hover{border-left-color:var(--accent);background:var(--bg3);box-shadow:0 4px 16px rgba(0,0,0,.14)}
+.meeting-card.selected{border-left-color:var(--accent);background:rgba(59,130,246,.05)}
+.mc-left{min-width:56px;display:flex;flex-direction:column;align-items:center;text-align:center;padding-top:2px;flex-shrink:0}
+.mc-center{flex:1;min-width:0}
+.mc-right{min-width:140px;display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0}
 
 /* 카드 헤더: ext 배지 */
 .mc-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;height:22px}
@@ -256,9 +261,11 @@ input,textarea{font-family:var(--font)}
   font-size:12px;color:var(--text2);
 }
 
-/* 반응형 그리드 */
-@media(max-width:1100px){.meeting-list{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:640px){.meeting-list{grid-template-columns:1fr}}
+/* 반응형 */
+@media(max-width:640px){
+  .meeting-card{flex-wrap:wrap}
+  .mc-right{min-width:unset;width:100%;flex-direction:row;align-items:center;justify-content:space-between;margin-top:6px}
+}
 
 .empty-state{text-align:center;padding:60px 20px;color:var(--text2)}
 .empty-icon{font-size:52px;margin-bottom:12px}
@@ -472,9 +479,23 @@ input,textarea{font-family:var(--font)}
         </select>
       </div>
 
+      <!-- 팀 필터 칩 -->
+      <div style="margin-bottom:10px">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:7px;font-weight:600">👥 팀별 필터</div>
+        <div id="teamChipList" style="display:flex;flex-wrap:wrap;gap:6px">
+          <button class="chip-btn active" id="teamChip-all" onclick="selectTeam('')">전체</button>
+          <button class="chip-btn" id="teamChip-기획팀" onclick="selectTeam('기획팀')">기획팀</button>
+          <button class="chip-btn" id="teamChip-사업팀" onclick="selectTeam('사업팀')">사업팀</button>
+          <button class="chip-btn" id="teamChip-가맹마케팅지원팀" onclick="selectTeam('가맹마케팅지원팀')">가맹마케팅지원팀</button>
+          <button class="chip-btn" id="teamChip-에듀테크팀" onclick="selectTeam('에듀테크팀')">에듀테크팀</button>
+          <button class="chip-btn" id="teamChip-운영지원팀" onclick="selectTeam('운영지원팀')">운영지원팀</button>
+          <button class="chip-btn" id="teamChip-재무팀" onclick="selectTeam('재무팀')">재무팀</button>
+        </div>
+      </div>
+
       <!-- 태그 필터 칩 -->
-      <div id="tagChips" style="margin-bottom:16px;display:none">
-        <div style="font-size:12.5px;color:var(--text2);margin-bottom:8px">🏷️ 자주 나오는 태그 — 눌러서 필터</div>
+      <div id="tagChips" style="margin-bottom:16px">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:7px;font-weight:600">🏷️ 자주 나오는 태그</div>
         <div id="tagChipList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
       </div>
 
@@ -489,6 +510,16 @@ input,textarea{font-family:var(--font)}
       <div style="display:flex;gap:8px;margin-bottom:20px">
         <button class="upload-tab active" id="tabDoc" onclick="switchUploadTab('doc')">📄 문서 파일</button>
         <button class="upload-tab" id="tabAudio" onclick="switchUploadTab('audio')">🎙️ 음성 파일</button>
+      </div>
+
+      <!-- 팀 선택 -->
+      <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px">
+        <label style="font-size:13px;font-weight:700;color:var(--text2);white-space:nowrap">팀 선택</label>
+        <select class="filter-select" id="uploadTeam" style="flex:1;max-width:220px">
+          <option value="">팀 미지정</option>
+          <option>기획팀</option><option>사업팀</option><option>가맹마케팅지원팀</option>
+          <option>에듀테크팀</option><option>운영지원팀</option><option>재무팀</option>
+        </select>
       </div>
 
       <!-- 문서 탭 -->
@@ -549,6 +580,14 @@ input,textarea{font-family:var(--font)}
   </div>
   <div style="display:flex;flex-direction:column;gap:14px">
     <div>
+      <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">팀</label>
+      <select id="editTeam" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font)">
+        <option value="">팀 미지정</option>
+        <option>기획팀</option><option>사업팀</option><option>가맹마케팅지원팀</option>
+        <option>에듀테크팀</option><option>운영지원팀</option><option>재무팀</option>
+      </select>
+    </div>
+    <div>
       <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">회의 제목</label>
       <input id="editTitle" type="text" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font)">
     </div>
@@ -598,7 +637,20 @@ input,textarea{font-family:var(--font)}
 let MEETINGS = [];
 let CURRENT_ID = null;
 let ACTIVE_TAG = null;
+let ACTIVE_TEAM = '';
 const DETAIL_CACHE = {};
+
+const TEAMS = ['기획팀','사업팀','가맹마케팅지원팀','에듀테크팀','운영지원팀','재무팀'];
+
+function selectTeam(team) {
+  ACTIVE_TEAM = team;
+  TEAMS.forEach(t => {
+    const btn = document.getElementById('teamChip-' + t);
+    if (btn) btn.classList.toggle('active', t === team);
+  });
+  document.getElementById('teamChip-all').classList.toggle('active', !team);
+  renderList();
+}
 
 // ── 로그인 ──────────────────────────────────────────────────────────────
 async function doLogin() {
@@ -720,6 +772,7 @@ function renderList() {
   const type = document.getElementById('filterType').value;
 
   let filtered = MEETINGS.filter(m => {
+    if (ACTIVE_TEAM && m.team !== ACTIVE_TEAM) return false;
     if (ACTIVE_TAG) {
       if (!(m.tags||[]).includes(ACTIVE_TAG)) return false;
     }
@@ -789,21 +842,28 @@ function cardHtml(m) {
   }
 
   return `<div class="meeting-card ${CURRENT_ID===m.id?'selected':''}" onclick="openDetail('${m.id}')">
-    <div class="mc-header">
+    <!-- 왼쪽: 배지+날짜 -->
+    <div class="mc-left">
       <span class="mc-ext ${ext}">${ext.toUpperCase()}</span>
-      <span style="font-size:11.5px;color:var(--text2)">${statusIcon}</span>
+      <div style="font-size:11.5px;color:var(--text2);margin-top:4px">${displayDate}</div>
+      ${m.team ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;white-space:nowrap">${esc(m.team)}</div>` : ''}
     </div>
-    <div class="mc-title">${esc(m.meetingTitle)}</div>
-    <div class="mc-attendees">👥 ${esc(attendeeStr)}</div>
-    <div class="mc-bullets">${bulletsHtml}</div>
-    <div class="mc-tags">${tagsHtml}</div>
-    <div class="mc-spacer"></div>
-    <div class="mc-footer">
-      <span>회의 ${displayDate}</span>
-      ${m.fileType === 'audio' && m.hasDoc
-        ? `<a href="/api/doc/${m.id}" onclick="event.stopPropagation()" title="회의록 Word 다운로드"
-             style="font-size:11.5px;color:var(--accent2);text-decoration:none;display:flex;align-items:center;gap:3px">📄 Word</a>`
-        : `<span>${m.uploadedAt.slice(0,10)} 등록</span>`}
+    <!-- 가운데: 제목+참석자+bullets -->
+    <div class="mc-center">
+      <div class="mc-title" style="height:auto;margin-bottom:4px">${esc(m.meetingTitle)}</div>
+      <div class="mc-attendees" style="margin-bottom:8px">👥 ${esc(attendeeStr)}</div>
+      <div class="mc-bullets" style="height:auto">${bulletsHtml}</div>
+    </div>
+    <!-- 오른쪽: 태그+상태+다운로드 -->
+    <div class="mc-right">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;justify-content:flex-end">
+        <span style="font-size:11.5px">${statusIcon}</span>
+        ${m.fileType === 'audio' && m.hasDoc
+          ? `<a href="/api/doc/${m.id}" onclick="event.stopPropagation()" title="회의록 Word 다운로드"
+               style="font-size:11.5px;color:var(--accent2);text-decoration:none;display:flex;align-items:center;gap:3px">📄 Word</a>`
+          : ''}
+      </div>
+      <div class="mc-tags" style="height:auto;justify-content:flex-end">${tagsHtml}</div>
     </div>
   </div>`;
 }
@@ -939,6 +999,7 @@ function openEdit(id) {
   if (!m) return;
   EDIT_ID = id;
 
+  document.getElementById('editTeam').value = m.team || '';
   document.getElementById('editTitle').value = m.meetingTitle || '';
   document.getElementById('editDate').value = m.meetingDate || '';
   document.getElementById('editAttendees').value = (m.attendees || []).join('\n');
@@ -978,6 +1039,7 @@ async function saveEdit() {
   const toLines = s => s.split('\n').map(x=>x.trim()).filter(Boolean);
 
   const body = {
+    team:         document.getElementById('editTeam').value,
     meetingTitle: document.getElementById('editTitle').value.trim(),
     meetingDate:  document.getElementById('editDate').value.trim(),
     attendees:    toLines(document.getElementById('editAttendees').value),
@@ -1199,6 +1261,8 @@ async function startAudioUpload(file) {
     xhr.setRequestHeader('X-File-Name', encodeURIComponent(file.name));
     xhr.setRequestHeader('X-File-Size', String(file.size));
     xhr.setRequestHeader('Content-Type', mimeType);
+    const team = document.getElementById('uploadTeam')?.value || '';
+    if (team) xhr.setRequestHeader('X-Team', encodeURIComponent(team));
 
     xhr.upload.addEventListener('progress', e => {
       if (e.lengthComputable) {
@@ -1300,6 +1364,8 @@ async function startUpload(file) {
 
   const formData = new FormData();
   formData.append('file', file);
+  const team = document.getElementById('uploadTeam')?.value || '';
+  if (team) formData.append('team', team);
 
   try {
     progBar.style.width = '40%';

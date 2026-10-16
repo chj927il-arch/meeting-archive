@@ -223,6 +223,7 @@ function makeIndexEntry(id, meta, analysis, extra = {}) {
     meetingTitle: meta.meetingTitle, meetingDate: meta.meetingDate,
     attendees: meta.attendees, oneLiner: meta.oneLiner,
     tags: meta.tags, uploadedAt: meta.uploadedAt, analysisStatus: meta.analysisStatus,
+    team: meta.team || '',
     previewResult:       analysis?.summary?.result?.slice(0,1)       || [],
     previewImplications: analysis?.summary?.implications?.slice(0,1) || [],
     previewDecisions:    analysis?.summary?.decisions?.slice(0,1)    || [],
@@ -282,8 +283,10 @@ async function handleUpload(request, env) {
   }
 
   const now  = new Date().toISOString();
+  const team = formData.get('team') || '';
   const meta = {
     id, fileName, fileSize, mimeType, uploadedAt: now, analysisStatus,
+    team,
     meetingTitle: analysis?.meetingTitle || fileName.replace(/\.[^.]+$/, ''),
     meetingDate:  analysis?.meetingDate  || '',
     attendees:    analysis?.attendees    || [],
@@ -308,6 +311,7 @@ async function handleAudioUpload(request, env) {
   const fileName = decodeURIComponent(request.headers.get('X-File-Name') || 'recording');
   const fileSize = parseInt(request.headers.get('X-File-Size') || '0');
   const mimeType = request.headers.get('Content-Type') || 'audio/mpeg';
+  const team     = decodeURIComponent(request.headers.get('X-Team') || '');
 
   // ① Google File API resumable 업로드 초기화
   const initRes = await fetch(
@@ -359,7 +363,7 @@ async function handleAudioUpload(request, env) {
   const now = new Date().toISOString();
   const meta = {
     id, fileName, fileSize, mimeType, fileType: 'audio',
-    uploadedAt: now, analysisStatus,
+    uploadedAt: now, analysisStatus, team,
     meetingTitle: analysis?.meetingTitle || fileName.replace(/\.[^.]+$/, ''),
     meetingDate:  analysis?.meetingDate  || '',
     attendees:    analysis?.attendees    || [],
@@ -480,6 +484,7 @@ async function handleEdit(request, env, id) {
 
   const body = await request.json();
   // 편집 가능한 필드만 허용
+  if (body.team         !== undefined) meta.team         = body.team;
   if (body.meetingTitle !== undefined) meta.meetingTitle = body.meetingTitle;
   if (body.meetingDate  !== undefined) meta.meetingDate  = body.meetingDate;
   if (body.attendees    !== undefined) meta.attendees    = body.attendees;
@@ -495,6 +500,7 @@ async function handleEdit(request, env, id) {
   const item = idx.find(m => m.id === id);
   if (item) {
     Object.assign(item, {
+      team: meta.team || '',
       meetingTitle: meta.meetingTitle, meetingDate: meta.meetingDate,
       attendees: meta.attendees, oneLiner: meta.oneLiner, tags: meta.tags,
       previewResult:       meta.summary?.result?.slice(0,1)       || item.previewResult       || [],
