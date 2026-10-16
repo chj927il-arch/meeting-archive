@@ -174,19 +174,20 @@ input,textarea{font-family:var(--font)}
 .list-toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center;width:100%}
 
 /* 팀/태그 필터 공통 */
-.filter-section{margin-bottom:14px;width:100%}
+.filter-section{margin-bottom:14px;display:block;box-sizing:border-box}
 .filter-section-label{font-size:13px;color:var(--text2);margin-bottom:8px;font-weight:600}
-.filter-chip-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%}
+.filter-chip-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 
 /* 실(department) 그룹 */
 .dept-group{
-  display:inline-flex;align-items:center;gap:5px;
-  background:var(--bg3);border:1px solid var(--border);
-  border-radius:10px;padding:4px 8px 4px 6px;
+  display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap;
+  background:rgba(59,130,246,.07);border:1.5px solid rgba(59,130,246,.25);
+  border-radius:12px;padding:5px 10px 5px 8px;
 }
 .dept-label{
-  font-size:11px;font-weight:700;color:var(--text2);
-  white-space:nowrap;padding-right:4px;border-right:1px solid var(--border);margin-right:2px;
+  font-size:12px;font-weight:800;color:var(--accent2);
+  white-space:nowrap;padding-right:8px;border-right:1.5px solid rgba(59,130,246,.3);
+  margin-right:3px;letter-spacing:-.2px;
 }
 
 /* 음성 탭 안내 박스 */
@@ -774,16 +775,19 @@ async function loadMeetings() {
 // ── 태그 칩 ──────────────────────────────────────────────────────────────
 function buildTagChips() {
   const tagCount = {};
-  MEETINGS.forEach(m => (m.tags||[]).forEach(t => { tagCount[t] = (tagCount[t]||0) + 1; }));
-  const sorted = Object.entries(tagCount).sort((a,b)=>b[1]-a[1]).slice(0,15);
+  MEETINGS.forEach(m => (m.tags||[]).forEach(t => { if(t) tagCount[t] = (tagCount[t]||0) + 1; }));
+  const sorted = Object.entries(tagCount).sort((a,b)=>b[1]-a[1]).slice(0,20);
 
   const wrap = document.getElementById('tagChips');
   const list = document.getElementById('tagChipList');
+  if (!wrap || !list) return;
+
   if (!sorted.length) {
-    list.innerHTML = `<span style="font-size:13px;color:var(--text2)">회의록 분석이 완료되면 자동으로 나타납니다.</span>`;
+    wrap.style.display = 'none';
     return;
   }
 
+  wrap.style.display = 'block';
   const allBtn = `<button class="chip-btn ${ACTIVE_TAG===null?'active':''}" onclick="selectTag(null)">전체<span class="chip-count">${MEETINGS.length}</span></button>`;
   list.innerHTML = allBtn + sorted.map(([tag, cnt]) =>
     `<button class="chip-btn ${ACTIVE_TAG===tag?'active':''}" onclick="selectTag('${esc(tag)}')">${esc(tag)}<span class="chip-count">${cnt}</span></button>`
