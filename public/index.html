@@ -111,11 +111,11 @@ input,textarea{font-family:var(--font)}
 .badge-yellow{background:rgba(234,179,8,.15);color:var(--yellow)}
 .badge-red{background:rgba(239,68,68,.15);color:var(--red)}
 .badge-gray{background:rgba(139,148,158,.12);color:var(--text2)}
-.tag{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11.5px;background:rgba(59,130,246,.1);color:var(--accent2);border:1px solid rgba(59,130,246,.2);margin:2px 3px 2px 0}
+.tag{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12.5px;background:rgba(59,130,246,.1);color:var(--accent2);border:1px solid rgba(59,130,246,.2);margin:2px 3px 2px 0}
 .chip-btn{
-  display:inline-flex;align-items:center;gap:5px;padding:6px 13px;
+  display:inline-flex;align-items:center;gap:5px;padding:7px 14px;
   border-radius:999px;border:1px solid var(--border);background:var(--bg2);
-  color:var(--text2);font-size:13px;cursor:pointer;transition:all .15s;font-family:var(--font);
+  color:var(--text2);font-size:14px;cursor:pointer;transition:all .15s;font-family:var(--font);
 }
 .chip-btn:hover{border-color:var(--accent);color:var(--accent2);background:rgba(59,130,246,.08)}
 .chip-btn.active{background:rgba(59,130,246,.15);border-color:var(--accent);color:var(--accent2);font-weight:600}
@@ -171,17 +171,47 @@ input,textarea{font-family:var(--font)}
 .upload-err{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);padding:16px;color:var(--red);font-size:13px}
 
 /* ── 목록 뷰 ─────────────────────────────────────────────────────────── */
-.list-toolbar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.list-toolbar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+
+/* 팀/태그 필터 공통 */
+.filter-section{margin-bottom:14px}
+.filter-section-label{font-size:13px;color:var(--text2);margin-bottom:8px;font-weight:600}
+.filter-chip-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+
+/* 실(department) 그룹 */
+.dept-group{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:10px;padding:4px 8px 4px 6px;
+}
+.dept-label{
+  font-size:11px;font-weight:700;color:var(--text2);
+  white-space:nowrap;padding-right:4px;border-right:1px solid var(--border);margin-right:2px;
+}
+
+/* 음성 탭 안내 박스 */
+.audio-info-box{
+  background:var(--bg3);border:1px solid var(--border);border-radius:12px;
+  padding:18px 20px;margin-bottom:18px;
+}
+.audio-info-title{font-size:15px;font-weight:700;margin-bottom:12px}
+.audio-info-body p{font-size:14px;color:var(--text2);margin:0 0 10px;line-height:1.7}
+.audio-info-body ol{font-size:14px;color:var(--text);margin:0 0 12px;padding-left:20px;line-height:1.9}
+.audio-info-body li{margin-bottom:2px}
+.audio-info-notice{
+  font-size:13.5px;background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.3);
+  border-radius:8px;padding:10px 14px;color:var(--yellow);line-height:1.6;
+}
 .search-wrap{flex:1;min-width:180px;position:relative}
 .search-wrap input{
-  width:100%;padding:9px 14px 9px 36px;border-radius:8px;
-  border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13.5px;
+  width:100%;padding:10px 14px 10px 38px;border-radius:8px;
+  border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:15px;
 }
 .search-wrap input:focus{outline:none;border-color:var(--accent)}
-.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text2)}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--text2)}
 .filter-select{
-  padding:9px 12px;border-radius:8px;border:1px solid var(--border);
-  background:var(--bg2);color:var(--text);font-size:13px;
+  padding:10px 13px;border-radius:8px;border:1px solid var(--border);
+  background:var(--bg2);color:var(--text);font-size:14px;
 }
 .filter-select:focus{outline:none;border-color:var(--accent)}
 
@@ -214,21 +244,21 @@ input,textarea{font-family:var(--font)}
 .mc-ext.hwp,.mc-ext.hwpx{background:rgba(234,179,8,.15);color:var(--yellow)}
 
 .mc-title{
-  font-size:15px;font-weight:700;
+  font-size:16px;font-weight:700;
   overflow:hidden;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
   line-height:1.45;margin-bottom:6px;
 }
 .mc-attendees{
   overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
-  font-size:12.5px;color:var(--text2);margin-bottom:10px;
+  font-size:13.5px;color:var(--text2);margin-bottom:10px;
   display:flex;align-items:center;gap:4px;
 }
 .mc-bullets{
   display:flex;flex-direction:column;gap:6px;
 }
 .mc-bullet{
-  font-size:14px;color:var(--text);line-height:1.5;
+  font-size:14.5px;color:var(--text);line-height:1.55;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
   padding-left:14px;position:relative;flex-shrink:0;
 }
@@ -471,24 +501,33 @@ input,textarea{font-family:var(--font)}
         </select>
       </div>
 
-      <!-- 팀 필터 칩 -->
-      <div style="margin-bottom:10px">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:7px;font-weight:600">👥 팀별 필터</div>
-        <div id="teamChipList" style="display:flex;flex-wrap:wrap;gap:6px">
+      <!-- 팀별 필터 (실 묶음) -->
+      <div class="filter-section">
+        <div class="filter-section-label">👥 팀별 필터</div>
+        <div class="filter-chip-row">
           <button class="chip-btn active" id="teamChip-all" onclick="selectTeam('')">전체</button>
-          <button class="chip-btn" id="teamChip-기획팀" onclick="selectTeam('기획팀')">기획팀</button>
-          <button class="chip-btn" id="teamChip-사업팀" onclick="selectTeam('사업팀')">사업팀</button>
-          <button class="chip-btn" id="teamChip-가맹마케팅지원팀" onclick="selectTeam('가맹마케팅지원팀')">가맹마케팅지원팀</button>
-          <button class="chip-btn" id="teamChip-에듀테크팀" onclick="selectTeam('에듀테크팀')">에듀테크팀</button>
-          <button class="chip-btn" id="teamChip-운영지원팀" onclick="selectTeam('운영지원팀')">운영지원팀</button>
-          <button class="chip-btn" id="teamChip-재무팀" onclick="selectTeam('재무팀')">재무팀</button>
+          <span class="dept-group">
+            <span class="dept-label">기획실</span>
+            <button class="chip-btn" id="teamChip-기획팀" onclick="selectTeam('기획팀')">기획팀</button>
+            <button class="chip-btn" id="teamChip-에듀테크팀" onclick="selectTeam('에듀테크팀')">에듀테크팀</button>
+          </span>
+          <span class="dept-group">
+            <span class="dept-label">가맹사업성장실</span>
+            <button class="chip-btn" id="teamChip-사업팀" onclick="selectTeam('사업팀')">사업팀</button>
+            <button class="chip-btn" id="teamChip-가맹마케팅지원팀" onclick="selectTeam('가맹마케팅지원팀')">가맹마케팅지원팀</button>
+          </span>
+          <span class="dept-group">
+            <span class="dept-label">경영관리실</span>
+            <button class="chip-btn" id="teamChip-운영지원팀" onclick="selectTeam('운영지원팀')">운영지원팀</button>
+            <button class="chip-btn" id="teamChip-재무팀" onclick="selectTeam('재무팀')">재무팀</button>
+          </span>
         </div>
       </div>
 
-      <!-- 태그 필터 칩 -->
-      <div id="tagChips" style="margin-bottom:16px">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:7px;font-weight:600">🏷️ 자주 나오는 태그</div>
-        <div id="tagChipList" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+      <!-- 자주 나오는 태그 -->
+      <div class="filter-section" id="tagChips">
+        <div class="filter-section-label">🏷️ 자주 나오는 태그</div>
+        <div class="filter-chip-row" id="tagChipList"></div>
       </div>
 
       <div id="listArea"><div class="empty-state"><div class="spinner"></div></div></div>
@@ -527,13 +566,26 @@ input,textarea{font-family:var(--font)}
 
       <!-- 음성 탭 -->
       <div id="uploadTabAudio" style="display:none">
-        <div class="page-sub" style="margin-bottom:16px">회의 녹음 파일을 올리면 Gemini AI가 전사 후 자동으로 회의록을 작성합니다.<br>파일이 크더라도 Google 서버에 직접 업로드하므로 용량 제한 없이 가능합니다.</div>
+        <div class="audio-info-box">
+          <div class="audio-info-title">🤖 AI 음성 분석 작동 원리</div>
+          <div class="audio-info-body">
+            <p>회의 녹음 파일을 올리면 <strong>Google Gemini 2.5 Flash</strong> 모델이 다음 단계로 처리합니다.</p>
+            <ol>
+              <li><strong>업로드</strong> — 음성 파일이 Google 서버로 직접 전송됩니다 (Cloudflare를 경유해 프록시 업로드).</li>
+              <li><strong>전사(STT)</strong> — Gemini가 회의 내용을 텍스트로 변환합니다. 한국어 인식을 지원하며 화자 구분도 시도합니다.</li>
+              <li><strong>분석·요약</strong> — 회의 결과, 시사점, 핵심 결정사항, 후속 조치를 JSON 구조로 추출합니다.</li>
+              <li><strong>Word 생성</strong> — 분석 결과로 다운로드 가능한 회의록 Word 파일을 자동 생성합니다.</li>
+            </ol>
+            <div class="audio-info-notice">⏱️ <strong>40MB 이상 파일은 분석·등록까지 1분 이상 소요될 수 있습니다.</strong> 업로드 중 화면을 닫지 마세요.</div>
+          </div>
+        </div>
         <div class="drop-zone" id="dropZoneAudio" onclick="document.getElementById('uploadAudioInput').click()" ondragover="onDragOver(event)" ondragleave="onDragLeaveAudio(event)" ondrop="onDropAudio(event)">
           <div class="drop-icon">🎙️</div>
           <div class="drop-title">음성 파일을 드래그하거나 클릭해서 선택</div>
           <div class="drop-sub">MP3, M4A, WAV, OGG, WebM — 용량 제한 없음<br><span onclick="event.stopPropagation();document.getElementById('uploadAudioInput').click()">파일 선택</span></div>
         </div>
         <input type="file" id="uploadAudioInput" accept=".mp3,.m4a,.wav,.ogg,.webm,.aac,.flac" onchange="onAudioFileSelected(this.files[0])">
+        </div><!-- /audio-info-box -->
       </div>
 
       <div class="upload-progress" id="uploadProgress">
