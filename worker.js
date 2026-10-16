@@ -159,38 +159,51 @@ function generateMeetingDoc(meta) {
   const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const listHtml = (items) => (items||[]).map(i => `<li>${esc(i)}</li>`).join('');
 
-  return `<!DOCTYPE html>
-<html>
+  return `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns:w="urn:schemas-microsoft-com:office:word"
+  xmlns="http://www.w3.org/TR/REC-html40">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!--[if gte mso 9]>
+<xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml>
+<![endif]-->
 <style>
-  body { font-family: '맑은 고딕', 'Malgun Gothic', Arial, sans-serif; font-size: 11pt; margin: 2.5cm 3cm; line-height: 1.8; color: #111; }
-  h1 { font-size: 17pt; font-weight: bold; border-bottom: 2.5px solid #1a1a1a; padding-bottom: 8pt; margin-bottom: 10pt; }
-  h2 { font-size: 12pt; font-weight: bold; color: #1a56a0; margin-top: 18pt; margin-bottom: 6pt; padding-left: 8pt; border-left: 3.5px solid #1a56a0; }
-  .meta-table { border-collapse: collapse; margin-bottom: 16pt; width: 100%; }
-  .meta-table td { padding: 5pt 10pt; font-size: 10.5pt; border: 1px solid #ccc; }
-  .meta-table td:first-child { background: #f0f4fa; font-weight: bold; width: 20%; color: #333; }
-  ul { margin: 4pt 0 4pt 16pt; padding: 0; }
-  li { margin: 4pt 0; font-size: 11pt; }
-  .oneliner { background: #f5f7fa; border-left: 4px solid #1a56a0; padding: 8pt 12pt; font-size: 11pt; color: #333; margin-bottom: 16pt; font-style: italic; }
-  .tags { margin-top: 18pt; font-size: 10pt; color: #666; }
-  .footer { margin-top: 24pt; font-size: 9pt; color: #999; border-top: 1px solid #ddd; padding-top: 6pt; }
+  @page { size: A4; margin: 2.5cm 2.5cm 2.5cm 2.5cm; }
+  body {
+    font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
+    font-size: 11pt;
+    line-height: 1.8;
+    color: #111;
+    width: 100%;
+    max-width: 100%;
+  }
+  h1 { font-size: 16pt; font-weight: bold; border-bottom: 2px solid #1a1a1a; padding-bottom: 6pt; margin-bottom: 12pt; page-break-after: avoid; }
+  h2 { font-size: 12pt; font-weight: bold; color: #1a56a0; margin-top: 16pt; margin-bottom: 6pt; padding-left: 8pt; border-left: 3pt solid #1a56a0; page-break-after: avoid; }
+  table { border-collapse: collapse; margin-bottom: 14pt; width: 100%; table-layout: fixed; }
+  td { padding: 5pt 10pt; font-size: 10.5pt; border: 1px solid #ccc; vertical-align: top; word-break: keep-all; }
+  td:first-child { background: #f0f4fa; font-weight: bold; width: 22%; color: #333; }
+  ul { margin: 4pt 0 4pt 18pt; padding: 0; }
+  li { margin: 3pt 0; font-size: 11pt; }
+  .oneliner { background: #f5f7fa; border-left: 4pt solid #1a56a0; padding: 8pt 12pt; font-size: 11pt; color: #333; margin-bottom: 14pt; font-style: italic; }
+  .tags { margin-top: 16pt; font-size: 10pt; color: #666; }
+  .footer { margin-top: 20pt; font-size: 9pt; color: #999; border-top: 1px solid #ddd; padding-top: 5pt; }
 </style>
 </head>
 <body>
 <h1>${esc(meta.meetingTitle)}</h1>
 ${meta.oneLiner ? `<div class="oneliner">${esc(meta.oneLiner)}</div>` : ''}
-<table class="meta-table">
+<table>
   <tr><td>회의 일자</td><td>${esc(meta.meetingDate || '—')}</td></tr>
   <tr><td>참석자</td><td>${esc((meta.attendees||[]).join(', ') || '—')}</td></tr>
   <tr><td>파일명</td><td>${esc(meta.fileName)}</td></tr>
   <tr><td>등록일</td><td>${esc(meta.uploadedAt?.slice(0,10) || '')}</td></tr>
 </table>
-${meta.summary?.result?.length ? `<h2>📊 회의 결과</h2><ul>${listHtml(meta.summary.result)}</ul>` : ''}
-${meta.summary?.implications?.length ? `<h2>💡 시사점</h2><ul>${listHtml(meta.summary.implications)}</ul>` : ''}
-${meta.summary?.decisions?.length ? `<h2>✅ 핵심 결정사항</h2><ul>${listHtml(meta.summary.decisions)}</ul>` : ''}
-${meta.summary?.actionItems?.length ? `<h2>📋 후속 조치</h2><ul>${listHtml(meta.summary.actionItems)}</ul>` : ''}
-${meta.tags?.length ? `<div class="tags">🏷️ 키워드: ${meta.tags.map(t=>esc(t)).join(' · ')}</div>` : ''}
+${meta.summary?.result?.length ? `<h2>■ 회의 결과</h2><ul>${listHtml(meta.summary.result)}</ul>` : ''}
+${meta.summary?.implications?.length ? `<h2>■ 시사점</h2><ul>${listHtml(meta.summary.implications)}</ul>` : ''}
+${meta.summary?.decisions?.length ? `<h2>■ 핵심 결정사항</h2><ul>${listHtml(meta.summary.decisions)}</ul>` : ''}
+${meta.summary?.actionItems?.length ? `<h2>■ 후속 조치</h2><ul>${listHtml(meta.summary.actionItems)}</ul>` : ''}
+${meta.tags?.length ? `<div class="tags">키워드: ${meta.tags.map(t=>esc(t)).join(' · ')}</div>` : ''}
 <div class="footer">본 문서는 AI(Gemini 2.5 Flash)가 회의 녹음을 분석하여 자동 생성한 회의록입니다.</div>
 </body>
 </html>`;
@@ -458,6 +471,52 @@ async function handleDelete(request, env, id) {
   return json({ ok: true });
 }
 
+// ── 회의록 편집 (PUT) ─────────────────────────────────────────────────
+async function handleEdit(request, env, id) {
+  if (!isAuthed(request, env)) return authResponse();
+  const raw = await env.MEETING_KV.get(`meeting-${id}`);
+  if (!raw) return json({ ok: false, error: '없음' }, 404);
+  const meta = JSON.parse(raw);
+
+  const body = await request.json();
+  // 편집 가능한 필드만 허용
+  if (body.meetingTitle !== undefined) meta.meetingTitle = body.meetingTitle;
+  if (body.meetingDate  !== undefined) meta.meetingDate  = body.meetingDate;
+  if (body.attendees    !== undefined) meta.attendees    = body.attendees;
+  if (body.oneLiner     !== undefined) meta.oneLiner     = body.oneLiner;
+  if (body.tags         !== undefined) meta.tags         = body.tags;
+  if (body.summary      !== undefined) meta.summary      = body.summary;
+  meta.editedAt = new Date().toISOString();
+
+  await env.MEETING_KV.put(`meeting-${id}`, JSON.stringify(meta));
+
+  // 인덱스도 업데이트
+  const idx  = await getIndex(env);
+  const item = idx.find(m => m.id === id);
+  if (item) {
+    Object.assign(item, {
+      meetingTitle: meta.meetingTitle, meetingDate: meta.meetingDate,
+      attendees: meta.attendees, oneLiner: meta.oneLiner, tags: meta.tags,
+      previewResult:       meta.summary?.result?.slice(0,1)       || item.previewResult       || [],
+      previewImplications: meta.summary?.implications?.slice(0,1) || item.previewImplications || [],
+      previewDecisions:    meta.summary?.decisions?.slice(0,1)    || item.previewDecisions    || [],
+    });
+    await saveIndex(env, idx);
+  }
+
+  // 음성 파일이면 Word 문서도 재생성
+  if (meta.fileType === 'audio' && meta.hasDoc) {
+    const docHtml   = generateMeetingDoc(meta);
+    const docBytes  = new TextEncoder().encode(docHtml);
+    let binary = '';
+    for (let i = 0; i < docBytes.length; i += 8192)
+      binary += String.fromCharCode(...docBytes.slice(i, i + 8192));
+    await env.MEETING_KV.put(`doc-${id}`, btoa(binary));
+  }
+
+  return json({ ok: true, meta });
+}
+
 // ── 재분석 ───────────────────────────────────────────────────────────
 async function handleReanalyze(request, env, id) {
   if (!isAuthed(request, env)) return authResponse();
@@ -568,6 +627,9 @@ export default {
 
     const reMatch = pathname.match(/^\/api\/reanalyze\/([^/]+)$/);
     if (reMatch && method === 'POST') return handleReanalyze(request, env, reMatch[1]);
+
+    const editMatch = pathname.match(/^\/api\/meetings\/([^/]+)$/);
+    if (editMatch && method === 'PUT') return handleEdit(request, env, editMatch[1]);
 
     return env.ASSETS.fetch(request);
   }
