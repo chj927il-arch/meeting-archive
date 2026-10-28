@@ -359,6 +359,7 @@ function makeIndexEntry(id, meta, analysis, extra = {}) {
     previewResult:       analysis?.summary?.result?.slice(0,1)       || [],
     previewImplications: analysis?.summary?.implications?.slice(0,1) || [],
     previewDecisions:    analysis?.summary?.decisions?.slice(0,1)    || [],
+    actionItems:         analysis?.summary?.actionItems               || [],
     ...extra
   };
 }

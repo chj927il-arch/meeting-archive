@@ -1765,12 +1765,13 @@ function calDayClick(e, dateStr) {
   document.body.appendChild(popup);
   CAL_POPUP = popup;
 
-  // 팝업 위치: 클릭한 날짜 셀 기준
+  // 팝업 위치: fixed이므로 viewport 기준 (scrollX/Y 불필요)
   const cell = e.currentTarget;
   const r = cell.getBoundingClientRect();
-  let left = r.left + window.scrollX;
-  let top  = r.bottom + window.scrollY + 4;
-  if (left + 290 > window.innerWidth) left = window.innerWidth - 300;
+  let left = r.left;
+  let top  = r.bottom + 4;
+  if (left + 270 > window.innerWidth) left = Math.max(4, window.innerWidth - 274);
+  if (top + 200 > window.innerHeight) top = r.top - 204;
   popup.style.left = left + 'px';
   popup.style.top  = top  + 'px';
 
