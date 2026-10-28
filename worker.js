@@ -157,6 +157,34 @@ async function extractDocxText(arrayBuffer) {
   } catch { return null; }
 }
 
+// ── 직원 이름 오타 교정 ──────────────────────────────────────────────
+// 음성 AI가 잘못 인식하는 이름 → 올바른 이름 (오타 발생시 여기에 추가)
+const NAME_CORRECTIONS = {
+  '백은':   '백용기',   // 이천기숙학원 원장
+  '정구영': '정구용',   // 기획팀
+  '이길':   '이기열',   // 사업기획실 실장
+};
+
+function applyNameCorrections(text) {
+  if (!text || typeof text !== 'string') return text;
+  let result = text;
+  for (const [wrong, correct] of Object.entries(NAME_CORRECTIONS)) {
+    result = result.replaceAll(wrong, correct);
+  }
+  return result;
+}
+
+function correctAnalysisNames(analysis) {
+  if (!analysis) return analysis;
+  const fix = (v) => {
+    if (typeof v === 'string') return applyNameCorrections(v);
+    if (Array.isArray(v)) return v.map(fix);
+    if (v && typeof v === 'object') { const o = {}; for (const k in v) o[k] = fix(v[k]); return o; }
+    return v;
+  };
+  return fix(analysis);
+}
+
 // ── Gemini 분석 공통 스키마/프롬프트 ─────────────────────────────────
 const GEMINI_SCHEMA = {
   type: 'object',
@@ -385,6 +413,8 @@ async function handleUpload(request, env) {
   } else {
     analysisStatus = 'unsupported_format';
   }
+
+  if (analysis) analysis = correctAnalysisNames(analysis);
 
   const now  = new Date().toISOString();
   const team = formData.get('team') || '';
@@ -675,6 +705,8 @@ async function handleReanalyze(request, env, id) {
       analysisStatus = analysis ? 'ok' : 'failed';
     }
   }
+
+  if (analysis) analysis = correctAnalysisNames(analysis);
 
   if (analysis) {
     Object.assign(meta, {
