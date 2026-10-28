@@ -432,17 +432,20 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── 2컬럼 목록 레이아웃 ─────────────────────────────────────────────── */
-.list-two-col{display:flex;gap:24px;align-items:flex-start}
+.list-two-col{display:flex;gap:20px;align-items:flex-start}
 .list-left{flex:1;min-width:0}
 .list-right{
-  width:340px;flex-shrink:0;display:flex;flex-direction:column;gap:16px;
-  position:sticky;top:0;max-height:100vh;overflow-y:auto;
+  width:320px;flex-shrink:0;display:flex;flex-direction:column;gap:14px;
+  position:sticky;top:0;max-height:calc(100vh - 90px);overflow-y:auto;
+  padding-bottom:12px;
 }
-.rp-card{padding:18px 16px}
-.rp-section-title{font-size:14px;font-weight:700;color:var(--text2);margin-bottom:12px;
-  text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:5px}
-@media(max-width:1100px){.list-right{width:300px}}
-@media(max-width:900px){
+.list-right::-webkit-scrollbar{width:4px}
+.list-right::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.rp-card{padding:14px 14px}
+.rp-section-title{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;
+  text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:5px}
+@media(max-width:1200px){.list-right{width:280px}}
+@media(max-width:960px){
   .list-two-col{flex-direction:column}
   .list-right{width:100%;position:static;max-height:none}
 }
@@ -587,13 +590,13 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 
     <!-- 목록 뷰 -->
     <div class="view active" id="view-list">
+      <div class="page-title">📂 회의록 목록</div>
+      <div class="page-sub">업로드된 회의록을 검색하고 열람하세요.</div>
+
       <div class="list-two-col">
 
         <!-- 왼쪽: 회의록 목록 -->
         <div class="list-left">
-          <div class="page-title">📂 회의록 목록</div>
-          <div class="page-sub">업로드된 회의록을 검색하고 열람하세요.</div>
-
           <div class="list-toolbar">
             <div class="search-wrap">
               <span class="search-icon">🔍</span>
@@ -1729,10 +1732,7 @@ function renderCalendar() {
     const hasMeeting = ms.length > 0;
     let dotsHtml = '';
     if (hasMeeting) {
-      dotsHtml = ms.slice(0,2).map(m =>
-        `<div class="cal-dot">${esc(m.meetingTitle)}</div>`
-      ).join('');
-      if (ms.length > 2) dotsHtml += `<div class="cal-more">+${ms.length - 2}건 더보기</div>`;
+      dotsHtml = `<div style="display:flex;gap:2px;margin-top:2px">${ms.slice(0,3).map(()=>`<div class="cal-dot"></div>`).join('')}</div>`;
     }
     html += `<div class="cal-day${isToday?' today':''}${hasMeeting?' has-meeting':''}"
       onclick="calDayClick(event,'${ds}')" data-date="${ds}">
