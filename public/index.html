@@ -381,17 +381,23 @@ input,textarea{font-family:var(--font)}
 
 /* ── 반응형 ──────────────────────────────────────────────────────────── */
 @media(max-width:900px){
-  .mobile-topbar{display:flex}
-  .app{flex-direction:column}
+  /* 탑바: 항상 화면 최상단에 고정 */
+  .mobile-topbar{
+    display:flex;
+    position:fixed;top:0;left:0;right:0;
+    z-index:300;height:52px;
+  }
+  /* 사이드바: 슬라이드인 드로어 */
   .sidebar{
     position:fixed;top:0;left:0;height:100dvh;
-    width:min(280px,85vw);min-width:0;z-index:200;
+    width:min(280px,85vw);min-width:0;z-index:250;
     transform:translateX(-101%);transition:transform .25s ease;
     border-right:1px solid var(--border);
   }
   .app.navopen .sidebar{transform:none}
   .app.navopen .nav-backdrop{display:block}
-  .main{padding:16px 16px 80px;min-width:0;width:100%;max-width:100%}
+  /* 메인: 탑바 높이만큼 padding-top, flex layout 해제 */
+  .main{padding:68px 16px 80px;min-width:0;width:100%;flex:none}
   .detail-panel{width:100vw}
   .login-box{padding:28px 20px}
   .upload-tab{padding:8px 12px;font-size:13px}
