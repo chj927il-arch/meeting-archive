@@ -562,7 +562,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 
       <!-- 팀 선택 -->
       <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px">
-        <label style="font-size:13px;font-weight:700;color:var(--text2);white-space:nowrap">팀 선택</label>
+        <label style="font-size:13px;font-weight:700;color:var(--text2);white-space:nowrap">주관부서</label>
         <select class="filter-select" id="uploadTeam" style="flex:1;max-width:220px">
           <option value="">팀 미지정</option>
           <option>기획팀</option><option>사업팀</option><option>가맹마케팅지원팀</option>
@@ -912,7 +912,7 @@ function cardHtml(m) {
     <div class="mc-left">
       <span class="mc-ext ${ext}">${ext.toUpperCase()}</span>
       <div style="font-size:11.5px;color:var(--text2);margin-top:4px">${displayDate}</div>
-      ${m.team ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;white-space:nowrap">${esc(m.team)}</div>` : ''}
+      ${m.team ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;white-space:nowrap">주관 ${esc(m.team)}</div>` : ''}
     </div>
     <!-- 가운데: 제목+참석자+bullets -->
     <div class="mc-center">
