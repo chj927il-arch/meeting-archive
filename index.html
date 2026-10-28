@@ -287,6 +287,67 @@
       .frow{grid-template-columns:1fr;}
       .search-row{flex-direction:column;}
     }
+
+    /* ── 모바일 최적화 (추가) ── */
+    @media(max-width:640px){
+      /* 카드: 고정 높이 제거 → 자동 높이 */
+      .mcard{height:auto;min-height:240px;}
+      .mcard-body{overflow:visible;}
+
+      /* 모달: 바텀시트 스타일 */
+      .overlay{align-items:flex-end;padding:0;}
+      .modal{border-radius:16px 16px 0 0;max-width:100%;margin:0;max-height:92vh;overflow-y:auto;}
+      .view-modal{max-width:100%;}
+
+      /* PDF 뷰어 높이 반응형 */
+      .pdf-frame{height:55vw;min-height:220px;}
+      .docx-preview{max-height:45vh;}
+
+      /* 터치 타깃 확대 */
+      .btn{min-height:40px;}
+      .btn-sm{min-height:36px;padding:7px 14px;}
+      .modal-x{width:36px;height:36px;font-size:18px;}
+      .fi,.fta,.filter-sel,.sort-sel{font-size:16px;} /* iOS zoom 방지 */
+
+      /* 드롭존: 드래그 없음 → 탭 유도 */
+      .drop-zone{flex-direction:column;padding:18px 12px;gap:8px;min-height:80px;}
+      .drop-sub{display:none;}
+
+      /* 검색 입력 */
+      #q{font-size:16px;} /* iOS 자동 확대 방지 */
+
+      /* 헤더 최적화 */
+      .hdr-actions .btn-icon{display:none;} /* 설정 버튼 숨김 → FAB으로 대체 */
+
+      /* 통계칩 가로스크롤 */
+      .stats-row{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;}
+      .stat-chip{flex-shrink:0;}
+
+      /* 뷰 메타정보 줄바꿈 */
+      .view-meta{gap:12px;}
+      .vm-value{font-size:14px;}
+
+      /* 바텀시트 상단 핸들 */
+      .modal::before{content:'';display:block;width:36px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 4px;flex-shrink:0;}
+    }
+
+    /* ── 모바일 FAB (파일 추가 버튼) ── */
+    .fab{
+      display:none;
+      position:fixed;bottom:max(20px,env(safe-area-inset-bottom,0px));right:16px;
+      width:52px;height:52px;border-radius:50%;
+      background:var(--accent);color:#fff;border:none;
+      font-size:24px;cursor:pointer;z-index:150;
+      box-shadow:0 4px 16px rgba(0,0,0,.35);
+      align-items:center;justify-content:center;
+      transition:transform .12s;
+    }
+    .fab:active{transform:scale(.93);}
+    @media(max-width:640px){
+      .fab{display:flex;}
+      .page{padding-bottom:max(80px,calc(env(safe-area-inset-bottom,0px) + 72px));}
+    }
+
     ::-webkit-scrollbar{width:5px;}
     ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
   </style>
@@ -974,5 +1035,8 @@ async function init(){
 }
 init();
 </script>
+
+<!-- 모바일 FAB -->
+<button class="fab" onclick="document.getElementById('file-input').click()" title="파일 추가">＋</button>
 </body>
 </html>
