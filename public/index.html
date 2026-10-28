@@ -572,9 +572,8 @@ input,select,textarea{font-family:var(--font);font-size:16px}
       </button>
     </div>
     <div class="sb-bottom">
-      <div class="sb-user">
-        <span>🏢</span><span>팀 계정</span>
-        <span id="meetingCount" style="margin-left:auto;font-size:11px;background:rgba(59,130,246,.15);color:var(--accent2);padding:2px 7px;border-radius:999px">0건</span>
+      <div class="sb-user" style="display:none">
+        <span id="meetingCount">0건</span>
       </div>
       <button class="logout-btn" onclick="toggleTheme()" id="themeBtn">
         <span id="themeIcon">🌙</span><span id="themeLabel">다크 모드</span>
@@ -1812,7 +1811,7 @@ function kanbanGetCards() {
   const states = kanbanLoadStates();
   const cards = [];
   MEETINGS.forEach(m => {
-    (m.summary?.actionItems || []).forEach((item, i) => {
+    (m.actionItems || m.summary?.actionItems || []).forEach((item, i) => {
       const id = `${m.id}_${i}`;
       const p = parseActionItem(item);
       cards.push({
