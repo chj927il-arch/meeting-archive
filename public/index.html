@@ -488,41 +488,46 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 .cal-popup-item:hover{background:rgba(59,130,246,.1);color:var(--accent2)}
 .cal-popup-date{font-size:10.5px;color:var(--text2);margin-bottom:2px}
 
-/* ── 칸반 (오른쪽 패널 — 탭+세로형) ────────────────────────────────── */
-.kb-tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:nowrap}
-.kb-tab{
-  padding:4px 0;border-radius:6px;border:1px solid var(--border);
-  background:none;color:var(--text2);font-size:11px;font-weight:600;cursor:pointer;
-  font-family:var(--font);transition:all .12s;display:flex;align-items:center;gap:3px;
-  flex:1;justify-content:center;white-space:nowrap;
+/* ── 칸반 (4컬럼 포스트잇 스타일) ──────────────────────────────────── */
+.kb-board{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;align-items:start}
+.kb-col-wrap{display:flex;flex-direction:column;gap:5px;min-width:0}
+.kb-col-header{
+  padding:5px 4px 6px;border-radius:7px 7px 0 0;text-align:center;
+  font-size:10px;font-weight:800;letter-spacing:.3px;color:#fff;
+  display:flex;flex-direction:column;align-items:center;gap:1px;
 }
-.kb-tab:hover{background:var(--bg3)}
-.kb-tab.active{background:rgba(59,130,246,.15);border-color:var(--accent);color:var(--accent2)}
-.kb-tab .kb-cnt{font-size:10px;background:rgba(139,148,158,.2);padding:1px 5px;border-radius:999px}
-.kb-col{display:none}
-.kb-col.active{display:block}
+.kb-col-header .kb-emoji{font-size:13px}
+.kb-col-header .kb-cnt-badge{
+  font-size:9px;background:rgba(255,255,255,.3);border-radius:999px;
+  padding:0 5px;line-height:16px;
+}
+.kb-cards{display:flex;flex-direction:column;gap:4px}
 .kanban-card{
-  background:var(--bg3);border:1px solid var(--border);border-radius:8px;
-  padding:10px 12px;margin-bottom:7px;cursor:pointer;transition:all .13s;
+  border-radius:0 0 3px 3px;padding:7px 7px 5px;cursor:pointer;
+  box-shadow:0 2px 4px rgba(0,0,0,.15);transition:transform .12s,box-shadow .12s;
+  position:relative;
 }
-.kanban-card:hover{box-shadow:0 3px 12px rgba(0,0,0,.09);border-color:var(--accent)}
+.kanban-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:rgba(0,0,0,.12);border-radius:3px 3px 0 0;
+}
+.kanban-card:hover{transform:translateY(-2px);box-shadow:0 4px 10px rgba(0,0,0,.2)}
 .kc-team{
-  font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px;
-  background:rgba(59,130,246,.12);color:var(--accent2);display:inline-block;margin-bottom:5px;
-}
-.kc-text{font-size:12.5px;line-height:1.5;color:var(--text);margin-bottom:7px}
-.kc-source{font-size:10.5px;color:var(--text2);display:flex;align-items:center;gap:3px;flex-wrap:wrap}
-.kc-source button{
-  font-size:10px;color:var(--accent2);background:none;border:none;
-  padding:0;cursor:pointer;font-family:var(--font);max-width:140px;
+  font-size:9px;font-weight:800;opacity:.7;margin-bottom:3px;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
-.kc-col-select{
-  font-size:10px;color:var(--text2);background:var(--bg2);border:1px solid var(--border);
-  border-radius:4px;padding:1px 4px;cursor:pointer;font-family:var(--font);margin-left:auto;
+.kc-text{font-size:10.5px;line-height:1.45;margin-bottom:5px;word-break:keep-all}
+.kc-source{display:flex;align-items:center;gap:3px;flex-wrap:nowrap;overflow:hidden}
+.kc-source button{
+  font-size:9px;opacity:.65;background:none;border:none;padding:0;cursor:pointer;
+  font-family:var(--font);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px;
 }
-.kc-col-select:hover{border-color:var(--accent)}
-.kb-empty{text-align:center;padding:24px 0;color:var(--text2);font-size:12.5px}
+.kc-col-select{
+  font-size:9px;background:rgba(0,0,0,.1);border:none;border-radius:3px;
+  padding:1px 3px;cursor:pointer;font-family:var(--font);margin-left:auto;flex-shrink:0;
+}
+.kb-empty-col{text-align:center;padding:10px 4px;font-size:10px;opacity:.4;color:var(--text2)}
+.kb-board-empty{text-align:center;padding:24px 0;color:var(--text2);font-size:12.5px;grid-column:1/-1}
 
 /* ── 토스트 ──────────────────────────────────────────────────────────── */
 #toast{
@@ -1834,41 +1839,47 @@ function renderKanban() {
   const cards = kanbanGetCards();
 
   if (!cards.length) {
-    board.innerHTML = `<div class="kb-empty">📋 회의록을 등록하면<br>액션 아이템이 카드로 나타납니다</div>`;
+    board.innerHTML = `<div class="kb-board"><div class="kb-board-empty">📋 회의록을 등록하면<br>액션 아이템이 카드로 나타납니다</div></div>`;
     return;
   }
 
-  // 탭 헤더
-  const tabs = KANBAN_COLS.map(col => {
-    const cnt = cards.filter(c => c.col === col.id).length;
-    return `<button class="kb-tab ${KB_ACTIVE_COL===col.id?'active':''}"
-      onclick="kbSwitchTab('${col.id}')" style="${KB_ACTIVE_COL===col.id?'border-color:'+col.color+';color:'+col.color:''}">
-      ${col.emoji} ${col.label}
-      ${cnt ? `<span class="kb-cnt">${cnt}</span>` : ''}
-    </button>`;
-  }).join('');
+  // 포스트잇 색상 (컬럼별)
+  const NOTE_COLORS = {
+    todo:  { bg:'#fff9c4', text:'#5a4a00' },
+    doing: { bg:'#ffe0b2', text:'#6d3b00' },
+    hold:  { bg:'#e8eaf6', text:'#283593' },
+    done:  { bg:'#c8e6c9', text:'#1b5e20' },
+  };
 
-  // 컬럼별 카드
   const cols = KANBAN_COLS.map(col => {
     const colCards = cards.filter(c => c.col === col.id);
-    const otherCols = KANBAN_COLS.filter(c => c.id !== col.id);
+    const nc = NOTE_COLORS[col.id];
     const cardsHtml = colCards.length
       ? colCards.map(c => `
-        <div class="kanban-card" style="border-left:3px solid ${col.color}">
+        <div class="kanban-card" style="background:${nc.bg};color:${nc.text}"
+          title="${esc(c.meetingTitle)}">
           ${c.team ? `<div class="kc-team">${esc(c.team)}</div>` : ''}
           <div class="kc-text">${esc(c.text)}</div>
           <div class="kc-source">
-            <button onclick="openDetail('${c.meetingId}')" title="${esc(c.meetingTitle)}">📋 ${esc(c.meetingTitle)}</button>
-            <select class="kc-col-select" onchange="kanbanMove('${esc(c.id)}',this.value)" title="단계 이동">
-              ${KANBAN_COLS.map(oc=>`<option value="${oc.id}"${oc.id===col.id?' selected':''}>${oc.emoji} ${oc.label}</option>`).join('')}
+            <button onclick="openDetail('${c.meetingId}')" style="color:${nc.text}" title="${esc(c.meetingTitle)}">📋</button>
+            <select class="kc-col-select" onchange="kanbanMove('${esc(c.id)}',this.value)" style="color:${nc.text}">
+              ${KANBAN_COLS.map(oc=>`<option value="${oc.id}"${oc.id===col.id?' selected':''}>${oc.emoji}${oc.label}</option>`).join('')}
             </select>
           </div>
         </div>`).join('')
-      : `<div class="kb-empty">${col.emoji} 없음</div>`;
-    return `<div class="kb-col${KB_ACTIVE_COL===col.id?' active':''}" id="kbcol-${col.id}">${cardsHtml}</div>`;
+      : `<div class="kb-empty-col">없음</div>`;
+
+    return `<div class="kb-col-wrap">
+      <div class="kb-col-header" style="background:${col.color}">
+        <span class="kb-emoji">${col.emoji}</span>
+        <span>${col.label}</span>
+        ${colCards.length ? `<span class="kb-cnt-badge">${colCards.length}</span>` : ''}
+      </div>
+      <div class="kb-cards">${cardsHtml}</div>
+    </div>`;
   }).join('');
 
-  board.innerHTML = `<div class="kb-tabs">${tabs}</div>${cols}`;
+  board.innerHTML = `<div class="kb-board">${cols}</div>`;
 }
 
 function kbSwitchTab(colId) {
@@ -1903,6 +1914,7 @@ function kanbanReset() {
       document.getElementById('loginScreen').classList.remove('show');
       document.getElementById('mainApp').style.display = 'flex';
       buildYearFilter();
+      buildTagChips();
       renderList();
       showView('list');
       calInit();
