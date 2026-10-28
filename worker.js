@@ -50,9 +50,12 @@ async function uploadToGDrive(env, buffer, fileName) {
     const mimeMap = { mp3:'audio/mpeg', m4a:'audio/mp4', wav:'audio/wav', ogg:'audio/ogg', webm:'audio/webm', aac:'audio/aac', flac:'audio/flac' };
     const mime = mimeMap[ext] || 'audio/mpeg';
 
+    // 공유 드라이브 지원 파라미터
+    const qs = 'uploadType=resumable&fields=id,webViewLink,name&supportsAllDrives=true';
+
     // Drive 재개 가능 업로드 초기화
     const initRes = await fetch(
-      'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,webViewLink,name',
+      `https://www.googleapis.com/upload/drive/v3/files?${qs}`,
       {
         method: 'POST',
         headers: {
@@ -237,7 +240,35 @@ async function analyzeWithGemini(env, fileBuffer, mimeType, fileName, textConten
 // ── 회의록 Word(HTML) 문서 생성 ──────────────────────────────────────
 function generateMeetingDoc(meta) {
   const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  const listHtml = (items) => (items||[]).map(i => `<li>${esc(i)}</li>`).join('');
+
+  // Word HTML에서 border-left CSS는 미지원 → 좁은 컬럼 테이블로 대체
+  const sectionHeader = (label) => `
+<table width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:14pt;margin-bottom:6pt;border-collapse:collapse;">
+  <tr>
+    <td width="4" bgcolor="#1a56a0" style="background:#1a56a0;padding:0;font-size:1pt;">&nbsp;</td>
+    <td style="padding:3pt 0 3pt 10pt;"><b><font size="3" color="#1a56a0">${esc(label)}</font></b></td>
+  </tr>
+</table>`;
+
+  // 리스트: Word에서 bullet 정렬 보장을 위해 table 기반으로
+  const listHtml = (items) => {
+    if (!items || !items.length) return '';
+    return `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:4pt 0 8pt 0;border-collapse:collapse;">
+${items.map(i => `  <tr>
+    <td width="18" valign="top" style="padding:2pt 6pt 2pt 0;font-size:11pt;color:#555;">•</td>
+    <td style="padding:2pt 0;font-size:11pt;line-height:1.75;color:#111;">${esc(i)}</td>
+  </tr>`).join('\n')}
+</table>`;
+  };
+
+  // 한줄 요약 박스: border-left 대신 좌측 컬럼 배경색 테이블
+  const onelinerBox = meta.oneLiner ? `
+<table width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-bottom:14pt;border-collapse:collapse;background:#f5f7fa;">
+  <tr>
+    <td width="4" bgcolor="#1a56a0" style="background:#1a56a0;padding:0;font-size:1pt;">&nbsp;</td>
+    <td bgcolor="#f5f7fa" style="background:#f5f7fa;padding:8pt 14pt;font-size:11pt;color:#333;font-style:italic;">${esc(meta.oneLiner)}</td>
+  </tr>
+</table>` : '';
 
   return `<html xmlns:o="urn:schemas-microsoft-com:office:office"
   xmlns:w="urn:schemas-microsoft-com:office:word"
@@ -246,45 +277,38 @@ function generateMeetingDoc(meta) {
 <meta charset="UTF-8">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 <!--[if gte mso 9]>
-<xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml>
+<xml><w:WordDocument>
+  <w:View>Print</w:View>
+  <w:Zoom>100</w:Zoom>
+  <w:DoNotOptimizeForBrowser/>
+</w:WordDocument></xml>
 <![endif]-->
 <style>
   @page { size: A4; margin: 2.5cm 2.5cm 2.5cm 2.5cm; }
-  body {
-    font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
-    font-size: 11pt;
-    line-height: 1.8;
-    color: #111;
-    width: 100%;
-    max-width: 100%;
-  }
-  h1 { font-size: 16pt; font-weight: bold; border-bottom: 2px solid #1a1a1a; padding-bottom: 6pt; margin-bottom: 12pt; page-break-after: avoid; }
-  h2 { font-size: 12pt; font-weight: bold; color: #1a56a0; margin-top: 16pt; margin-bottom: 6pt; padding-left: 8pt; border-left: 3pt solid #1a56a0; page-break-after: avoid; }
-  table { border-collapse: collapse; margin-bottom: 14pt; width: 100%; table-layout: fixed; }
-  td { padding: 5pt 10pt; font-size: 10.5pt; border: 1px solid #ccc; vertical-align: top; word-break: keep-all; }
-  td:first-child { background: #f0f4fa; font-weight: bold; width: 22%; color: #333; }
-  ul { margin: 4pt 0 4pt 18pt; padding: 0; }
-  li { margin: 3pt 0; font-size: 11pt; }
-  .oneliner { background: #f5f7fa; border-left: 4pt solid #1a56a0; padding: 8pt 12pt; font-size: 11pt; color: #333; margin-bottom: 14pt; font-style: italic; }
-  .tags { margin-top: 16pt; font-size: 10pt; color: #666; }
+  body { font-family: '맑은 고딕', 'Malgun Gothic', sans-serif; font-size: 11pt; line-height: 1.8; color: #111; }
+  h1 { font-size: 16pt; font-weight: bold; border-bottom: 2px solid #1a1a1a; padding-bottom: 6pt; margin-bottom: 10pt; page-break-after: avoid; }
+  table.info-table { border-collapse: collapse; margin-bottom: 14pt; width: 100%; }
+  table.info-table td { padding: 5pt 10pt; font-size: 10.5pt; border: 1px solid #ccc; vertical-align: top; }
+  table.info-table td.lbl { background: #f0f4fa; font-weight: bold; width: 22%; color: #333; }
+  .tags { margin-top: 14pt; font-size: 10pt; color: #666; }
   .footer { margin-top: 20pt; font-size: 9pt; color: #999; border-top: 1px solid #ddd; padding-top: 5pt; }
 </style>
 </head>
 <body>
 <h1>${esc(meta.meetingTitle)}</h1>
-${meta.oneLiner ? `<div class="oneliner">${esc(meta.oneLiner)}</div>` : ''}
-<table>
-  <tr><td>회의 일자</td><td>${esc(meta.meetingDate || '—')}</td></tr>
-  <tr><td>참석자</td><td>${esc((meta.attendees||[]).join(', ') || '—')}</td></tr>
-  <tr><td>파일명</td><td>${esc(meta.fileName)}</td></tr>
-  <tr><td>등록일</td><td>${esc(meta.uploadedAt?.slice(0,10) || '')}</td></tr>
+${onelinerBox}
+<table class="info-table">
+  <tr><td class="lbl">회의 일자</td><td>${esc(meta.meetingDate || '—')}</td></tr>
+  <tr><td class="lbl">참석자</td><td>${esc((meta.attendees||[]).join(', ') || '—')}</td></tr>
+  <tr><td class="lbl">파일명</td><td>${esc(meta.fileName)}</td></tr>
+  <tr><td class="lbl">등록일</td><td>${esc(meta.uploadedAt?.slice(0,10) || '')}</td></tr>
 </table>
-${meta.summary?.result?.length ? `<h2>■ 회의 결과</h2><ul>${listHtml(meta.summary.result)}</ul>` : ''}
-${meta.summary?.implications?.length ? `<h2>■ 시사점</h2><ul>${listHtml(meta.summary.implications)}</ul>` : ''}
-${meta.summary?.decisions?.length ? `<h2>■ 핵심 결정사항</h2><ul>${listHtml(meta.summary.decisions)}</ul>` : ''}
-${meta.summary?.actionItems?.length ? `<h2>■ 후속 조치</h2><ul>${listHtml(meta.summary.actionItems)}</ul>` : ''}
-${meta.tags?.length ? `<div class="tags">키워드: ${meta.tags.map(t=>esc(t)).join(' · ')}</div>` : ''}
-<div class="footer">본 문서는 AI(Gemini 2.5 Flash)가 회의 녹음을 분석하여 자동 생성한 회의록입니다.</div>
+${meta.summary?.result?.length ? sectionHeader('■ 회의 결과') + listHtml(meta.summary.result) : ''}
+${meta.summary?.implications?.length ? sectionHeader('■ 시사점') + listHtml(meta.summary.implications) : ''}
+${meta.summary?.decisions?.length ? sectionHeader('■ 핵심 결정사항') + listHtml(meta.summary.decisions) : ''}
+${meta.summary?.actionItems?.length ? sectionHeader('■ 후속 조치') + listHtml(meta.summary.actionItems) : ''}
+${meta.tags?.length ? `<p class="tags">🏷️ 키워드: ${meta.tags.map(t=>esc(t)).join(' · ')}</p>` : ''}
+<p class="footer">본 문서는 AI(Gemini 2.5 Flash)가 분석하여 자동 생성한 회의록입니다.</p>
 </body>
 </html>`;
 }
@@ -404,6 +428,8 @@ async function handleAudioUpload(request, env) {
     if (driveResult?.id) {
       driveFileId = driveResult.id;
       driveUrl    = driveResult.webViewLink || `https://drive.google.com/file/d/${driveResult.id}/view`;
+    } else if (driveResult?._error) {
+      console.error('Drive 업로드 실패:', driveResult._error);
     }
   }
 
