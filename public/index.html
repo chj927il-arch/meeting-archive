@@ -382,6 +382,7 @@ input,textarea{font-family:var(--font)}
 /* ── 반응형 ──────────────────────────────────────────────────────────── */
 @media(max-width:900px){
   .mobile-topbar{display:flex}
+  .app{flex-direction:column}
   .sidebar{
     position:fixed;top:0;left:0;height:100dvh;
     width:min(280px,85vw);min-width:0;z-index:200;
@@ -390,8 +391,7 @@ input,textarea{font-family:var(--font)}
   }
   .app.navopen .sidebar{transform:none}
   .app.navopen .nav-backdrop{display:block}
-  .app{display:block}
-  .main{padding:16px 16px 80px;max-width:100%;width:100%;box-sizing:border-box}
+  .main{padding:16px 16px 80px;min-width:0;width:100%;max-width:100%}
   .detail-panel{width:100vw}
   .login-box{padding:28px 20px}
   .upload-tab{padding:8px 12px;font-size:13px}
