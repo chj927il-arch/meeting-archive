@@ -122,6 +122,10 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 .chip-btn:hover{border-color:var(--accent);color:var(--accent2);background:rgba(59,130,246,.08)}
 .chip-btn.active{background:rgba(59,130,246,.15);border-color:var(--accent);color:var(--accent2);font-weight:600}
 .chip-count{font-size:11px;background:rgba(139,148,158,.2);padding:1px 6px;border-radius:999px}
+.team-chip-label{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:999px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-size:14px;cursor:pointer;transition:all .15s;user-select:none}
+.team-chip-label:hover{border-color:var(--accent);color:var(--accent2);background:rgba(59,130,246,.08)}
+.team-chip-label input{display:none}
+.team-chip-label:has(input:checked){background:rgba(59,130,246,.15);border-color:var(--accent);color:var(--accent2);font-weight:600}
 
 /* ── 로그인 화면 ─────────────────────────────────────────────────────── */
 #loginScreen{
@@ -402,6 +406,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
   /* 메인: 탑바+하단탭 높이만큼 padding */
   .main{padding:60px 14px 72px;min-width:0;width:100%;flex:none}
   .detail-panel{width:100vw}
+  .dp-actions{padding-bottom:calc(14px + 56px)} /* 하단 탭바 높이만큼 */
   .login-box{padding:28px 20px}
   .upload-tab{padding:8px 12px;font-size:13px}
 
@@ -755,6 +760,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
               <button class="cal-nav-btn" onclick="calMove(-1)">‹</button>
               <span class="cal-month-label" id="calMonthLabel"></span>
               <button class="cal-nav-btn" onclick="calMove(1)">›</button>
+              <button class="cal-nav-btn" onclick="showCalAddModal()" title="일정 추가" style="margin-left:4px;font-size:14px">+</button>
             </div>
             <div class="cal-grid" id="calGrid"></div>
           </div>
@@ -780,6 +786,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
           <button class="cal-nav-btn" onclick="calMove(-1)">‹</button>
           <span class="cal-month-label" id="calMonthLabelM"></span>
           <button class="cal-nav-btn" onclick="calMove(1)">›</button>
+          <button class="cal-nav-btn" onclick="showCalAddModal()" title="일정 추가" style="margin-left:4px;font-size:14px">+</button>
         </div>
         <div class="cal-grid" id="calGridM"></div>
       </div>
@@ -806,14 +813,17 @@ input,select,textarea{font-family:var(--font);font-size:16px}
         <button class="upload-tab" id="tabDoc" onclick="switchUploadTab('doc')">📄 문서 파일</button>
       </div>
 
-      <!-- 팀 선택 -->
-      <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px">
-        <label style="font-size:13px;font-weight:700;color:var(--text2);white-space:nowrap">주관부서</label>
-        <select class="filter-select" id="uploadTeam" style="flex:1;max-width:220px">
-          <option value="">팀 미지정</option>
-          <option>기획팀</option><option>사업팀</option><option>가맹마케팅지원팀</option>
-          <option>에듀테크팀</option><option>운영지원팀</option><option>재무팀</option>
-        </select>
+      <!-- 팀 선택 (복수 선택) -->
+      <div style="margin-bottom:16px">
+        <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:8px">주관부서 <span style="font-weight:400;font-size:12px">(복수 선택 가능)</span></label>
+        <div id="uploadTeamChips" style="display:flex;flex-wrap:wrap;gap:6px">
+          <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="기획팀"><span>기획팀</span></label>
+          <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="사업팀"><span>사업팀</span></label>
+          <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="가맹마케팅지원팀"><span>가맹마케팅지원팀</span></label>
+          <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="에듀테크팀"><span>에듀테크팀</span></label>
+          <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="운영지원팀"><span>운영지원팀</span></label>
+          <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="재무팀"><span>재무팀</span></label>
+        </div>
       </div>
 
       <!-- 문서 탭 -->
@@ -878,6 +888,29 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 </div>
 
 <!-- 편집 모달 -->
+<!-- 캘린더 일정 추가 모달 -->
+<div id="calAddBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center" onclick="if(event.target===this)hideCalAddModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;width:min(420px,92vw);z-index:510">
+    <div style="font-size:16px;font-weight:700;margin-bottom:16px">📅 일정 추가</div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:13px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">날짜</label>
+      <input type="date" id="calAddDate" class="filter-select" style="width:100%">
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:13px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">제목 *</label>
+      <input type="text" id="calAddTitle" placeholder="예: 마케팅팀 주간회의" class="filter-select" style="width:100%" onkeydown="if(event.key==='Enter')submitCalAdd()">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:13px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px">메모 (선택)</label>
+      <input type="text" id="calAddNote" placeholder="장소, 참고사항 등" class="filter-select" style="width:100%">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="hideCalAddModal()" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text2);cursor:pointer">취소</button>
+      <button onclick="submitCalAdd()" style="padding:8px 20px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-weight:600;cursor:pointer">등록</button>
+    </div>
+  </div>
+</div>
+
 <div id="editBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500" onclick="closeEdit()"></div>
 <div id="editModal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
   width:min(620px,95vw);max-height:90vh;overflow-y:auto;
@@ -1030,7 +1063,7 @@ async function loadMeetings() {
     buildYearFilter();
     buildTagChips();
     renderList();
-    calInit();
+    await calInit();
     renderKanban();
   } catch (e) {
     console.error(e);
@@ -1587,7 +1620,7 @@ async function startAudioUpload(file) {
     xhr.setRequestHeader('X-File-Name', encodeURIComponent(file.name));
     xhr.setRequestHeader('X-File-Size', String(file.size));
     xhr.setRequestHeader('Content-Type', mimeType);
-    const team = document.getElementById('uploadTeam')?.value || '';
+    const team = [...document.querySelectorAll('.upload-team-cb:checked')].map(cb => cb.value).join(',');
     if (team) xhr.setRequestHeader('X-Team', encodeURIComponent(team));
 
     xhr.upload.addEventListener('progress', e => {
@@ -1690,7 +1723,7 @@ async function startUpload(file) {
 
   const formData = new FormData();
   formData.append('file', file);
-  const team = document.getElementById('uploadTeam')?.value || '';
+  const team = [...document.querySelectorAll('.upload-team-cb:checked')].map(cb => cb.value).join(',');
   if (team) formData.append('team', team);
 
   try {
@@ -1809,22 +1842,21 @@ function applyTheme() {
 // ── 캘린더 ──────────────────────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════════
 let CAL_YEAR, CAL_MONTH; // 현재 표시 중인 연/월
+let CAL_EVENTS = []; // KV에서 불러온 수동+자동 일정
+
+async function loadCalEvents() {
+  try {
+    const res = await fetch('/api/cal-events');
+    CAL_EVENTS = res.ok ? await res.json() : [];
+  } catch { CAL_EVENTS = []; }
+}
 let CAL_POPUP = null;    // 팝업 DOM
 
-function calInit() {
+async function calInit() {
   const now = new Date();
-  // MEETINGS 중 가장 최근 날짜를 기본으로
-  if (MEETINGS.length) {
-    const dates = MEETINGS
-      .map(m => m.meetingDate || m.uploadedAt.slice(0,10))
-      .filter(Boolean).sort();
-    const last = new Date(dates[dates.length - 1]);
-    CAL_YEAR  = last.getFullYear();
-    CAL_MONTH = last.getMonth();
-  } else {
-    CAL_YEAR  = now.getFullYear();
-    CAL_MONTH = now.getMonth();
-  }
+  CAL_YEAR  = now.getFullYear();
+  CAL_MONTH = now.getMonth();
+  await loadCalEvents();
   renderCalendar();
 }
 
@@ -1863,13 +1895,14 @@ function renderCalendar() {
   for (let d = 1; d <= daysInMonth; d++) {
     const ds = `${CAL_YEAR}-${String(CAL_MONTH+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const ms = dateMap[ds] || [];
+    const evs = CAL_EVENTS.filter(e => e.date === ds);
     const isToday = ds === todayStr;
     const hasMeeting = ms.length > 0;
+    const hasEvent = evs.length > 0;
     let dotsHtml = '';
-    if (hasMeeting) {
-      dotsHtml = `<div style="display:flex;gap:2px;margin-top:2px">${ms.slice(0,3).map(()=>`<div class="cal-dot"></div>`).join('')}</div>`;
-    }
-    html += `<div class="cal-day${isToday?' today':''}${hasMeeting?' has-meeting':''}"
+    if (hasMeeting) dotsHtml += `<div style="display:flex;gap:2px;margin-top:2px">${ms.slice(0,3).map(()=>`<div class="cal-dot"></div>`).join('')}</div>`;
+    if (hasEvent)   dotsHtml += `<div style="display:flex;gap:2px;margin-top:1px">${evs.slice(0,2).map(()=>`<div class="cal-dot" style="background:#f59e0b"></div>`).join('')}</div>`;
+    html += `<div class="cal-day${isToday?' today':''}${hasMeeting||hasEvent?' has-meeting':''}"
       onclick="calDayClick(event,'${ds}')" data-date="${ds}">
       <div class="cal-day-num">${d}</div>
       ${dotsHtml}
@@ -1883,19 +1916,31 @@ function calDayClick(e, dateStr) {
     const d = m.meetingDate || m.uploadedAt.slice(0,10);
     return d === dateStr;
   });
+  const evs = CAL_EVENTS.filter(ev => ev.date === dateStr);
   calClosePopup();
-  if (!meetings.length) return;
 
   const popup = document.createElement('div');
   popup.className = 'cal-day-popup';
   popup.id = 'calPopup';
 
   const [y, mo, d] = dateStr.split('-');
-  popup.innerHTML = `<div class="cal-popup-title">📅 ${y}년 ${Number(mo)}월 ${Number(d)}일 회의 (${meetings.length}건)</div>` +
-    meetings.map(m => `<div class="cal-popup-item" onclick="calClosePopup();openDetail('${m.id}')">
-      <div class="cal-popup-date">${m.team ? '주관 ' + esc(m.team) + ' | ' : ''}${(m.attendees||[]).slice(0,2).join(', ')}</div>
-      ${esc(m.meetingTitle)}
-    </div>`).join('');
+  let inner = `<div class="cal-popup-title">📅 ${y}년 ${Number(mo)}월 ${Number(d)}일</div>`;
+  if (meetings.length) {
+    inner += `<div style="font-size:11px;font-weight:700;color:var(--text2);margin:6px 0 2px">회의록 (${meetings.length}건)</div>` +
+      meetings.map(m => `<div class="cal-popup-item" onclick="calClosePopup();openDetail('${m.id}')">
+        <div class="cal-popup-date">${m.team ? '주관 ' + esc(m.team) + ' | ' : ''}${(m.attendees||[]).slice(0,2).join(', ')}</div>
+        ${esc(m.meetingTitle)}
+      </div>`).join('');
+  }
+  if (evs.length) {
+    inner += `<div style="font-size:11px;font-weight:700;color:var(--text2);margin:6px 0 2px">일정 (${evs.length}건)</div>` +
+      evs.map(ev => `<div class="cal-popup-item" style="display:flex;justify-content:space-between;align-items:center">
+        <div>🗓 ${esc(ev.title)}${ev.note ? '<div class="cal-popup-date">' + esc(ev.note) + '</div>' : ''}</div>
+        <button onclick="event.stopPropagation();calDeleteEvent('${ev.id}')" style="border:none;background:none;color:var(--text2);cursor:pointer;font-size:14px">🗑</button>
+      </div>`).join('');
+  }
+  inner += `<button onclick="calClosePopup();showCalAddModal('${dateStr}')" style="margin-top:8px;width:100%;padding:6px;border-radius:6px;border:1px dashed var(--border);background:none;color:var(--text2);cursor:pointer;font-size:13px">+ 일정 추가</button>`;
+  popup.innerHTML = inner;
 
   document.body.appendChild(popup);
   CAL_POPUP = popup;
@@ -1916,6 +1961,39 @@ function calDayClick(e, dateStr) {
 
 function calClosePopup() {
   if (CAL_POPUP) { CAL_POPUP.remove(); CAL_POPUP = null; }
+}
+
+async function calDeleteEvent(id) {
+  try { await fetch(`/api/cal-events/${id}`, { method: 'DELETE' }); } catch {}
+  CAL_EVENTS = CAL_EVENTS.filter(e => e.id !== id);
+  calClosePopup();
+  renderCalendar();
+  renderCalendarM && renderCalendarM();
+}
+
+function showCalAddModal(prefillDate) {
+  const bd = document.getElementById('calAddBackdrop');
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('calAddDate').value = prefillDate || today;
+  document.getElementById('calAddTitle').value = '';
+  document.getElementById('calAddNote').value = '';
+  bd.style.display = 'flex';
+  document.getElementById('calAddTitle').focus();
+}
+function hideCalAddModal() {
+  document.getElementById('calAddBackdrop').style.display = 'none';
+}
+async function submitCalAdd() {
+  const title = document.getElementById('calAddTitle').value.trim();
+  const date  = document.getElementById('calAddDate').value;
+  const note  = document.getElementById('calAddNote').value.trim();
+  if (!title || !date) { alert('제목과 날짜를 입력하세요.'); return; }
+  try {
+    const res = await fetch('/api/cal-events', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({title, date, note}) });
+    const data = await res.json();
+    if (data.event) { CAL_EVENTS.push(data.event); renderCalendar(); renderCalendarM && renderCalendarM(); }
+  } catch {}
+  hideCalAddModal();
 }
 
 // ════════════════════════════════════════════════════════════════════════
@@ -2114,10 +2192,14 @@ function renderCalendarM() {
   for (let d = 1; d <= daysInMonth; d++) {
     const ds = `${CAL_YEAR}-${String(CAL_MONTH+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const ms = dateMap[ds] || [];
+    const evs = CAL_EVENTS.filter(e => e.date === ds);
     const isToday = ds === todayStr;
     const hasMeeting = ms.length > 0;
-    const dotsHtml = hasMeeting ? `<div style="display:flex;gap:2px;margin-top:2px">${ms.slice(0,3).map(()=>`<div class="cal-dot"></div>`).join('')}</div>` : '';
-    html += `<div class="cal-day${isToday?' today':''}${hasMeeting?' has-meeting':''}" onclick="calDayClick(event,'${ds}')" data-date="${ds}">
+    const hasEvent = evs.length > 0;
+    let dotsHtml = '';
+    if (hasMeeting) dotsHtml += `<div style="display:flex;gap:2px;margin-top:2px">${ms.slice(0,3).map(()=>`<div class="cal-dot"></div>`).join('')}</div>`;
+    if (hasEvent)   dotsHtml += `<div style="display:flex;gap:2px;margin-top:1px">${evs.slice(0,2).map(()=>`<div class="cal-dot" style="background:#f59e0b"></div>`).join('')}</div>`;
+    html += `<div class="cal-day${isToday?' today':''}${hasMeeting||hasEvent?' has-meeting':''}" onclick="calDayClick(event,'${ds}')" data-date="${ds}">
       <div class="cal-day-num">${d}</div>${dotsHtml}</div>`;
   }
   grid.innerHTML = html;
@@ -2273,7 +2355,7 @@ function toggleRpSection(titleEl) {
       buildTagChips();
       renderList();
       showView('list');
-      calInit();
+      await calInit();
       renderKanban();
     }
   } catch {}

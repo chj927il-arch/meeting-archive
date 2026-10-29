@@ -202,17 +202,21 @@ const GEMINI_SCHEMA = {
       },
       required: ['result', 'implications', 'decisions', 'actionItems']
     },
-    tags:     { type: 'array', items: { type: 'string' } },
-    oneLiner: { type: 'string' }
+    tags:            { type: 'array', items: { type: 'string' } },
+    oneLiner:        { type: 'string' },
+    nextMeetingDate: { type: 'string' }
   },
   required: ['meetingTitle', 'meetingDate', 'attendees', 'summary', 'tags', 'oneLiner']
 };
+
+const EMPLOYEE_NAMES = ["김근욱","남웅식","이기열","강태혁","최혁준","정구용","김태현","윤희지","강민석","권현","장훈희","강민구","송의진","박숙진","신수경","김연주","조영준","주윤미","김지현","최선규","배소연","김민지","김다은","고소영","김지명","소현지","김영준","김성태","임주연","배은진","최우리","최혜민","조수연","허린","김지영","유동석","노의영","김현동","조은애","김진경","이재윤","백용기","박영준","강범석","박재완","윤슬기","최정섭","안소나","강희은","안한","최수연","이건","박선경","전우승","이장권","구남웅","전동혁","김호일","정유성","김승헌","유석호","정대희","황민영","조명석","노현영","남궁희","이동훈","김예은","석예슬","이지용","이준엽","허대영","김희정","이옥경","윤정현","윤진우","민혜종","정민호","박호연","조승희","박진현","양예지","권미진","안홍준","양성대","송현겸","주현식","송우석","박재성","고재학","안장원","전상진","이상헌","홍채범","원승욱","김경호","전대웅","변용호","백은수","한주희","정헌철","우다령","김세영","이안나","박은정","정주영","나수진","문정석","이영종","이은령","김예림","문용길","안지유","이문성","조자혜","최용준","박종박","안유정","윤하림","김소희","강인혜","이수지","주혜리","안나현","이상수","김태형","유창혜","장석진","이강훈"];
 
 function makePrompt(fileName, isAudio) {
   const src = isAudio
     ? '첨부된 회의 녹음 파일을 듣고'
     : '다음 회의록 파일을';
-  return `당신은 회의록 분석 전문가입니다. ${src} 분석해 JSON으로 반환하세요.\n\n파일명: ${fileName}\n\n분석 규칙:\n- meetingTitle: 회의 제목. ${isAudio ? '대화에서 파악하거나' : '문서에 없으면'} 내용 기반으로 적절히 생성\n- meetingDate: 회의 날짜(YYYY-MM-DD). 없으면 빈 문자열\n- attendees: 참석자 목록. ${isAudio ? '발언자/자기소개에서 이름 추출' : '이름+직함 형태면 그대로 포함'}\n- summary.result: 회의 결과를 핵심만 뽑아 3~5개 개조식 bullet (각 항목 15~30자, 명사형으로 끝낼 것)\n- summary.implications: 시사점을 핵심만 뽑아 3~5개 개조식 bullet (각 항목 15~30자, 명사형으로 끝낼 것)\n- summary.decisions: 결정된 사항들 개조식 목록\n- summary.actionItems: 후속 조치와 담당자 (예: "마케팅팀 — 제안서 초안 작성 (~10/20)")\n- tags: 핵심 키워드 5~10개\n- oneLiner: 가장 핵심적인 한 줄 요약 (30자 이내)`;
+  const nameHint = `\n\n[이투스ECI 직원명부 — 참석자 이름을 이 목록에서 최대한 매칭하세요]\n${EMPLOYEE_NAMES.join(', ')}`;
+  return `당신은 회의록 분석 전문가입니다. ${src} 분석해 JSON으로 반환하세요.\n\n파일명: ${fileName}${nameHint}\n\n분석 규칙:\n- meetingTitle: 회의 제목. ${isAudio ? '대화에서 파악하거나' : '문서에 없으면'} 내용 기반으로 적절히 생성\n- meetingDate: 회의 날짜(YYYY-MM-DD). 없으면 빈 문자열\n- attendees: 참석자 목록. ${isAudio ? '발언자/자기소개에서 이름 추출. 위 직원명부에 있는 이름과 발음이 비슷하면 명부의 정확한 이름으로 기재' : '이름+직함 형태면 그대로 포함. 위 직원명부에서 매칭되는 이름 사용'}\n- summary.result: 회의 결과를 핵심만 뽑아 3~5개 개조식 bullet (각 항목 15~30자, 명사형으로 끝낼 것)\n- summary.implications: 시사점을 핵심만 뽑아 3~5개 개조식 bullet (각 항목 15~30자, 명사형으로 끝낼 것)\n- summary.decisions: 결정된 사항들 개조식 목록\n- summary.actionItems: 후속 조치와 담당자 (예: "마케팅팀 — 제안서 초안 작성 (~10/20)")\n- tags: 핵심 키워드 5~10개\n- oneLiner: 가장 핵심적인 한 줄 요약 (30자 이내)\n- nextMeetingDate: 다음 회의 날짜(YYYY-MM-DD). "다음 회의", "다음 주 N요일", "N월 N일에 다시" 등 언급이 있으면 추출. 없으면 빈 문자열`;
 }
 
 async function callGemini(env, parts, thinkingBudget = 2048) {
@@ -435,6 +439,8 @@ async function handleUpload(request, env) {
   idx.unshift(makeIndexEntry(id, meta, analysis));
   if (idx.length > 500) idx.splice(500);
   await saveIndex(env, idx);
+
+  await autoAddNextMeeting(env, analysis, meta.meetingTitle);
 
   return json({ ok: true, id, analysisStatus, meta });
 }
@@ -726,12 +732,50 @@ async function handleReanalyze(request, env, id) {
     const item = idx.find(m => m.id === id);
     if (item) Object.assign(item, makeIndexEntry(id, meta, analysis));
     await saveIndex(env, idx);
+
+    await autoAddNextMeeting(env, analysis, meta.meetingTitle);
   }
 
   return json({ ok: true, analysisStatus, meta });
 }
 
 // ── 로그인/로그아웃 ───────────────────────────────────────────────────
+async function autoAddNextMeeting(env, analysis, meetingTitle) {
+  const nmd = analysis?.nextMeetingDate;
+  if (!nmd || !/^\d{4}-\d{2}-\d{2}$/.test(nmd)) return;
+  const raw = await env.MEETING_KV.get('calendar-events');
+  const events = raw ? JSON.parse(raw) : [];
+  const title = `다음 회의: ${meetingTitle || ''}`.trim();
+  if (events.some(e => e.date === nmd && e.title === title)) return; // 중복 방지
+  events.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), title, date: nmd, note: '회의록 자동 추출', createdAt: new Date().toISOString() });
+  await env.MEETING_KV.put('calendar-events', JSON.stringify(events));
+}
+
+async function handleCalEventsGet(request, env) {
+  const raw = await env.MEETING_KV.get('calendar-events');
+  return json(raw ? JSON.parse(raw) : []);
+}
+
+async function handleCalEventsPost(request, env) {
+  const body = await request.json();
+  const { title, date, note } = body;
+  if (!title || !date) return json({ error: 'title and date required' }, 400);
+  const raw = await env.MEETING_KV.get('calendar-events');
+  const events = raw ? JSON.parse(raw) : [];
+  const ev = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), title, date, note: note || '', createdAt: new Date().toISOString() };
+  events.push(ev);
+  await env.MEETING_KV.put('calendar-events', JSON.stringify(events));
+  return json({ ok: true, event: ev });
+}
+
+async function handleCalEventDelete(request, env, id) {
+  const raw = await env.MEETING_KV.get('calendar-events');
+  let events = raw ? JSON.parse(raw) : [];
+  events = events.filter(e => e.id !== id);
+  await env.MEETING_KV.put('calendar-events', JSON.stringify(events));
+  return json({ ok: true });
+}
+
 async function handleTodoGet(request, env) {
   const raw = await env.MEETING_KV.get('todo-states');
   const states = raw ? JSON.parse(raw) : {};
@@ -794,6 +838,10 @@ export default {
     if (pathname === '/api/meetings'      && method === 'GET')  return handleList(request, env);
     if (pathname === '/api/todo-states'   && method === 'GET')  return handleTodoGet(request, env);
     if (pathname === '/api/todo-states'   && method === 'POST') return handleTodoSet(request, env);
+    if (pathname === '/api/cal-events'    && method === 'GET')  return handleCalEventsGet(request, env);
+    if (pathname === '/api/cal-events'    && method === 'POST') return handleCalEventsPost(request, env);
+    const calDelMatch = pathname.match(/^\/api\/cal-events\/([^/]+)$/);
+    if (calDelMatch && method === 'DELETE') return handleCalEventDelete(request, env, calDelMatch[1]);
 
     const detailMatch = pathname.match(/^\/api\/meetings\/([^/]+)$/);
     if (detailMatch) {
