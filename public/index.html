@@ -2184,6 +2184,29 @@ function renderKanbanM() {
     document.body.style.userSelect = '';
     try { localStorage.setItem(LS_KEY, right.offsetWidth); } catch {}
   });
+
+  // 태블릿 터치 지원
+  resizer.addEventListener('touchstart', e => {
+    e.preventDefault();
+    dragging = true;
+    startX = e.touches[0].clientX;
+    startW = right.offsetWidth;
+    resizer.classList.add('dragging');
+  }, { passive: false });
+
+  document.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    const delta = startX - e.touches[0].clientX;
+    const newW = Math.min(700, Math.max(260, startW + delta));
+    right.style.width = newW + 'px';
+  }, { passive: true });
+
+  document.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    resizer.classList.remove('dragging');
+    try { localStorage.setItem(LS_KEY, right.offsetWidth); } catch {}
+  });
 })();
 
 // ── popstate: 모바일 뒤로가기 ────────────────────────────────────────────
