@@ -432,23 +432,33 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── 2컬럼 목록 레이아웃 ─────────────────────────────────────────────── */
-.list-two-col{display:flex;gap:20px;align-items:flex-start}
-.list-left{flex:1;min-width:0;max-width:calc(100% - 420px)}
+.list-two-col{display:flex;gap:0;align-items:flex-start}
+.list-left{flex:1;min-width:240px;overflow:hidden}
 .list-right{
   width:400px;flex-shrink:0;display:flex;flex-direction:column;gap:14px;
   position:sticky;top:0;max-height:calc(100vh - 90px);overflow-y:auto;
-  padding-bottom:12px;
+  padding-bottom:12px;min-width:260px;max-width:700px;
 }
 .list-right::-webkit-scrollbar{width:4px}
 .list-right::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+/* ── 리사이즈 핸들 ── */
+.panel-resizer{
+  width:6px;flex-shrink:0;cursor:col-resize;background:transparent;
+  position:relative;z-index:10;align-self:stretch;margin:0 6px;
+}
+.panel-resizer::after{
+  content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:2px;height:40px;border-radius:2px;background:var(--border);transition:background .15s;
+}
+.panel-resizer:hover::after,.panel-resizer.dragging::after{background:var(--accent)}
 .rp-card{padding:14px 14px}
 .rp-section-title{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;
   text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:5px}
-@media(max-width:1200px){.list-right{width:360px}.list-left{max-width:calc(100% - 380px)}}
 @media(max-width:960px){
   .list-two-col{flex-direction:column}
-  .list-right{width:100%;position:static;max-height:none}
-  .list-left{max-width:100%}
+  .list-right{width:100%!important;position:static;max-height:none;min-width:0}
+  .list-left{min-width:0}
+  .panel-resizer{display:none}
 }
 
 /* ── 캘린더 (컴팩트, 오른쪽 패널용) ─────────────────────────────────── */
@@ -490,7 +500,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 
 /* ── 칸반 (4컬럼 포스트잇 스타일) ──────────────────────────────────── */
 .kb-board{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;align-items:start}
-.kb-col-wrap{display:flex;flex-direction:column;gap:5px;min-width:0}
+.kb-col-wrap{display:flex;flex-direction:column;gap:0;min-width:0}
 .kb-col-header{
   padding:5px 4px 6px;border-radius:7px 7px 0 0;text-align:center;
   font-size:10px;font-weight:800;letter-spacing:.3px;color:#fff;
@@ -501,7 +511,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
   font-size:9px;background:rgba(255,255,255,.3);border-radius:999px;
   padding:0 5px;line-height:16px;
 }
-.kb-cards{display:flex;flex-direction:column;gap:4px}
+.kb-cards{display:flex;flex-direction:column;gap:4px;padding:4px 2px 2px}
 .kanban-card{
   border-radius:0 0 3px 3px;padding:7px 7px 5px;cursor:pointer;
   box-shadow:0 2px 4px rgba(0,0,0,.15);transition:transform .12s,box-shadow .12s;
@@ -650,6 +660,9 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 
           <div id="listArea"><div class="empty-state"><div class="spinner"></div></div></div>
         </div>
+
+        <!-- 리사이즈 핸들 -->
+        <div class="panel-resizer" id="panelResizer"></div>
 
         <!-- 오른쪽: 캘린더 + 칸반 -->
         <div class="list-right" id="listRight">
@@ -1900,6 +1913,48 @@ function kanbanReset() {
   KB_ACTIVE_COL = 'todo';
   renderKanban();
 }
+
+// ── 패널 리사이저 ────────────────────────────────────────────────────────
+(function initResizer() {
+  const LS_KEY = 'panel_right_width';
+  const resizer = document.getElementById('panelResizer');
+  const right   = document.getElementById('listRight');
+  if (!resizer || !right) return;
+
+  // 저장된 너비 복원
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) right.style.width = saved + 'px';
+  } catch {}
+
+  let startX = 0, startW = 0, dragging = false;
+
+  resizer.addEventListener('mousedown', e => {
+    e.preventDefault();
+    dragging = true;
+    startX = e.clientX;
+    startW = right.offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const delta = startX - e.clientX; // 핸들을 왼쪽으로 → 우측 패널 넓어짐
+    const newW = Math.min(700, Math.max(260, startW + delta));
+    right.style.width = newW + 'px';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    resizer.classList.remove('dragging');
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+    try { localStorage.setItem(LS_KEY, right.offsetWidth); } catch {}
+  });
+})();
 
 // ── 초기화 ──────────────────────────────────────────────────────────────
 (async function init() {
