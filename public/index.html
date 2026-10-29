@@ -443,14 +443,18 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 .list-right::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 /* ── 리사이즈 핸들 ── */
 .panel-resizer{
-  width:6px;flex-shrink:0;cursor:col-resize;background:transparent;
-  position:relative;z-index:10;align-self:stretch;margin:0 6px;
+  width:16px;flex-shrink:0;cursor:col-resize;
+  position:relative;z-index:10;align-self:stretch;
+  display:flex;align-items:center;justify-content:center;
+  background:transparent;transition:background .15s;border-radius:4px;
 }
+.panel-resizer:hover,.panel-resizer.dragging{background:rgba(59,130,246,.08)}
 .panel-resizer::after{
-  content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-  width:2px;height:40px;border-radius:2px;background:var(--border);transition:background .15s;
+  content:'⋮⋮';font-size:11px;letter-spacing:-2px;
+  color:var(--border);transition:color .15s;pointer-events:none;
+  line-height:1;
 }
-.panel-resizer:hover::after,.panel-resizer.dragging::after{background:var(--accent)}
+.panel-resizer:hover::after,.panel-resizer.dragging::after{color:var(--accent)}
 .rp-card{padding:14px 14px}
 .rp-section-title{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;
   text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:5px}
@@ -502,11 +506,13 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 .kb-board{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;align-items:start}
 .kb-col-wrap{display:flex;flex-direction:column;gap:0;min-width:0}
 .kb-col-header{
-  padding:5px 4px 6px;border-radius:7px 7px 0 0;text-align:center;
+  height:52px;border-radius:7px 7px 0 0;text-align:center;
   font-size:10px;font-weight:800;letter-spacing:.3px;color:#fff;
-  display:flex;flex-direction:column;align-items:center;gap:1px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  padding:0 2px;box-sizing:border-box;
 }
-.kb-col-header .kb-emoji{font-size:13px}
+.kb-col-header .kb-emoji{font-size:13px;line-height:1}
+.kb-col-header .kb-label{font-size:9.5px;font-weight:800}
 .kb-col-header .kb-cnt-badge{
   font-size:9px;background:rgba(255,255,255,.3);border-radius:999px;
   padding:0 5px;line-height:16px;
@@ -1885,8 +1891,8 @@ function renderKanban() {
     return `<div class="kb-col-wrap">
       <div class="kb-col-header" style="background:${col.color}">
         <span class="kb-emoji">${col.emoji}</span>
-        <span>${col.label}</span>
-        ${colCards.length ? `<span class="kb-cnt-badge">${colCards.length}</span>` : ''}
+        <span class="kb-label">${col.label}</span>
+        <span class="kb-cnt-badge">${colCards.length}</span>
       </div>
       <div class="kb-cards">${cardsHtml}</div>
     </div>`;
