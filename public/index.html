@@ -383,7 +383,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 }
 
 /* ── 반응형 ──────────────────────────────────────────────────────────── */
-@media(max-width:960px){
+@media(max-width:1280px){
   /* 탑바: 항상 화면 최상단에 고정 */
   .mobile-topbar{
     display:flex;
@@ -445,7 +445,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
   .panel-resizer{display:none}
   .list-left{min-width:0;max-width:100%}
 }
-@media(min-width:961px){
+@media(min-width:1281px){
   .mobile-bottom-tabs{display:none}
   .dp-back-btn{display:none}
   .mobile-rp-view{display:none !important}
@@ -503,7 +503,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 .rp-card{padding:14px 14px}
 .rp-section-title{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;
   text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:5px}
-@media(max-width:960px){
+@media(max-width:1280px){
   /* 칸반: 4컬럼 한 화면에 모두 표시 */
   #kanbanBoardM .kb-board{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;overflow-x:hidden}
   #kanbanBoardM .kb-col-wrap{min-width:0}
@@ -2033,7 +2033,7 @@ function kanbanReset() {
 // ── 모바일 탭 전환 ───────────────────────────────────────────────────────
 let _mobileTab = 'list';
 function mobileTabSwitch(tab) {
-  if (window.innerWidth > 960) return;
+  if (window.innerWidth > 1280) return;
   _mobileTab = tab;
   // 탭 활성화
   ['list','cal','kb','upload'].forEach(t => {
@@ -2216,7 +2216,7 @@ window.addEventListener('popstate', e => {
 
 // ── 모바일 섹션 토글 ─────────────────────────────────────────────────────
 function toggleRpSection(titleEl) {
-  if (window.innerWidth > 960) return;
+  if (window.innerWidth > 1280) return;
   // 칸반은 wrapper div 안에 있어서 parentElement의 다음 형제를 찾음
   const card = titleEl.closest('.rp-card');
   if (!card) return;
