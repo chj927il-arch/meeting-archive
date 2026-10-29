@@ -649,7 +649,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
     <button class="mbt-tab" id="mbt-kb" onclick="mobileTabSwitch('kb')">
       <span class="mbt-icon">🗂️</span><span>칸반</span>
     </button>
-    <button class="mbt-tab" id="mbt-upload" onclick="showView('upload');mobileTabSwitch('upload')">
+    <button class="mbt-tab" id="mbt-upload" onclick="mobileTabSwitch('upload')">
       <span class="mbt-icon">➕</span><span>등록</span>
     </button>
   </div>
@@ -2051,6 +2051,7 @@ function mobileTabSwitch(tab) {
     if (listLeft) listLeft.style.display = '';
     if (calView)  calView.classList.remove('active');
     if (kbView)   kbView.classList.remove('active');
+    showView('list');
   } else if (tab === 'cal') {
     if (listLeft) listLeft.style.display = 'none';
     if (calView)  { calView.classList.add('active'); calView.classList.remove('kb'); }
@@ -2061,6 +2062,11 @@ function mobileTabSwitch(tab) {
     if (calView)  calView.classList.remove('active');
     if (kbView)   { kbView.classList.add('active'); }
     renderKanbanM();
+  } else if (tab === 'upload') {
+    if (listLeft) listLeft.style.display = 'none';
+    if (calView)  calView.classList.remove('active');
+    if (kbView)   kbView.classList.remove('active');
+    showView('upload');
   }
 }
 
