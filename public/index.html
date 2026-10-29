@@ -1929,12 +1929,26 @@ const KANBAN_COLS = [
 ];
 let KB_ACTIVE_COL = 'todo';
 
-function kanbanStorageKey() { return 'kanban_states_v2'; }
-function kanbanLoadStates() {
-  try { return JSON.parse(localStorage.getItem(kanbanStorageKey()) || '{}'); } catch { return {}; }
+let _kanbanStates = null;
+
+async function kanbanLoadStates() {
+  if (_kanbanStates) return _kanbanStates;
+  try {
+    const res = await fetch('/api/todo-states');
+    _kanbanStates = res.ok ? await res.json() : {};
+  } catch { _kanbanStates = {}; }
+  return _kanbanStates;
 }
-function kanbanSaveStates(states) {
-  try { localStorage.setItem(kanbanStorageKey(), JSON.stringify(states)); } catch {}
+
+async function kanbanSaveState(id, col) {
+  if (_kanbanStates) _kanbanStates[id] = col;
+  try {
+    await fetch('/api/todo-states', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, col })
+    });
+  } catch {}
 }
 
 function parseActionItem(text) {
@@ -1943,8 +1957,8 @@ function parseActionItem(text) {
   return { team: '', text: text };
 }
 
-function kanbanGetCards() {
-  const states = kanbanLoadStates();
+async function kanbanGetCards() {
+  const states = await kanbanLoadStates();
   const cards = [];
   MEETINGS.forEach(m => {
     (m.actionItems || m.summary?.actionItems || []).forEach((item, i) => {
@@ -1962,10 +1976,10 @@ function kanbanGetCards() {
   return cards;
 }
 
-function renderKanban() {
+async function renderKanban() {
   const board = document.getElementById('kanbanBoard');
   if (!board) return;
-  const cards = kanbanGetCards();
+  const cards = await kanbanGetCards();
 
   if (!cards.length) {
     board.innerHTML = `<div class="kb-board"><div class="kb-board-empty">📋 회의록을 등록하면<br>액션 아이템이 카드로 나타납니다</div></div>`;
@@ -2016,16 +2030,21 @@ function kbSwitchTab(colId) {
   renderKanban();
 }
 
-function kanbanMove(cardId, colId) {
-  const states = kanbanLoadStates();
-  states[cardId] = colId;
-  kanbanSaveStates(states);
+async function kanbanMove(cardId, colId) {
+  await kanbanSaveState(cardId, colId);
   renderKanban();
 }
 
-function kanbanReset() {
+async function kanbanReset() {
   if (!confirm('모든 카드를 "할 일"로 초기화합니다.')) return;
-  try { localStorage.removeItem(kanbanStorageKey()); } catch {}
+  _kanbanStates = {};
+  try {
+    await fetch('/api/todo-states', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: '__reset__', col: '__reset__' })
+    });
+  } catch {}
   KB_ACTIVE_COL = 'todo';
   renderKanban();
 }
@@ -2105,10 +2124,10 @@ function renderCalendarM() {
 }
 
 // 모바일 전용 칸반 렌더
-function renderKanbanM() {
+async function renderKanbanM() {
   const board = document.getElementById('kanbanBoardM');
   if (!board) return;
-  const cards = kanbanGetCards();
+  const cards = await kanbanGetCards();
   if (!cards.length) {
     board.innerHTML = `<div class="kb-board"><div class="kb-board-empty">📋 회의록을 등록하면<br>액션 아이템이 카드로 나타납니다</div></div>`;
     return;

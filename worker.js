@@ -732,6 +732,26 @@ async function handleReanalyze(request, env, id) {
 }
 
 // ── 로그인/로그아웃 ───────────────────────────────────────────────────
+async function handleTodoGet(request, env) {
+  const raw = await env.MEETING_KV.get('todo-states');
+  const states = raw ? JSON.parse(raw) : {};
+  return json(states);
+}
+
+async function handleTodoSet(request, env) {
+  const { id, col } = await request.json();
+  if (!id || !col) return json({ error: 'bad request' }, 400);
+  if (id === '__reset__') {
+    await env.MEETING_KV.put('todo-states', '{}');
+    return json({ ok: true });
+  }
+  const raw = await env.MEETING_KV.get('todo-states');
+  const states = raw ? JSON.parse(raw) : {};
+  states[id] = col;
+  await env.MEETING_KV.put('todo-states', JSON.stringify(states));
+  return json({ ok: true });
+}
+
 async function handleLogin(request, env) {
   const { pw } = await request.json();
   if (pw !== env.SITE_PW) return json({ ok: false, error: '비밀번호가 틀렸습니다.' }, 401);
@@ -772,6 +792,8 @@ export default {
     if (pathname === '/api/upload'        && method === 'POST') return handleUpload(request, env);
     if (pathname === '/api/audio/upload'  && method === 'POST') return handleAudioUpload(request, env);
     if (pathname === '/api/meetings'      && method === 'GET')  return handleList(request, env);
+    if (pathname === '/api/todo-states'   && method === 'GET')  return handleTodoGet(request, env);
+    if (pathname === '/api/todo-states'   && method === 'POST') return handleTodoSet(request, env);
 
     const detailMatch = pathname.match(/^\/api\/meetings\/([^/]+)$/);
     if (detailMatch) {
