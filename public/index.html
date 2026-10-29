@@ -2033,7 +2033,7 @@ function kanbanReset() {
 // ── 모바일 탭 전환 ───────────────────────────────────────────────────────
 let _mobileTab = 'list';
 function mobileTabSwitch(tab) {
-  if (window.innerWidth > 900) return;
+  if (window.innerWidth > 960) return;
   _mobileTab = tab;
   // 탭 활성화
   ['list','cal','kb','upload'].forEach(t => {
