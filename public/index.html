@@ -399,11 +399,56 @@ input,select,textarea{font-family:var(--font);font-size:16px}
   }
   .app.navopen .sidebar{transform:none}
   .app.navopen .nav-backdrop{display:block}
-  /* 메인: 탑바 높이만큼 padding-top, flex layout 해제 */
-  .main{padding:68px 16px 80px;min-width:0;width:100%;flex:none}
+  /* 메인: 탑바+하단탭 높이만큼 padding */
+  .main{padding:60px 14px 72px;min-width:0;width:100%;flex:none}
   .detail-panel{width:100vw}
   .login-box{padding:28px 20px}
   .upload-tab{padding:8px 12px;font-size:13px}
+
+  /* ── 모바일 하단 탭바 ── */
+  .mobile-bottom-tabs{
+    display:flex;position:fixed;bottom:0;left:0;right:0;
+    height:56px;z-index:300;
+    background:var(--bg2);border-top:1px solid var(--border);
+    box-shadow:0 -2px 12px rgba(0,0,0,.08);
+  }
+  .mbt-tab{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;border:none;background:none;cursor:pointer;font-family:var(--font);
+    color:var(--text2);font-size:10px;font-weight:600;transition:color .15s;
+    padding:0;
+  }
+  .mbt-tab .mbt-icon{font-size:20px;line-height:1}
+  .mbt-tab.active{color:var(--accent2)}
+  .mbt-tab.active .mbt-icon{filter:drop-shadow(0 0 3px rgba(59,130,246,.4))}
+
+  /* 상세 패널 모바일 뒤로가기 버튼 */
+  .dp-back-btn{
+    display:flex;align-items:center;gap:6px;
+    padding:10px 16px;border:none;background:none;
+    color:var(--accent2);font-size:14px;font-weight:600;
+    font-family:var(--font);cursor:pointer;width:100%;
+    border-bottom:1px solid var(--border);
+  }
+  .dp-back-btn:active{background:var(--bg3)}
+
+  /* 모바일 캘린더/칸반 전용 뷰 */
+  .mobile-rp-view{
+    display:none;flex-direction:column;gap:14px;
+    padding:0;
+  }
+  .mobile-rp-view.active{display:flex}
+
+  /* 목록 뷰에서 우측 패널 숨기기 */
+  .list-two-col{flex-direction:column}
+  .list-right{display:none !important}
+  .panel-resizer{display:none}
+  .list-left{min-width:0;max-width:100%}
+}
+@media(min-width:901px){
+  .mobile-bottom-tabs{display:none}
+  .dp-back-btn{display:none}
+  .mobile-rp-view{display:none !important}
 }
 @media(max-width:520px){
   .list-toolbar{flex-direction:column}
@@ -463,9 +508,9 @@ input,select,textarea{font-family:var(--font);font-size:16px}
   .list-right{width:100%!important;position:static;max-height:none;min-width:0}
   .list-left{min-width:0}
   .panel-resizer{display:none}
-  /* 칸반: 4컬럼 가로 스크롤 */
-  .kb-board{display:flex;flex-direction:row;gap:8px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory}
-  .kb-col-wrap{min-width:160px;flex-shrink:0;scroll-snap-align:start}
+  /* 칸반: 4컬럼 가로 스크롤 (모바일 전용 뷰) */
+  #kanbanBoardM .kb-board{display:flex;flex-direction:row;gap:8px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory}
+  #kanbanBoardM .kb-col-wrap{min-width:calc(50vw - 24px);flex-shrink:0;scroll-snap-align:start}
   /* 캘린더 */
   .cal-grid{font-size:12px}
   .cal-day-num{font-size:12px}
@@ -586,6 +631,22 @@ input,select,textarea{font-family:var(--font);font-size:16px}
   </div>
   <div class="nav-backdrop" id="navBackdrop"></div>
 
+  <!-- 모바일 하단 탭바 -->
+  <div class="mobile-bottom-tabs" id="mobileBottomTabs">
+    <button class="mbt-tab active" id="mbt-list" onclick="mobileTabSwitch('list')">
+      <span class="mbt-icon">📂</span><span>목록</span>
+    </button>
+    <button class="mbt-tab" id="mbt-cal" onclick="mobileTabSwitch('cal')">
+      <span class="mbt-icon">📅</span><span>캘린더</span>
+    </button>
+    <button class="mbt-tab" id="mbt-kb" onclick="mobileTabSwitch('kb')">
+      <span class="mbt-icon">🗂️</span><span>칸반</span>
+    </button>
+    <button class="mbt-tab" id="mbt-upload" onclick="showView('upload');mobileTabSwitch('upload')">
+      <span class="mbt-icon">➕</span><span>등록</span>
+    </button>
+  </div>
+
   <!-- 사이드바 -->
   <nav class="sidebar">
     <div class="sb-head">
@@ -704,6 +765,30 @@ input,select,textarea{font-family:var(--font);font-size:16px}
       </div>
     </div>
 
+    <!-- 모바일 캘린더 뷰 -->
+    <div class="mobile-rp-view" id="mobile-cal-view">
+      <div class="card rp-card">
+        <div class="rp-section-title">📅 캘린더</div>
+        <div class="cal-header" style="margin-bottom:12px">
+          <button class="cal-nav-btn" onclick="calMove(-1)">‹</button>
+          <span class="cal-month-label" id="calMonthLabelM"></span>
+          <button class="cal-nav-btn" onclick="calMove(1)">›</button>
+        </div>
+        <div class="cal-grid" id="calGridM"></div>
+      </div>
+    </div>
+
+    <!-- 모바일 칸반 뷰 -->
+    <div class="mobile-rp-view" id="mobile-kb-view">
+      <div class="card rp-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="rp-section-title" style="margin-bottom:0">🗂️ 칸반 보드</div>
+          <button class="kc-move-btn" onclick="kanbanReset()" title="초기화">🔄</button>
+        </div>
+        <div id="kanbanBoardM"></div>
+      </div>
+    </div>
+
     <!-- 업로드 뷰 -->
     <div class="view" id="view-upload">
       <div class="page-title">➕ 회의록 등록</div>
@@ -772,6 +857,8 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 <!-- 상세 패널 -->
 <div class="detail-backdrop" id="detailBackdrop" onclick="closeDetail()"></div>
 <div class="detail-panel" id="detailPanel">
+  <!-- 모바일 전용 뒤로가기 -->
+  <button class="dp-back-btn" onclick="closeDetail()">← 목록으로</button>
   <div class="dp-head">
     <div>
       <div class="dp-title" id="dpTitle">—</div>
@@ -1934,6 +2021,116 @@ function kanbanReset() {
   try { localStorage.removeItem(kanbanStorageKey()); } catch {}
   KB_ACTIVE_COL = 'todo';
   renderKanban();
+}
+
+// ── 모바일 탭 전환 ───────────────────────────────────────────────────────
+let _mobileTab = 'list';
+function mobileTabSwitch(tab) {
+  if (window.innerWidth > 900) return;
+  _mobileTab = tab;
+  // 탭 활성화
+  ['list','cal','kb','upload'].forEach(t => {
+    const btn = document.getElementById('mbt-' + t);
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+  // 뷰 전환
+  const calView = document.getElementById('mobile-cal-view');
+  const kbView  = document.getElementById('mobile-kb-view');
+  const listView = document.getElementById('view-list');
+  // list-left (회의록 목록)
+  const listLeft = document.querySelector('.list-left');
+
+  if (tab === 'list') {
+    if (listLeft) listLeft.style.display = '';
+    if (calView)  calView.classList.remove('active');
+    if (kbView)   kbView.classList.remove('active');
+  } else if (tab === 'cal') {
+    if (listLeft) listLeft.style.display = 'none';
+    if (calView)  { calView.classList.add('active'); calView.classList.remove('kb'); }
+    if (kbView)   kbView.classList.remove('active');
+    renderCalendarM();
+  } else if (tab === 'kb') {
+    if (listLeft) listLeft.style.display = 'none';
+    if (calView)  calView.classList.remove('active');
+    if (kbView)   { kbView.classList.add('active'); }
+    renderKanbanM();
+  }
+}
+
+// 모바일 전용 캘린더 (별도 그리드 id 사용)
+function renderCalendarM() {
+  const label = document.getElementById('calMonthLabelM');
+  const grid  = document.getElementById('calGridM');
+  if (!label || !grid) return;
+  label.textContent = `${CAL_YEAR}년 ${CAL_MONTH + 1}월`;
+  const dateMap = {};
+  MEETINGS.forEach(m => {
+    const d = (m.meetingDate || m.uploadedAt.slice(0,10));
+    const [y, mo] = d.split('-').map(Number);
+    if (y === CAL_YEAR && mo - 1 === CAL_MONTH) {
+      if (!dateMap[d]) dateMap[d] = [];
+      dateMap[d].push(m);
+    }
+  });
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const firstDay = new Date(CAL_YEAR, CAL_MONTH, 1).getDay();
+  const daysInMonth = new Date(CAL_YEAR, CAL_MONTH + 1, 0).getDate();
+  const DOWS = ['일','월','화','수','목','금','토'];
+  let html = DOWS.map(d => `<div class="cal-dow">${d}</div>`).join('');
+  for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${CAL_YEAR}-${String(CAL_MONTH+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const ms = dateMap[ds] || [];
+    const isToday = ds === todayStr;
+    const hasMeeting = ms.length > 0;
+    const dotsHtml = hasMeeting ? `<div style="display:flex;gap:2px;margin-top:2px">${ms.slice(0,3).map(()=>`<div class="cal-dot"></div>`).join('')}</div>` : '';
+    html += `<div class="cal-day${isToday?' today':''}${hasMeeting?' has-meeting':''}" onclick="calDayClick(event,'${ds}')" data-date="${ds}">
+      <div class="cal-day-num">${d}</div>${dotsHtml}</div>`;
+  }
+  grid.innerHTML = html;
+}
+
+// 모바일 전용 칸반 렌더
+function renderKanbanM() {
+  const board = document.getElementById('kanbanBoardM');
+  if (!board) return;
+  const cards = kanbanGetCards();
+  if (!cards.length) {
+    board.innerHTML = `<div class="kb-board"><div class="kb-board-empty">📋 회의록을 등록하면<br>액션 아이템이 카드로 나타납니다</div></div>`;
+    return;
+  }
+  const NOTE_COLORS = {
+    todo:  { bg:'#fff9c4', text:'#5a4a00' },
+    doing: { bg:'#ffe0b2', text:'#6d3b00' },
+    hold:  { bg:'#e8eaf6', text:'#283593' },
+    done:  { bg:'#c8e6c9', text:'#1b5e20' },
+  };
+  const cols = KANBAN_COLS.map(col => {
+    const colCards = cards.filter(c => c.col === col.id);
+    const nc = NOTE_COLORS[col.id];
+    const cardsHtml = colCards.length
+      ? colCards.map(c => `<div class="kanban-card" style="background:${nc.bg};color:${nc.text}" title="${esc(c.meetingTitle)}">
+          <div class="kc-team">${c.team ? esc(c.team) : ''}</div>
+          <div class="kc-text">${esc(c.text)}</div>
+          <div class="kc-source">
+            <button onclick="openDetail('${c.meetingId}')" style="color:${nc.text}">📋</button>
+            <select class="kc-col-select" onchange="kanbanMove('${esc(c.id)}',this.value);renderKanbanM()" style="color:${nc.text}">
+              ${KANBAN_COLS.map(oc=>`<option value="${oc.id}"${oc.id===col.id?' selected':''}>${oc.emoji}${oc.label}</option>`).join('')}
+            </select>
+          </div>
+        </div>`).join('')
+      : `<div class="kb-empty-col">없음</div>`;
+    return `<div class="kb-col-wrap">
+      <div class="kb-col-header" style="background:${col.color}">
+        <span class="kb-emoji">${col.emoji}</span>
+        <span class="kb-label">${col.label}</span>
+        <span class="kb-cnt-badge">${colCards.length}</span>
+      </div>
+      <div class="kb-cards">${cardsHtml}</div>
+    </div>`;
+  }).join('');
+  board.innerHTML = `<div class="kb-board">${cols}</div>`;
 }
 
 // ── 패널 리사이저 ────────────────────────────────────────────────────────
