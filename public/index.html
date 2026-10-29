@@ -508,9 +508,20 @@ input,select,textarea{font-family:var(--font);font-size:16px}
   .list-right{width:100%!important;position:static;max-height:none;min-width:0}
   .list-left{min-width:0}
   .panel-resizer{display:none}
-  /* 칸반: 4컬럼 가로 스크롤 (모바일 전용 뷰) */
-  #kanbanBoardM .kb-board{display:flex;flex-direction:row;gap:8px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory}
-  #kanbanBoardM .kb-col-wrap{min-width:calc(50vw - 24px);flex-shrink:0;scroll-snap-align:start}
+  /* 칸반: 4컬럼 한 화면에 모두 표시 */
+  #kanbanBoardM .kb-board{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;overflow-x:hidden}
+  #kanbanBoardM .kb-col-wrap{min-width:0}
+  #kanbanBoardM .kb-col-header{height:44px;font-size:9px;padding:0 1px}
+  #kanbanBoardM .kb-col-header .kb-emoji{font-size:11px}
+  #kanbanBoardM .kb-col-header .kb-label{font-size:8.5px}
+  #kanbanBoardM .kanban-card{padding:5px 5px 4px;border-radius:2px}
+  #kanbanBoardM .kc-team{font-size:8px;min-height:11px}
+  #kanbanBoardM .kc-text{font-size:9.5px;line-height:1.35;margin-bottom:4px;
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  #kanbanBoardM .kc-source{gap:2px}
+  #kanbanBoardM .kc-source button{font-size:9px}
+  #kanbanBoardM .kc-col-select{font-size:8px;padding:1px 2px}
+  #kanbanBoardM .kb-cards{gap:3px;padding:3px 1px 2px}
   /* 캘린더 */
   .cal-grid{font-size:12px}
   .cal-day-num{font-size:12px}
@@ -558,7 +569,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 .cal-popup-date{font-size:10.5px;color:var(--text2);margin-bottom:2px}
 
 /* ── 칸반 (4컬럼 포스트잇 스타일) ──────────────────────────────────── */
-.kb-board{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;align-items:start}
+.kb-board{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;align-items:start}
 .kb-col-wrap{display:flex;flex-direction:column;gap:0;min-width:0}
 .kb-col-header{
   height:52px;border-radius:7px 7px 0 0;text-align:center;
