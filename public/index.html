@@ -1986,15 +1986,14 @@ document.addEventListener('keydown', function(e) {
 
 // ── 업로드 후 의심 워딩 확인 모달 ─────────────────────────────────────────
 const SUSPICIOUS_PATTERNS = [
-  // 브랜드/업체명 의심 오류
-  { pattern: /이돌스파르타/g, desc: '"이돌스파르타"', suggest: '잇올스파르타' },
-  { pattern: /잇올스\s?파르타/g, desc: '"잇올스파르타"', suggest: null },
-  // 축약어 오해 가능
-  { pattern: /\bFC\b/g, desc: '"FC"', suggest: '가맹점(FC)이 맞는지 확인' },
-  { pattern: /\b앱\s?푸시\b/g, desc: '"앱 푸시"', suggest: '정확한 채널명인지 확인' },
-  // 오타 가능성 패턴
-  { pattern: /대성\s?디\s?랩/g, desc: '"대성디랩"', suggest: null },
-  { pattern: /수만\s?휘/g, desc: '"수만휘"', suggest: null },
+  // 브랜드명 오타
+  { pattern: /이돌스파르타/g, desc: '"이돌스파르타" (오타 의심)', suggest: '잇올스파르타' },
+  { pattern: /이틀스파르타/g, desc: '"이틀스파르타" (오타 의심)', suggest: '잇올스파르타' },
+  // 축약어 — 문맥에 따라 확인 필요
+  { pattern: /\bFC\b/g, desc: '"FC" 단독 사용', suggest: '가맹점(FC) 또는 프랜차이즈 의미인지 확인' },
+  { pattern: /앱\s?푸시/g, desc: '"앱 푸시"', suggest: '정식 채널명(앱 알림 등)인지 확인' },
+  // 회사명 분리 오기
+  { pattern: /대성\s+디랩|대\s?성디랩/g, desc: '"대성디랩" 띄어쓰기 오류 의심', suggest: '대성디랩' },
 ];
 
 function scanSuspiciousWords(text) {
