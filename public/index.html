@@ -916,10 +916,23 @@ input,select,textarea{font-family:var(--font);font-size:16px}
       <div id="rvChips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:34px;margin-bottom:7px"></div>
       <input id="rvAttendeeInput" type="text" placeholder="이름 입력 후 Enter" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:13px;font-family:inherit">
     </div>
-    <!-- AI 요약 확인 -->
+    <!-- AI 요약 편집 -->
     <div id="rvSummarySection" style="margin-bottom:18px;display:none">
-      <div style="font-size:12.5px;font-weight:700;color:var(--text2);margin-bottom:8px">🤖 AI 분석 요약 (읽기 전용)</div>
-      <div id="rvSummaryBody" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.7;color:var(--text1)"></div>
+      <div style="font-size:12.5px;font-weight:700;color:var(--text2);margin-bottom:8px">🤖 AI 분석 요약 <span style="font-weight:400;color:var(--text3)">(각 줄이 항목 하나)</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div>
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">📊 결과</label>
+          <textarea id="rvSumResult" rows="3" placeholder="결과 항목 (줄바꿈으로 구분)" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:13px;font-family:inherit;resize:vertical;line-height:1.6"></textarea>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">💡 시사점</label>
+          <textarea id="rvSumImplications" rows="3" placeholder="시사점 항목 (줄바꿈으로 구분)" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:13px;font-family:inherit;resize:vertical;line-height:1.6"></textarea>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">✅ 결정사항</label>
+          <textarea id="rvSumDecisions" rows="3" placeholder="결정사항 항목 (줄바꿈으로 구분)" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:13px;font-family:inherit;resize:vertical;line-height:1.6"></textarea>
+        </div>
+      </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost btn-sm" onclick="closeReviewModal()">건너뛰기</button>
@@ -1633,19 +1646,17 @@ function openReviewModal(id, meta) {
 
   renderReviewChips();
 
-  // AI 요약
-  const sec  = document.getElementById('rvSummarySection');
-  const body = document.getElementById('rvSummaryBody');
+  // AI 요약 — 편집 가능 textarea
+  const sec = document.getElementById('rvSummarySection');
   if (meta.summary) {
     sec.style.display = 'block';
     const s = meta.summary;
-    let html = '';
-    if (s.result?.length)      html += `<div style="margin-bottom:6px"><strong>📊 결과</strong><ul style="margin:4px 0 0 16px;padding:0">${s.result.map(d=>`<li>${esc(d)}</li>`).join('')}</ul></div>`;
-    if (s.implications?.length) html += `<div style="margin-bottom:6px"><strong>💡 시사점</strong><ul style="margin:4px 0 0 16px;padding:0">${s.implications.map(d=>`<li>${esc(d)}</li>`).join('')}</ul></div>`;
-    if (s.decisions?.length)   html += `<div><strong>✅ 결정사항</strong><ul style="margin:4px 0 0 16px;padding:0">${s.decisions.map(d=>`<li>${esc(d)}</li>`).join('')}</ul></div>`;
-    body.innerHTML = html || '<span style="color:var(--text2)">요약 없음</span>';
+    document.getElementById('rvSumResult').value       = (s.result       || []).join('\n');
+    document.getElementById('rvSumImplications').value = (s.implications || []).join('\n');
+    document.getElementById('rvSumDecisions').value    = (s.decisions    || []).join('\n');
   } else {
     sec.style.display = 'none';
+    ['rvSumResult','rvSumImplications','rvSumDecisions'].forEach(id => { document.getElementById(id).value = ''; });
   }
 
   document.getElementById('reviewBackdrop').style.display = 'flex';
@@ -1689,7 +1700,17 @@ async function saveReview() {
     const m = MEETINGS.find(x => x.id === id) || {};
     const res = await fetch(`/api/meetings/${id}`, {
       method: 'PUT', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ meetingTitle: title || m.meetingTitle, meetingDate: date || m.meetingDate, attendees, team: m.team })
+      body: JSON.stringify({
+        meetingTitle: title || m.meetingTitle,
+        meetingDate: date || m.meetingDate,
+        attendees,
+        team: m.team,
+        summary: {
+          result:       (document.getElementById('rvSumResult')?.value       || '').split('\n').map(s=>s.trim()).filter(Boolean),
+          implications: (document.getElementById('rvSumImplications')?.value || '').split('\n').map(s=>s.trim()).filter(Boolean),
+          decisions:    (document.getElementById('rvSumDecisions')?.value    || '').split('\n').map(s=>s.trim()).filter(Boolean),
+        }
+      })
     });
     const data = await res.json();
     if (data.ok) { showToast('✅ 저장 완료!'); await loadMeetings(); openDetail(id); showView('list'); }
