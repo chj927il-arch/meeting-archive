@@ -1288,10 +1288,12 @@ function renderDetail(m) {
 
   // 기본 정보
   const displayDate = m.meetingDate || '—';
+  const teamStr = Array.isArray(m.team) ? m.team.join(', ') : (m.team || '—');
   const attendeeStr = m.attendees?.length ? m.attendees.join(', ') : '—';
   bodyHtml += `<div class="dp-section">
     <div class="dp-section-title">📌 기본 정보</div>
     <div class="dp-row"><span class="dp-row-label">회의 일자</span><span class="dp-row-val">${esc(displayDate)}</span></div>
+    <div class="dp-row"><span class="dp-row-label">주관부서</span><span class="dp-row-val">${esc(teamStr)}</span></div>
     <div class="dp-row"><span class="dp-row-label">참석자</span><span class="dp-row-val">${esc(attendeeStr)}</span></div>
     <div class="dp-row"><span class="dp-row-label">파일명</span><span class="dp-row-val" style="font-size:12.5px;color:var(--text2)">${esc(m.fileName)}</span></div>
   </div>`;
