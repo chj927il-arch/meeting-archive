@@ -894,6 +894,40 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 </div>
 
 <!-- 편집 모달 -->
+<!-- 업로드 검토 모달 -->
+<div id="reviewBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 0" onclick="if(event.target===this)closeReviewModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:28px;width:min(600px,94vw);z-index:510;margin:auto">
+    <div style="font-size:17px;font-weight:700;margin-bottom:4px">📋 등록 내용 확인 및 수정</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:20px">AI가 추출한 내용을 확인하고 수정 후 저장하세요.</div>
+
+    <!-- 제목 -->
+    <div style="margin-bottom:14px">
+      <label style="font-size:12.5px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">회의 제목</label>
+      <input id="rvTitle" type="text" style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:14px;font-family:inherit">
+    </div>
+    <!-- 회의 일자 -->
+    <div style="margin-bottom:14px">
+      <label style="font-size:12.5px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">회의 일자</label>
+      <input id="rvDate" type="date" style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:14px;font-family:inherit">
+    </div>
+    <!-- 참석자 -->
+    <div style="margin-bottom:14px">
+      <label style="font-size:12.5px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">참석자 <span style="font-weight:400;font-size:11.5px">(× 클릭으로 삭제, 입력 후 Enter로 추가)</span></label>
+      <div id="rvChips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:34px;margin-bottom:7px"></div>
+      <input id="rvAttendeeInput" type="text" placeholder="이름 입력 후 Enter" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:13px;font-family:inherit">
+    </div>
+    <!-- AI 요약 확인 -->
+    <div id="rvSummarySection" style="margin-bottom:18px;display:none">
+      <div style="font-size:12.5px;font-weight:700;color:var(--text2);margin-bottom:8px">🤖 AI 분석 요약 (읽기 전용)</div>
+      <div id="rvSummaryBody" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.7;color:var(--text1)"></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="closeReviewModal()">건너뛰기</button>
+      <button class="btn btn-primary btn-sm" onclick="saveReview()">✅ 저장 완료</button>
+    </div>
+  </div>
+</div>
+
 <!-- 재분석 모달 -->
 <div id="reanalyzeBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center" onclick="if(event.target===this)closeReanalyzeModal()">
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;width:min(460px,92vw);z-index:510">
@@ -1585,6 +1619,89 @@ function reanalyze(id, isAudio) {
   }
   document.getElementById('reanalyzeBackdrop').style.display = 'flex';
 }
+// ── 업로드 검토 모달 ─────────────────────────────────────────────────
+let REVIEW_ID = null;
+let REVIEW_ATTENDEES = [];
+
+function openReviewModal(id, meta) {
+  REVIEW_ID = id;
+  REVIEW_ATTENDEES = [...(meta.attendees || [])];
+
+  document.getElementById('rvTitle').value = meta.meetingTitle || '';
+  document.getElementById('rvDate').value  = meta.meetingDate  || '';
+  document.getElementById('rvAttendeeInput').value = '';
+
+  renderReviewChips();
+
+  // AI 요약
+  const sec  = document.getElementById('rvSummarySection');
+  const body = document.getElementById('rvSummaryBody');
+  if (meta.summary) {
+    sec.style.display = 'block';
+    const s = meta.summary;
+    let html = '';
+    if (s.result?.length)      html += `<div style="margin-bottom:6px"><strong>📊 결과</strong><ul style="margin:4px 0 0 16px;padding:0">${s.result.map(d=>`<li>${esc(d)}</li>`).join('')}</ul></div>`;
+    if (s.implications?.length) html += `<div style="margin-bottom:6px"><strong>💡 시사점</strong><ul style="margin:4px 0 0 16px;padding:0">${s.implications.map(d=>`<li>${esc(d)}</li>`).join('')}</ul></div>`;
+    if (s.decisions?.length)   html += `<div><strong>✅ 결정사항</strong><ul style="margin:4px 0 0 16px;padding:0">${s.decisions.map(d=>`<li>${esc(d)}</li>`).join('')}</ul></div>`;
+    body.innerHTML = html || '<span style="color:var(--text2)">요약 없음</span>';
+  } else {
+    sec.style.display = 'none';
+  }
+
+  document.getElementById('reviewBackdrop').style.display = 'flex';
+}
+
+function renderReviewChips() {
+  const wrap = document.getElementById('rvChips');
+  wrap.innerHTML = REVIEW_ATTENDEES.map((n, i) =>
+    `<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(59,130,246,.12);color:var(--accent2);border:1px solid rgba(59,130,246,.25);border-radius:20px;padding:3px 10px;font-size:13px;font-weight:500">
+      ${esc(n)}
+      <button onclick="removeReviewAttendee(${i})" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:14px;padding:0;line-height:1">×</button>
+    </span>`
+  ).join('');
+}
+
+function removeReviewAttendee(i) {
+  REVIEW_ATTENDEES.splice(i, 1);
+  renderReviewChips();
+}
+
+document.addEventListener('keydown', function(e) {
+  if (document.getElementById('reviewBackdrop').style.display === 'flex'
+      && e.target.id === 'rvAttendeeInput' && e.key === 'Enter') {
+    e.preventDefault();
+    const v = e.target.value.trim();
+    if (v) { REVIEW_ATTENDEES.push(v); e.target.value = ''; renderReviewChips(); }
+  }
+});
+
+async function saveReview() {
+  if (!REVIEW_ID) return;
+  const id    = REVIEW_ID;
+  const title = document.getElementById('rvTitle').value.trim();
+  const date  = document.getElementById('rvDate').value.trim();
+  // 입력 중인 것도 반영
+  const extra = (document.getElementById('rvAttendeeInput').value.trim()).split(/[,\n]/).map(s=>s.trim()).filter(Boolean);
+  const attendees = [...REVIEW_ATTENDEES, ...extra];
+  closeReviewModal();
+  showToast('저장 중...');
+  try {
+    const m = MEETINGS.find(x => x.id === id) || {};
+    const res = await fetch(`/api/meetings/${id}`, {
+      method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ meetingTitle: title || m.meetingTitle, meetingDate: date || m.meetingDate, attendees, team: m.team })
+    });
+    const data = await res.json();
+    if (data.ok) { showToast('✅ 저장 완료!'); await loadMeetings(); openDetail(id); showView('list'); }
+    else showToast('⚠️ 저장 실패');
+  } catch(e) { showToast('오류: ' + e.message); }
+}
+
+function closeReviewModal() {
+  document.getElementById('reviewBackdrop').style.display = 'none';
+  REVIEW_ID = null;
+}
+
 function closeReanalyzeModal() {
   document.getElementById('reanalyzeBackdrop').style.display = 'none';
   REANALYZE_ID = null;
@@ -1730,26 +1847,12 @@ async function startAudioUpload(file) {
         let warnHtml = data.analysisStatus !== 'ok'
           ? `<div class="upload-warn">⚠️ AI 분석에 실패했습니다. 파일은 등록되었습니다.</div>` : '';
 
-        result.innerHTML = `${warnHtml}
-          <div class="upload-ok">
-            <div style="font-size:15px;font-weight:700;margin-bottom:6px">✅ "${esc(file.name)}" 등록 완료</div>
-            <div style="font-size:13px;color:var(--text2)">🎙️ 음성 파일 · ${formatSize(file.size)}</div>
-            ${m.summary ? `<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
-              <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">🤖 AI 분석 결과</div>
-              <div style="font-size:13.5px;margin-bottom:5px"><strong>회의 제목:</strong> ${esc(m.meetingTitle)}</div>
-              <div style="font-size:13.5px;margin-bottom:5px"><strong>참석자:</strong> ${esc((m.attendees||[]).join(', ')||'—')}</div>
-              ${m.oneLiner ? `<div style="font-size:13px;color:var(--text2);font-style:italic">"${esc(m.oneLiner)}"</div>` : ''}
-            </div>` : ''}
-            <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-primary btn-sm" onclick="openDetail('${data.id}');showView('list')">상세 보기</button>
-              <button class="btn btn-ghost btn-sm" onclick="showView('list')">목록으로</button>
-            </div>
-          </div>`;
-
         progWrap.style.display = 'none';
         result.style.display   = 'block';
+        result.innerHTML = `${warnHtml}<div class="upload-ok"><div style="font-size:15px;font-weight:700;margin-bottom:4px">✅ "${esc(file.name)}" 등록 완료</div><div style="font-size:13px;color:var(--text2)">내용을 확인하고 수정할 수 있습니다.</div></div>`;
         document.getElementById('uploadAudioInput').value = '';
         await loadMeetings();
+        openReviewModal(data.id, m);
       } catch (e) {
         progWrap.style.display = 'none';
         result.style.display   = 'block';
@@ -1852,22 +1955,12 @@ async function startUpload(file) {
         </div>`;
     }
 
-    result.innerHTML = `${warnHtml}
-      <div class="upload-ok">
-        <div style="font-size:15px;font-weight:700;margin-bottom:6px">✅ "${esc(file.name)}" 등록 완료</div>
-        <div style="font-size:13px;color:var(--text2)">${ext.toUpperCase()} · ${formatSize(file.size)}</div>
-        ${summaryHtml}
-        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" onclick="openDetail('${data.id}');showView('list')">상세 보기</button>
-          <button class="btn btn-ghost btn-sm" onclick="showView('list')">목록으로</button>
-        </div>
-      </div>`;
-
     progWrap.style.display = 'none';
     result.style.display   = 'block';
+    result.innerHTML = `${warnHtml}<div class="upload-ok"><div style="font-size:15px;font-weight:700;margin-bottom:4px">✅ "${esc(file.name)}" 등록 완료</div><div style="font-size:13px;color:var(--text2)">내용을 확인하고 수정할 수 있습니다.</div></div>`;
     document.getElementById('uploadFileInput').value = '';
-
     await loadMeetings();
+    openReviewModal(data.id, m);
   } catch (e) {
     progWrap.style.display = 'none';
     result.style.display = 'block';
