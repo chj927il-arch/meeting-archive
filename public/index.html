@@ -1216,7 +1216,10 @@ function cardHtml(m) {
     <!-- 왼쪽: 배지+날짜 -->
     <div class="mc-left">
       <span class="mc-ext ${ext}">${ext.toUpperCase()}</span>
-      <div style="font-size:11.5px;color:var(--text2);margin-top:4px">${displayDate}</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.6">
+        <span style="opacity:.7">회의</span> ${m.meetingDate || '—'}<br>
+        <span style="opacity:.7">등록</span> ${m.uploadedAt.slice(0,10)}
+      </div>
       ${m.team ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;white-space:nowrap">주관 ${esc(m.team)}</div>` : ''}
     </div>
     <!-- 가운데: 제목+참석자+bullets -->
