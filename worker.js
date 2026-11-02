@@ -157,12 +157,12 @@ async function extractDocxText(arrayBuffer) {
   } catch { return null; }
 }
 
-// ── 직원 이름 오타 교정 ──────────────────────────────────────────────
+// ── 직원 이름 오타 교정 + 퍼지 매칭 ────────────────────────────────
 // 음성 AI가 잘못 인식하는 이름 → 올바른 이름 (오타 발생시 여기에 추가)
 const NAME_CORRECTIONS = {
-  '백은':   '백용기',   // 이천기숙학원 원장
-  '정구영': '정구용',   // 기획팀
-  '이길':   '이기열',   // 사업기획실 실장
+  '백은':   '백용기',
+  '정구영': '정구용',
+  '이길':   '이기열',
 };
 
 function applyNameCorrections(text) {
@@ -174,6 +174,39 @@ function applyNameCorrections(text) {
   return result;
 }
 
+// Levenshtein 거리 계산
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = [];
+  for (let i = 0; i <= m; i++) { dp[i] = [i]; }
+  for (let j = 0; j <= n; j++) { dp[0][j] = j; }
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+// 참석자 이름 하나를 직원 명단에 퍼지 매칭
+// - 명단에 정확히 있으면 그대로
+// - 성 일치 후보 중 Levenshtein 거리 ≤ threshold면 교체
+// - 성이 명단에 없으면 외부인으로 간주, 그대로 반환
+function fuzzyMatchName(name) {
+  if (!name || name.length < 2) return name;
+  if (EMPLOYEE_NAMES.includes(name)) return name;
+  const surname = name[0];
+  const candidates = EMPLOYEE_NAMES.filter(e => e[0] === surname);
+  if (candidates.length === 0) return name; // 외부인
+  let best = null, bestDist = Infinity;
+  for (const c of candidates) {
+    const d = levenshtein(name, c);
+    if (d < bestDist) { bestDist = d; best = c; }
+  }
+  // 이름 길이 2자면 거리 1 이하, 3자 이상이면 2 이하만 교체
+  const threshold = name.length <= 2 ? 1 : 2;
+  return bestDist <= threshold ? best : name;
+}
+
 function correctAnalysisNames(analysis) {
   if (!analysis) return analysis;
   const fix = (v) => {
@@ -182,7 +215,12 @@ function correctAnalysisNames(analysis) {
     if (v && typeof v === 'object') { const o = {}; for (const k in v) o[k] = fix(v[k]); return o; }
     return v;
   };
-  return fix(analysis);
+  const result = fix(analysis);
+  // attendees 배열에만 퍼지 매칭 적용 (오타 교정 후)
+  if (Array.isArray(result.attendees)) {
+    result.attendees = result.attendees.map(n => fuzzyMatchName(n));
+  }
+  return result;
 }
 
 // ── Gemini 분석 공통 스키마/프롬프트 ─────────────────────────────────
@@ -229,7 +267,10 @@ function makePrompt(fileName, isAudio, manualAttendees) {
 
   const attendeesRule = manualAttendees && manualAttendees.trim()
     ? `- attendees: 사용자가 직접 입력한 참석자 목록을 그대로 사용하세요 (아래 [참석자 직접 입력] 참조). 이름이 성씨만 있으면 위 직원명부에서 풀네임으로 보완하세요.`
-    : `- attendees: ${isAudio ? '발언자/자기소개에서 이름 추출. 위 직원명부에 있는 이름과 발음이 비슷하면 명부의 정확한 이름으로 기재. 성씨+직함만 들리면(예: "백 원장") 직원명부에서 해당 직함의 풀네임으로 매칭 시도' : '이름+직함 형태면 그대로 포함. 성씨만 있으면(예: "신 팀장") 직원명부에서 풀네임으로 보완. 위 직원명부에서 매칭되는 이름 우선 사용'}`;
+    : `- attendees: ${isAudio
+        ? '이 회의에 실제로 참석해 발언하거나 자기소개를 한 사람만 포함. 회의 중 단순히 언급된 외부인·부재자·타 부서 인원은 절대 포함하지 마세요. 성씨+직함만 들리면(예: "백 원장") 직원명부에서 해당 성씨의 풀네임으로 매칭. 직원명부에 있는 이름과 발음이 유사하면 명부의 정확한 이름으로 기재.'
+        : '이 회의에 실제로 참석한 사람만 포함. 문서에 이름이 언급되더라도 참석자로 명시되지 않은 사람은 제외. 성씨만 있으면(예: "신 팀장") 직원명부에서 풀네임으로 보완. 직원명부에서 매칭되는 이름 우선 사용.'
+      }`;
 
   const manualBlock = manualAttendees && manualAttendees.trim()
     ? `\n\n[참석자 직접 입력 — 이 목록을 attendees로 사용하고, 직원명부로 풀네임 보완]\n${manualAttendees.trim()}`
