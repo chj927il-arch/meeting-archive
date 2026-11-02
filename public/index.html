@@ -1361,9 +1361,9 @@ function renderDetail(m) {
     }
   } else {
     actions += `<a href="/api/file/${m.id}" download="${esc(m.fileName)}" class="btn btn-primary btn-sm">⬇️ 원문 다운로드</a>`;
-    if (ext !== 'hwp' && ext !== 'hwpx') {
-      actions += `<button class="btn btn-ghost btn-sm" onclick="reanalyze('${m.id}')">🔄 재분석</button>`;
-    }
+  }
+  if (ext !== 'hwp' && ext !== 'hwpx') {
+    actions += `<button class="btn btn-ghost btn-sm" onclick="reanalyze('${m.id}')">🔄 재분석</button>`;
   }
   actions += `<button class="btn btn-ghost btn-sm" onclick="openEdit('${m.id}')">✏️ 편집</button>`;
   actions += `<button class="btn btn-danger btn-sm" onclick="deleteMeeting('${m.id}')">🗑️ 삭제</button>`;
