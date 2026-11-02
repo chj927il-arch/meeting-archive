@@ -898,12 +898,16 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 <div id="reanalyzeBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center" onclick="if(event.target===this)closeReanalyzeModal()">
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;width:min(460px,92vw);z-index:510">
     <div style="font-size:16px;font-weight:700;margin-bottom:8px">🔄 재분석</div>
-    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">참석자를 직접 입력하면 AI 추출보다 우선 적용됩니다.<br>비워두면 AI가 문서에서 자동 추출합니다.</div>
-    <label style="font-size:13px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">참석자 직접 입력 <span style="font-weight:400">(선택)</span></label>
+    <div id="reanalyzeAudioNotice" style="display:none;font-size:13px;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.25);border-radius:8px;padding:10px 14px;margin-bottom:14px;color:var(--yellow)">
+      🎙️ 음성 파일은 AI 재분석이 불가합니다.<br>참석자를 직접 입력하면 즉시 저장됩니다.
+    </div>
+    <div id="reanalyzeDocNotice" style="font-size:13px;color:var(--text2);margin-bottom:16px">참석자를 직접 입력하면 AI 추출보다 우선 적용됩니다.<br>비워두면 AI가 문서에서 자동 추출합니다.</div>
+    <label style="font-size:13px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">참석자 직접 입력 <span id="reanalyzeAttendeesLabel" style="font-weight:400">(선택)</span></label>
     <textarea id="reanalyzeMdAttendeesInput" placeholder="예: 김근욱, 남웅식, 이기열&#10;쉼표 또는 줄바꿈으로 구분" rows="3" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:13px;resize:vertical;font-family:inherit;margin-bottom:16px"></textarea>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost btn-sm" onclick="closeReanalyzeModal()">취소</button>
-      <button class="btn btn-primary btn-sm" onclick="confirmReanalyze()">재분석 실행</button>
+      <button id="reanalyzeAiBtn" class="btn btn-primary btn-sm" onclick="confirmReanalyze()">🤖 AI 재분석 실행</button>
+      <button id="reanalyzeSaveBtn" class="btn btn-primary btn-sm" onclick="confirmReanalyze()">✅ 참석자 저장</button>
     </div>
   </div>
 </div>
@@ -1363,7 +1367,8 @@ function renderDetail(m) {
     actions += `<a href="/api/file/${m.id}" download="${esc(m.fileName)}" class="btn btn-primary btn-sm">⬇️ 원문 다운로드</a>`;
   }
   if (ext !== 'hwp' && ext !== 'hwpx') {
-    actions += `<button class="btn btn-ghost btn-sm" onclick="reanalyze('${m.id}')">🔄 재분석</button>`;
+    const isAudio = m.fileType === 'audio';
+    actions += `<button class="btn btn-ghost btn-sm" onclick="reanalyze('${m.id}',${isAudio})">🔄 재분석</button>`;
   }
   actions += `<button class="btn btn-ghost btn-sm" onclick="openEdit('${m.id}')">✏️ 편집</button>`;
   actions += `<button class="btn btn-danger btn-sm" onclick="deleteMeeting('${m.id}')">🗑️ 삭제</button>`;
@@ -1553,11 +1558,27 @@ async function extractDocxText(arrayBuffer) {
 
 // ── 재분석 ──────────────────────────────────────────────────────────────
 let REANALYZE_ID = null;
-function reanalyze(id) {
+let REANALYZE_IS_AUDIO = false;
+function reanalyze(id, isAudio) {
   REANALYZE_ID = id;
+  REANALYZE_IS_AUDIO = !!isAudio;
   document.getElementById('reanalyzeMdAttendeesInput').value = '';
-  const rb = document.getElementById('reanalyzeBackdrop');
-  rb.style.display = 'flex';
+  const notice = document.getElementById('reanalyzeAudioNotice');
+  const aiBtn  = document.getElementById('reanalyzeAiBtn');
+  const docNotice = document.getElementById('reanalyzeDocNotice');
+  const saveBtn = document.getElementById('reanalyzeSaveBtn');
+  if (REANALYZE_IS_AUDIO) {
+    notice.style.display    = 'block';
+    docNotice.style.display = 'none';
+    aiBtn.style.display     = 'none';
+    saveBtn.style.display   = 'inline-flex';
+  } else {
+    notice.style.display    = 'none';
+    docNotice.style.display = 'block';
+    aiBtn.style.display     = 'inline-flex';
+    saveBtn.style.display   = 'none';
+  }
+  document.getElementById('reanalyzeBackdrop').style.display = 'flex';
 }
 function closeReanalyzeModal() {
   document.getElementById('reanalyzeBackdrop').style.display = 'none';
@@ -1566,8 +1587,29 @@ function closeReanalyzeModal() {
 async function confirmReanalyze() {
   if (!REANALYZE_ID) return;
   const id = REANALYZE_ID;
+  const isAudio = REANALYZE_IS_AUDIO;
   const manualAttendees = document.getElementById('reanalyzeMdAttendeesInput').value.trim();
   closeReanalyzeModal();
+
+  if (isAudio) {
+    // 음성: AI 재분석 불가 → 참석자만 직접 저장
+    if (!manualAttendees) { showToast('참석자를 입력해주세요'); return; }
+    showToast('저장 중...');
+    try {
+      const m = MEETINGS.find(x => x.id === id);
+      const attendees = manualAttendees.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+      const res = await fetch(`/api/meetings/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendees, meetingTitle: m?.meetingTitle, meetingDate: m?.meetingDate, team: m?.team })
+      });
+      const data = await res.json();
+      if (data.ok) { showToast('✅ 참석자 저장 완료!'); await loadMeetings(); openDetail(id); }
+      else showToast('⚠️ 저장 실패');
+    } catch (e) { showToast('오류: ' + e.message); }
+    return;
+  }
+
   showToast('재분석 중...');
   try {
     const res = await fetch(`/api/reanalyze/${id}`, {
