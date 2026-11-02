@@ -211,12 +211,45 @@ const GEMINI_SCHEMA = {
 
 const EMPLOYEE_NAMES = ["김근욱","남웅식","이기열","강태혁","최혁준","정구용","김태현","윤희지","강민석","권현","장훈희","강민구","송의진","박숙진","신수경","김연주","조영준","주윤미","김지현","최선규","배소연","김민지","김다은","고소영","김지명","소현지","김영준","김성태","임주연","배은진","최우리","최혜민","조수연","허린","김지영","유동석","노의영","김현동","조은애","김진경","이재윤","백용기","박영준","강범석","박재완","윤슬기","최정섭","안소나","강희은","안한","최수연","이건","박선경","전우승","이장권","구남웅","전동혁","김호일","정유성","김승헌","유석호","정대희","황민영","조명석","노현영","남궁희","이동훈","김예은","석예슬","이지용","이준엽","허대영","김희정","이옥경","윤정현","윤진우","민혜종","정민호","박호연","조승희","박진현","양예지","권미진","안홍준","양성대","송현겸","주현식","송우석","박재성","고재학","안장원","전상진","이상헌","홍채범","원승욱","김경호","전대웅","변용호","백은수","한주희","정헌철","우다령","김세영","이안나","박은정","정주영","나수진","문정석","이영종","이은령","김예림","문용길","안지유","이문성","조자혜","최용준","박종박","안유정","윤하림","김소희","강인혜","이수지","주혜리","안나현","이상수","김태형","유창혜","장석진","이강훈"];
 
-function makePrompt(fileName, isAudio) {
+function makePrompt(fileName, isAudio, manualAttendees) {
   const src = isAudio
     ? '첨부된 회의 녹음 파일을 듣고'
     : '다음 회의록 파일을';
   const nameHint = `\n\n[이투스ECI 직원명부 — 참석자 이름을 이 목록에서 최대한 매칭하세요]\n${EMPLOYEE_NAMES.join(', ')}`;
-  return `당신은 회의록 분석 전문가입니다. ${src} 분석해 JSON으로 반환하세요.\n\n파일명: ${fileName}${nameHint}\n\n분석 규칙:\n- meetingTitle: 회의 제목. ${isAudio ? '대화에서 파악하거나' : '문서에 없으면'} 내용 기반으로 적절히 생성\n- meetingDate: 회의 날짜(YYYY-MM-DD). 없으면 빈 문자열\n- attendees: 참석자 목록. ${isAudio ? '발언자/자기소개에서 이름 추출. 위 직원명부에 있는 이름과 발음이 비슷하면 명부의 정확한 이름으로 기재' : '이름+직함 형태면 그대로 포함. 위 직원명부에서 매칭되는 이름 사용'}\n- summary.result: 회의 결과를 핵심만 뽑아 3~5개 개조식 bullet (각 항목 15~30자, 명사형으로 끝낼 것)\n- summary.implications: 시사점을 핵심만 뽑아 3~5개 개조식 bullet (각 항목 15~30자, 명사형으로 끝낼 것)\n- summary.decisions: 결정된 사항들 개조식 목록\n- summary.actionItems: 후속 조치와 담당자 (예: "마케팅팀 — 제안서 초안 작성 (~10/20)")\n- tags: 핵심 키워드 5~10개\n- oneLiner: 가장 핵심적인 한 줄 요약 (30자 이내)\n- nextMeetingDate: 다음 회의 날짜(YYYY-MM-DD). "다음 회의", "다음 주 N요일", "N월 N일에 다시" 등 언급이 있으면 추출. 없으면 빈 문자열`;
+
+  // 파일명에서 날짜 힌트 추출 (예: 261016 → 2026-10-16)
+  const dateFromName = (() => {
+    const m = fileName.match(/(\d{2})(\d{2})(\d{2})/);
+    if (!m) return '';
+    const y = parseInt(m[1], 10), mo = parseInt(m[2], 10), d = parseInt(m[3], 10);
+    if (y >= 20 && y <= 40 && mo >= 1 && mo <= 12 && d >= 1 && d <= 31)
+      return `파일명에서 날짜 힌트: 20${String(y).padStart(2,'0')}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    return '';
+  })();
+
+  const attendeesRule = manualAttendees && manualAttendees.trim()
+    ? `- attendees: 사용자가 직접 입력한 참석자 목록을 그대로 사용하세요 (아래 [참석자 직접 입력] 참조). 이름이 성씨만 있으면 위 직원명부에서 풀네임으로 보완하세요.`
+    : `- attendees: ${isAudio ? '발언자/자기소개에서 이름 추출. 위 직원명부에 있는 이름과 발음이 비슷하면 명부의 정확한 이름으로 기재. 성씨+직함만 들리면(예: "백 원장") 직원명부에서 해당 직함의 풀네임으로 매칭 시도' : '이름+직함 형태면 그대로 포함. 성씨만 있으면(예: "신 팀장") 직원명부에서 풀네임으로 보완. 위 직원명부에서 매칭되는 이름 우선 사용'}`;
+
+  const manualBlock = manualAttendees && manualAttendees.trim()
+    ? `\n\n[참석자 직접 입력 — 이 목록을 attendees로 사용하고, 직원명부로 풀네임 보완]\n${manualAttendees.trim()}`
+    : '';
+
+  return `당신은 회의록 분석 전문가입니다. ${src} 분석해 JSON으로 반환하세요.
+
+파일명: ${fileName}${dateFromName ? '\n' + dateFromName : ''}${nameHint}${manualBlock}
+
+분석 규칙:
+- meetingTitle: 회의 제목. 문서/음성의 실제 제목을 사용하되, 없으면 핵심 주제로 간결하게 생성. 연도가 내용에 언급되더라도 제목에 포함하지 말 것(예: "2023년 ..." 금지). 30자 이내.
+- meetingDate: 회의 날짜(YYYY-MM-DD). 문서 내 명시된 날짜 우선. 없으면 파일명 힌트 사용. 파일명 힌트도 없으면 빈 문자열. ※ 연도는 반드시 4자리(2026 등)로, 파일명의 앞 두 자리가 연도(예: 26→2026).
+${attendeesRule}
+- summary.result: 회의 결과를 핵심만 뽑아 3~5개 개조식 bullet (각 항목 15~30자, 명사형으로 끝낼 것)
+- summary.implications: 시사점을 핵심만 뽑아 3~5개 개조식 bullet (각 항목 15~30자, 명사형으로 끝낼 것)
+- summary.decisions: 결정된 사항들 개조식 목록
+- summary.actionItems: 후속 조치와 담당자 (예: "마케팅팀 — 제안서 초안 작성 (~10/20)")
+- tags: 핵심 키워드 5~10개
+- oneLiner: 가장 핵심적인 한 줄 요약 (30자 이내)
+- nextMeetingDate: 다음 회의 날짜(YYYY-MM-DD). "다음 회의", "다음 주 N요일", "N월 N일에 다시" 등 언급이 있으면 추출. 없으면 빈 문자열`;
 }
 
 async function callGemini(env, parts, thinkingBudget = 2048) {
@@ -254,8 +287,8 @@ async function callGemini(env, parts, thinkingBudget = 2048) {
 }
 
 // ── 문서 분석 ─────────────────────────────────────────────────────────
-async function analyzeWithGemini(env, fileBuffer, mimeType, fileName, textContent) {
-  const prompt = makePrompt(fileName, false);
+async function analyzeWithGemini(env, fileBuffer, mimeType, fileName, textContent, manualAttendees) {
+  const prompt = makePrompt(fileName, false, manualAttendees);
   let parts;
   if (mimeType === 'application/pdf' && fileBuffer) {
     const uint8 = new Uint8Array(fileBuffer);
@@ -340,14 +373,14 @@ ${meta.summary?.implications?.length ? sectionHeader('■ 시사점') + listHtml
 ${meta.summary?.decisions?.length ? sectionHeader('■ 핵심 결정사항') + listHtml(meta.summary.decisions) : ''}
 ${meta.summary?.actionItems?.length ? sectionHeader('■ 후속 조치') + listHtml(meta.summary.actionItems) : ''}
 ${meta.tags?.length ? `<p class="tags">🏷️ 키워드: ${meta.tags.map(t=>esc(t)).join(' · ')}</p>` : ''}
-<p class="footer">본 문서는 AI(Gemini 2.5 Flash)가 분석하여 자동 생성한 회의록입니다.</p>
+<p class="footer">본 문서는 AI(Gemini 3.8 Flash)가 분석하여 자동 생성한 회의록입니다.</p>
 </body>
 </html>`;
 }
 
 // ── 오디오 분석 (fileUri 방식) ────────────────────────────────────────
-async function analyzeAudioWithGemini(env, fileUri, fileName, mimeType) {
-  const prompt = makePrompt(fileName, true);
+async function analyzeAudioWithGemini(env, fileUri, fileName, mimeType, manualAttendees) {
+  const prompt = makePrompt(fileName, true, manualAttendees);
   const parts  = [{ text: prompt }, { fileData: { mimeType, fileUri } }];
   return callGemini(env, parts, 4096);
 }
@@ -403,14 +436,16 @@ async function handleUpload(request, env) {
     binary += String.fromCharCode(...uint8.slice(i, i + 8192));
   await env.MEETING_KV.put(`file-${id}`, btoa(binary));
 
+  const manualAttendees = formData.get('manualAttendees') || '';
+
   let analysis = null, analysisStatus = 'ok';
   if (ext === 'pdf') {
-    analysis = await analyzeWithGemini(env, arrayBuffer, 'application/pdf', fileName, null);
+    analysis = await analyzeWithGemini(env, arrayBuffer, 'application/pdf', fileName, null, manualAttendees);
     if (!analysis) analysisStatus = 'failed';
   } else if (ext === 'docx') {
     const textContent = await extractDocxText(arrayBuffer);
     if (textContent && textContent.length > 50) {
-      analysis = await analyzeWithGemini(env, null, null, fileName, textContent);
+      analysis = await analyzeWithGemini(env, null, null, fileName, textContent, manualAttendees);
       if (!analysis) analysisStatus = 'failed';
     } else { analysisStatus = 'text_extract_failed'; }
   } else if (ext === 'hwp' || ext === 'hwpx') {
@@ -428,7 +463,7 @@ async function handleUpload(request, env) {
     team,
     meetingTitle: analysis?.meetingTitle || fileName.replace(/\.[^.]+$/, ''),
     meetingDate:  analysis?.meetingDate  || '',
-    attendees:    analysis?.attendees    || [],
+    attendees:    analysis?.attendees    || (manualAttendees ? manualAttendees.split(/[,\n]/).map(s=>s.trim()).filter(Boolean) : []),
     oneLiner:     analysis?.oneLiner     || '',
     tags:         analysis?.tags         || [],
     summary:      analysis?.summary      || null
@@ -449,10 +484,11 @@ async function handleUpload(request, env) {
 async function handleAudioUpload(request, env) {
   if (!isAuthed(request, env)) return authResponse();
 
-  const fileName = decodeURIComponent(request.headers.get('X-File-Name') || 'recording');
-  const fileSize = parseInt(request.headers.get('X-File-Size') || '0');
-  const mimeType = request.headers.get('Content-Type') || 'audio/mpeg';
-  const team     = decodeURIComponent(request.headers.get('X-Team') || '');
+  const fileName        = decodeURIComponent(request.headers.get('X-File-Name') || 'recording');
+  const fileSize        = parseInt(request.headers.get('X-File-Size') || '0');
+  const mimeType        = request.headers.get('Content-Type') || 'audio/mpeg';
+  const team            = decodeURIComponent(request.headers.get('X-Team') || '');
+  const manualAttendees = decodeURIComponent(request.headers.get('X-Manual-Attendees') || '');
 
   // ① 음성 파일 버퍼링 (Drive + Gemini 둘 다 전송하기 위해)
   const audioBuffer = await request.arrayBuffer();
@@ -512,7 +548,7 @@ async function handleAudioUpload(request, env) {
   if (!fileUri) return json({ ok: false, error: '파일 URI 획득 실패' }, 500);
 
   // ③ Gemini 분석
-  const analysis      = await analyzeAudioWithGemini(env, fileUri, fileName, mimeType);
+  const analysis      = await analyzeAudioWithGemini(env, fileUri, fileName, mimeType, manualAttendees);
   const analysisStatus = analysis ? 'ok' : 'failed';
 
   // ④ KV 저장 (오디오 원본은 저장 안 함 — 용량 문제)
@@ -688,6 +724,10 @@ async function handleReanalyze(request, env, id) {
   if (!raw) return json({ ok: false, error: '없음' }, 404);
   const meta = JSON.parse(raw);
 
+  let reqBody = {};
+  try { reqBody = await request.json(); } catch {}
+  const manualAttendees = reqBody.manualAttendees || '';
+
   if (meta.fileType === 'audio')
     return json({ ok: false, error: '음성 파일은 재분석이 지원되지 않습니다. 다시 업로드해주세요.' }, 400);
 
@@ -703,12 +743,12 @@ async function handleReanalyze(request, env, id) {
   let analysis = null, analysisStatus = meta.analysisStatus;
 
   if (ext === 'pdf') {
-    analysis = await analyzeWithGemini(env, arrayBuffer, 'application/pdf', meta.fileName, null);
+    analysis = await analyzeWithGemini(env, arrayBuffer, 'application/pdf', meta.fileName, null, manualAttendees);
     analysisStatus = analysis ? 'ok' : 'failed';
   } else if (ext === 'docx') {
     const textContent = await extractDocxText(arrayBuffer);
     if (textContent && textContent.length > 50) {
-      analysis = await analyzeWithGemini(env, null, null, meta.fileName, textContent);
+      analysis = await analyzeWithGemini(env, null, null, meta.fileName, textContent, manualAttendees);
       analysisStatus = analysis ? 'ok' : 'failed';
     }
   }

@@ -826,6 +826,12 @@ input,select,textarea{font-family:var(--font);font-size:16px}
         </div>
       </div>
 
+      <!-- 참석자 직접 입력 -->
+      <div style="margin-bottom:16px">
+        <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px">참석자 직접 입력 <span style="font-weight:400;font-size:12px;color:var(--text3)">(선택 — 입력하면 AI 추출보다 우선 적용)</span></label>
+        <textarea id="uploadAttendees" placeholder="예: 김근욱, 남웅식, 이기열&#10;쉼표 또는 줄바꿈으로 구분" rows="2" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:13px;resize:vertical;font-family:inherit"></textarea>
+      </div>
+
       <!-- 문서 탭 -->
       <div id="uploadTabDoc" style="display:none">
         <div class="page-sub" style="margin-bottom:16px">PDF, DOCX, DOC, HWP 파일을 올리면 AI가 자동으로 분석·요약합니다.<br>HWP는 AI 분석 없이 저장만 됩니다. PDF로 저장 후 올리시면 더 정확합니다.</div>
@@ -888,6 +894,19 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 </div>
 
 <!-- 편집 모달 -->
+<!-- 재분석 모달 -->
+<div id="reanalyzeBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center" onclick="if(event.target===this)closeReanalyzeModal()">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;width:min(460px,92vw);z-index:510">
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px">🔄 재분석</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px">참석자를 직접 입력하면 AI 추출보다 우선 적용됩니다.<br>비워두면 AI가 문서에서 자동 추출합니다.</div>
+    <label style="font-size:13px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">참석자 직접 입력 <span style="font-weight:400">(선택)</span></label>
+    <textarea id="reanalyzeMdAttendeesInput" placeholder="예: 김근욱, 남웅식, 이기열&#10;쉼표 또는 줄바꿈으로 구분" rows="3" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:13px;resize:vertical;font-family:inherit;margin-bottom:16px"></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="closeReanalyzeModal()">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="confirmReanalyze()">재분석 실행</button>
+    </div>
+  </div>
+</div>
 <!-- 캘린더 일정 추가 모달 -->
 <div id="calAddBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;align-items:center;justify-content:center" onclick="if(event.target===this)hideCalAddModal()">
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;width:min(420px,92vw);z-index:510">
@@ -1342,7 +1361,7 @@ function renderDetail(m) {
     }
   } else {
     actions += `<a href="/api/file/${m.id}" download="${esc(m.fileName)}" class="btn btn-primary btn-sm">⬇️ 원문 다운로드</a>`;
-    if (m.analysisStatus !== 'ok' && ext !== 'hwp' && ext !== 'hwpx') {
+    if (ext !== 'hwp' && ext !== 'hwpx') {
       actions += `<button class="btn btn-ghost btn-sm" onclick="reanalyze('${m.id}')">🔄 재분석</button>`;
     }
   }
@@ -1533,18 +1552,35 @@ async function extractDocxText(arrayBuffer) {
 }
 
 // ── 재분석 ──────────────────────────────────────────────────────────────
-async function reanalyze(id) {
-  if (!confirm('재분석을 실행하시겠습니까? (Gemini AI 비용이 발생합니다)')) return;
+let REANALYZE_ID = null;
+function reanalyze(id) {
+  REANALYZE_ID = id;
+  document.getElementById('reanalyzeMdAttendeesInput').value = '';
+  const rb = document.getElementById('reanalyzeBackdrop');
+  rb.style.display = 'flex';
+}
+function closeReanalyzeModal() {
+  document.getElementById('reanalyzeBackdrop').style.display = 'none';
+  REANALYZE_ID = null;
+}
+async function confirmReanalyze() {
+  if (!REANALYZE_ID) return;
+  const manualAttendees = document.getElementById('reanalyzeMdAttendeesInput').value.trim();
+  closeReanalyzeModal();
   showToast('재분석 중...');
   try {
-    const res = await fetch(`/api/reanalyze/${id}`, { method: 'POST' });
+    const res = await fetch(`/api/reanalyze/${REANALYZE_ID}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ manualAttendees })
+    });
     const data = await res.json();
     if (data.ok && data.analysisStatus === 'ok') {
       showToast('✅ 재분석 완료!');
       await loadMeetings();
-      openDetail(id);
+      openDetail(REANALYZE_ID);
     } else {
-      showToast('⚠️ 재분석 실패 — Gemini 오류');
+      showToast('⚠️ ' + (data.error || '재분석 실패'));
     }
   } catch (e) {
     showToast('오류: ' + e.message);
@@ -1622,6 +1658,8 @@ async function startAudioUpload(file) {
     xhr.setRequestHeader('Content-Type', mimeType);
     const team = [...document.querySelectorAll('.upload-team-cb:checked')].map(cb => cb.value).join(',');
     if (team) xhr.setRequestHeader('X-Team', encodeURIComponent(team));
+    const attendeesVal = (document.getElementById('uploadAttendees')?.value || '').trim();
+    if (attendeesVal) xhr.setRequestHeader('X-Manual-Attendees', encodeURIComponent(attendeesVal));
 
     xhr.upload.addEventListener('progress', e => {
       if (e.lengthComputable) {
@@ -1725,6 +1763,8 @@ async function startUpload(file) {
   formData.append('file', file);
   const team = [...document.querySelectorAll('.upload-team-cb:checked')].map(cb => cb.value).join(',');
   if (team) formData.append('team', team);
+  const attendeesVal = (document.getElementById('uploadAttendees')?.value || '').trim();
+  if (attendeesVal) formData.append('manualAttendees', attendeesVal);
 
   try {
     progBar.style.width = '40%';
