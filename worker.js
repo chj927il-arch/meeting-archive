@@ -220,7 +220,7 @@ function makePrompt(fileName, isAudio) {
 }
 
 async function callGemini(env, parts, thinkingBudget = 2048) {
-  const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+  const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent';
   const body = {
     contents: [{ parts }],
     generationConfig: {
