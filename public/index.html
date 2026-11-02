@@ -638,8 +638,8 @@ input,select,textarea{font-family:var(--font);font-size:16px}
   <!-- 모바일 탑바 -->
   <div class="mobile-topbar">
     <button class="mtb-menu" id="navToggle">☰</button>
-    <span class="mtb-logo">📋</span>
-    <span class="mtb-title">회의록 관리 시스템</span>
+    <span class="mtb-logo" onclick="showView('list')" style="cursor:pointer">📋</span>
+    <span class="mtb-title" onclick="showView('list')" style="cursor:pointer">회의록 관리 시스템</span>
   </div>
   <div class="nav-backdrop" id="navBackdrop"></div>
 
@@ -661,7 +661,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 
   <!-- 사이드바 -->
   <nav class="sidebar">
-    <div class="sb-head">
+    <div class="sb-head" onclick="showView('list')" style="cursor:pointer" title="회의록 목록으로">
       <div class="sb-logo">📋</div>
       <div class="sb-title">회의록 관리 시스템</div>
       <div class="sb-sub">AI 자동 요약 시스템</div>
@@ -813,9 +813,10 @@ input,select,textarea{font-family:var(--font);font-size:16px}
         <button class="upload-tab" id="tabDoc" onclick="switchUploadTab('doc')">📄 문서 파일</button>
       </div>
 
-      <!-- 팀 선택 (복수 선택) -->
+      <!-- 팀 선택 (복수 선택, 필수) -->
       <div style="margin-bottom:16px">
-        <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:8px">주관부서 <span style="font-weight:400;font-size:12px">(복수 선택 가능)</span></label>
+        <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:8px">주관부서 <span style="color:#ef4444;font-size:13px">*</span> <span style="font-weight:400;font-size:12px">(복수 선택 가능, 최소 1개 필수)</span></label>
+        <div id="uploadTeamError" style="display:none;color:#ef4444;font-size:12px;margin-bottom:6px">⚠️ 주관부서를 1개 이상 선택해 주세요.</div>
         <div id="uploadTeamChips" style="display:flex;flex-wrap:wrap;gap:6px">
           <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="기획팀"><span>기획팀</span></label>
           <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="사업팀"><span>사업팀</span></label>
@@ -826,10 +827,22 @@ input,select,textarea{font-family:var(--font);font-size:16px}
         </div>
       </div>
 
-      <!-- 참석자 직접 입력 -->
+      <!-- 참석자 선택 (셀렉트박스 + 칩) -->
       <div style="margin-bottom:16px">
-        <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px">참석자 직접 입력 <span style="font-weight:400;font-size:12px;color:var(--text3)">(선택 — 입력하면 AI 추출보다 우선 적용)</span></label>
-        <textarea id="uploadAttendees" placeholder="예: 김근욱, 남웅식, 이기열&#10;쉼표 또는 줄바꿈으로 구분" rows="2" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:13px;resize:vertical;font-family:inherit"></textarea>
+        <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px">참석자 <span style="font-weight:400;font-size:12px;color:var(--text3)">(선택 — 입력하면 AI 추출보다 우선 적용)</span></label>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <select id="uploadAttendeesSelect" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:13px;font-family:inherit">
+            <option value="">-- 직원 선택 --</option>
+          </select>
+          <button type="button" onclick="addUploadAttendee()" style="padding:8px 14px;border-radius:8px;border:1px solid var(--accent);background:rgba(59,130,246,.1);color:var(--accent2);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">+ 추가</button>
+        </div>
+        <div id="uploadAttendeeChips" style="display:flex;flex-wrap:wrap;gap:5px;min-height:0"></div>
+        <!-- 직접 입력 (이름 직접 타이핑) -->
+        <div style="display:flex;gap:6px;margin-top:7px">
+          <input id="uploadAttendeeInput" type="text" placeholder="목록에 없으면 직접 입력 후 Enter" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:13px;font-family:inherit">
+        </div>
+        <!-- hidden — 기존 코드 호환 -->
+        <input type="hidden" id="uploadAttendees">
       </div>
 
       <!-- 문서 탭 -->
@@ -846,15 +859,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
       <!-- 음성 탭 -->
       <div id="uploadTabAudio">
         <div class="audio-info-box">
-          <div class="audio-info-title">🤖 AI 음성 분석 작동 원리</div>
-          <div class="audio-info-body">
-            <p><strong>Google Gemini 3.8 Flash</strong>는 음성을 텍스트로 먼저 변환(STT)한 뒤 분석하는 방식이 아니라, <strong>음성을 직접 이해하는 멀티모달(Multimodal) AI</strong>입니다. 사람이 회의 내용을 듣고 바로 요약하듯, 녹음 파일에서 핵심 내용을 즉시 추출합니다.</p>
-            <ol>
-              <li><strong>업로드</strong> — 음성 파일이 Google 서버로 직접 전송됩니다 (Cloudflare Workers를 경유해 프록시 업로드).</li>
-              <li><strong>음성 직접 분석</strong> — Gemini가 음성을 듣고 회의 맥락·발언 내용을 파악합니다. 별도 텍스트 변환 없이 한 번에 처리됩니다.</li>
-              <li><strong>구조화 추출</strong> — 회의 결과, 시사점, 핵심 결정사항, 후속 조치를 JSON 구조로 추출합니다.</li>
-              <li><strong>Word 생성</strong> — 분석 결과로 다운로드 가능한 회의록 Word 파일을 자동 생성합니다.</li>
-            </ol>
+          <div class="audio-info-body" style="padding-top:0">
             <div class="audio-info-notice">⏱️ <strong>40MB 이상 파일은 분석·등록까지 1분 이상 소요될 수 있습니다.</strong> 업로드 중 화면을 닫지 마세요.</div>
           </div>
         </div>
@@ -891,6 +896,19 @@ input,select,textarea{font-family:var(--font);font-size:16px}
   </div>
   <div class="dp-body" id="dpBody"></div>
   <div class="dp-actions" id="dpActions"></div>
+</div>
+
+<!-- 의심 워딩 확인 모달 -->
+<div id="wordCheckBackdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:520;align-items:center;justify-content:center" onclick="if(event.target===this)closeWordCheckModal(false)">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:28px;width:min(480px,94vw);z-index:530">
+    <div style="font-size:17px;font-weight:700;margin-bottom:4px">🔍 확인이 필요한 워딩 발견</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:18px">AI가 추출한 내용 중 오기입 가능성이 있는 단어가 있습니다.<br>내용 확인 후 저장 화면에서 직접 수정하실 수 있습니다.</div>
+    <div id="wordCheckList" style="margin-bottom:20px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-ghost btn-sm" onclick="closeWordCheckModal(false)">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="closeWordCheckModal(true)">확인했습니다 → 내용 검토</button>
+    </div>
+  </div>
 </div>
 
 <!-- 편집 모달 -->
@@ -1812,6 +1830,7 @@ function onDropAudio(e) {
 
 function onAudioFileSelected(file) {
   if (!file) return;
+  if (!checkTeamRequired()) { showToast('⚠️ 주관부서를 1개 이상 선택해 주세요'); return; }
   const ext = file.name.split('.').pop().toLowerCase();
   const allowed = ['mp3','m4a','wav','ogg','webm','aac','flac'];
   if (!allowed.includes(ext)) { showToast('⚠️ MP3, M4A, WAV, OGG 등 음성 파일만 가능합니다'); return; }
@@ -1873,7 +1892,7 @@ async function startAudioUpload(file) {
         result.innerHTML = `${warnHtml}<div class="upload-ok"><div style="font-size:15px;font-weight:700;margin-bottom:4px">✅ "${esc(file.name)}" 등록 완료</div><div style="font-size:13px;color:var(--text2)">내용을 확인하고 수정할 수 있습니다.</div></div>`;
         document.getElementById('uploadAudioInput').value = '';
         await loadMeetings();
-        openReviewModal(data.id, m);
+        openWordCheckModal(data.id, m);
       } catch (e) {
         progWrap.style.display = 'none';
         result.style.display   = 'block';
@@ -1901,6 +1920,142 @@ async function startAudioUpload(file) {
   });
 }
 
+// ── 업로드 폼 — 팀 필수 체크 ──────────────────────────────────────────────
+function checkTeamRequired() {
+  const ok = document.querySelectorAll('.upload-team-cb:checked').length > 0;
+  document.getElementById('uploadTeamError').style.display = ok ? 'none' : 'block';
+  return ok;
+}
+document.addEventListener('change', function(e) {
+  if (e.target.classList.contains('upload-team-cb')) checkTeamRequired();
+});
+
+// ── 업로드 폼 — 참석자 셀렉트+칩 ─────────────────────────────────────────
+let UPLOAD_ATTENDEES = [];
+
+(function initUploadAttendeesSelect() {
+  const NAMES = ["강민구","강민석","강범석","강인혜","강태혁","강희은","고소영","고재학","구남웅","권미진","권현","김경호","김근욱","김다은","김민지","김성태","김세영","김소희","김승헌","김연주","김예림","김예은","김지명","김지영","김지현","김진경","김태현","김태형","김현동","김호일","김희정","남궁희","남웅식","노의영","노현영","나수진","문용길","문정석","민혜종","박영준","박은정","박재성","박재완","박종박","박진현","박호연","박선경","박숙진","백용기","백은수","배소연","배은진","변용호","석예슬","소현지","송우석","송의진","송현겸","신수경","안나현","안소나","안유정","안장원","안지유","안한","안홍준","양성대","양예지","연승욱","우다령","원승욱","윤슬기","윤정현","윤진우","윤하림","윤희지","이강훈","이건","이기열","이동훈","이문성","이상수","이상헌","이수지","이안나","이영종","이옥경","이은령","이이준엽","이재윤","이장권","이지용","임주연","장석진","장훈희","전대웅","전동혁","전상진","전우승","정구용","정대희","정민호","정유성","정헌철","정주영","조명석","조수연","조승희","조영준","조은애","조자혜","주윤미","주현식","주혜리","최선규","최수연","최우리","최용준","최정섭","최혁준","최혜민","한주희","허대영","허린","홍채범","황민영"];
+  const sel = document.getElementById('uploadAttendeesSelect');
+  if (!sel) return;
+  NAMES.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n; opt.textContent = n;
+    sel.appendChild(opt);
+  });
+})();
+
+function addUploadAttendee() {
+  const sel = document.getElementById('uploadAttendeesSelect');
+  const name = sel.value.trim();
+  if (!name || UPLOAD_ATTENDEES.includes(name)) { sel.value = ''; return; }
+  UPLOAD_ATTENDEES.push(name);
+  sel.value = '';
+  renderUploadAttendeeChips();
+}
+
+function removeUploadAttendee(i) {
+  UPLOAD_ATTENDEES.splice(i, 1);
+  renderUploadAttendeeChips();
+}
+
+function renderUploadAttendeeChips() {
+  const wrap = document.getElementById('uploadAttendeeChips');
+  if (!wrap) return;
+  wrap.innerHTML = UPLOAD_ATTENDEES.map((n, i) =>
+    `<span style="display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,.12);color:var(--accent2);border:1px solid rgba(59,130,246,.25);border-radius:20px;padding:3px 10px;font-size:13px;font-weight:500">
+      ${esc(n)}
+      <button onclick="removeUploadAttendee(${i})" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:14px;padding:0;line-height:1">×</button>
+    </span>`
+  ).join('');
+  // hidden input 동기화 (기존 코드 호환)
+  const hid = document.getElementById('uploadAttendees');
+  if (hid) hid.value = UPLOAD_ATTENDEES.join(', ');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.target.id === 'uploadAttendeeInput' && e.key === 'Enter') {
+    e.preventDefault();
+    const v = e.target.value.trim();
+    if (v && !UPLOAD_ATTENDEES.includes(v)) {
+      UPLOAD_ATTENDEES.push(v);
+      e.target.value = '';
+      renderUploadAttendeeChips();
+    }
+  }
+});
+
+// ── 업로드 후 의심 워딩 확인 모달 ─────────────────────────────────────────
+const SUSPICIOUS_PATTERNS = [
+  // 브랜드/업체명 의심 오류
+  { pattern: /이돌스파르타/g, desc: '"이돌스파르타"', suggest: '잇올스파르타' },
+  { pattern: /잇올스\s?파르타/g, desc: '"잇올스파르타"', suggest: null },
+  // 축약어 오해 가능
+  { pattern: /\bFC\b/g, desc: '"FC"', suggest: '가맹점(FC)이 맞는지 확인' },
+  { pattern: /\b앱\s?푸시\b/g, desc: '"앱 푸시"', suggest: '정확한 채널명인지 확인' },
+  // 오타 가능성 패턴
+  { pattern: /대성\s?디\s?랩/g, desc: '"대성디랩"', suggest: null },
+  { pattern: /수만\s?휘/g, desc: '"수만휘"', suggest: null },
+];
+
+function scanSuspiciousWords(text) {
+  const hits = [];
+  for (const { pattern, desc, suggest } of SUSPICIOUS_PATTERNS) {
+    pattern.lastIndex = 0;
+    const m = text.match(new RegExp(pattern.source, 'gi'));
+    if (m) hits.push({ desc, suggest, count: m.length });
+  }
+  return hits;
+}
+
+function buildSuspiciousText(meta) {
+  const parts = [];
+  if (meta.meetingTitle) parts.push(meta.meetingTitle);
+  if (meta.summary?.result)       parts.push(...meta.summary.result);
+  if (meta.summary?.implications) parts.push(...meta.summary.implications);
+  if (meta.summary?.decisions)    parts.push(...meta.summary.decisions);
+  if (meta.promotions)            parts.push(...meta.promotions.map(p => p.title || ''));
+  return parts.join(' ');
+}
+
+let WORD_CHECK_ID = null;
+let WORD_CHECK_META = null;
+
+function openWordCheckModal(id, meta) {
+  WORD_CHECK_ID = id;
+  WORD_CHECK_META = meta;
+  const text = buildSuspiciousText(meta);
+  const hits = scanSuspiciousWords(text);
+
+  const bd = document.getElementById('wordCheckBackdrop');
+  const list = document.getElementById('wordCheckList');
+
+  if (hits.length === 0) {
+    // 의심 워딩 없으면 바로 리뷰 모달
+    openReviewModal(id, meta);
+    return;
+  }
+
+  list.innerHTML = hits.map(h => `
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
+      <span style="font-size:18px">⚠️</span>
+      <div>
+        <div style="font-size:13.5px;font-weight:600;color:var(--text1)">${esc(h.desc)} 발견 (${h.count}회)</div>
+        ${h.suggest ? `<div style="font-size:12px;color:var(--text2);margin-top:2px">→ ${esc(h.suggest)}</div>` : ''}
+      </div>
+    </div>`).join('');
+
+  bd.style.display = 'flex';
+}
+
+function closeWordCheckModal(proceed) {
+  document.getElementById('wordCheckBackdrop').style.display = 'none';
+  if (proceed) {
+    openReviewModal(WORD_CHECK_ID, WORD_CHECK_META);
+  }
+  WORD_CHECK_ID = null;
+  WORD_CHECK_META = null;
+}
+
 // ── 파일 업로드 ──────────────────────────────────────────────────────────
 function onDragOver(e)  { e.preventDefault(); document.getElementById('dropZone').classList.add('dragover'); }
 function onDragLeave(e) { document.getElementById('dropZone').classList.remove('dragover'); }
@@ -1913,6 +2068,7 @@ function onDrop(e) {
 
 function onFileSelected(file) {
   if (!file) return;
+  if (!checkTeamRequired()) { showToast('⚠️ 주관부서를 1개 이상 선택해 주세요'); return; }
   const ext = file.name.split('.').pop().toLowerCase();
   const allowed = ['pdf','docx','doc','hwp','hwpx'];
   if (!allowed.includes(ext)) { showToast('⚠️ PDF, DOCX, DOC, HWP 파일만 가능합니다'); return; }
@@ -1981,7 +2137,7 @@ async function startUpload(file) {
     result.innerHTML = `${warnHtml}<div class="upload-ok"><div style="font-size:15px;font-weight:700;margin-bottom:4px">✅ "${esc(file.name)}" 등록 완료</div><div style="font-size:13px;color:var(--text2)">내용을 확인하고 수정할 수 있습니다.</div></div>`;
     document.getElementById('uploadFileInput').value = '';
     await loadMeetings();
-    openReviewModal(data.id, m);
+    openWordCheckModal(data.id, m);
   } catch (e) {
     progWrap.style.display = 'none';
     result.style.display = 'block';
