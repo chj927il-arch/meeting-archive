@@ -1565,11 +1565,12 @@ function closeReanalyzeModal() {
 }
 async function confirmReanalyze() {
   if (!REANALYZE_ID) return;
+  const id = REANALYZE_ID;
   const manualAttendees = document.getElementById('reanalyzeMdAttendeesInput').value.trim();
   closeReanalyzeModal();
   showToast('재분석 중...');
   try {
-    const res = await fetch(`/api/reanalyze/${REANALYZE_ID}`, {
+    const res = await fetch(`/api/reanalyze/${id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ manualAttendees })
@@ -1578,7 +1579,7 @@ async function confirmReanalyze() {
     if (data.ok && data.analysisStatus === 'ok') {
       showToast('✅ 재분석 완료!');
       await loadMeetings();
-      openDetail(REANALYZE_ID);
+      openDetail(id);
     } else {
       showToast('⚠️ ' + (data.error || '재분석 실패'));
     }
