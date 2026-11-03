@@ -1382,7 +1382,25 @@ function renderDetail(m) {
   }
 
   // AI 요약
-  if (m.summary) {
+  if (m.analysisStatus === 'hwp_no_analysis' || m.analysisStatus === 'hwp') {
+    bodyHtml += `<div class="dp-section">
+      <div class="no-analysis-box">
+        ⚠️ <strong>HWP 파일은 AI 분석이 지원되지 않습니다.</strong><br>
+        한글(HWP)에서 "다른 이름으로 저장 → PDF"로 변환 후 다시 업로드하시면<br>
+        AI 자동 요약을 이용하실 수 있습니다.
+      </div>
+    </div>`;
+  } else if (m.analysisStatus !== 'ok') {
+    const errMsg = m.analysisError ? `<div style="font-size:12px;opacity:.75;margin-top:6px">원인: ${esc(m.analysisError)}</div>` : '';
+    const sizeWarning = (m.fileSize && m.fileSize > 80*1024*1024)
+      ? `<div style="font-size:12px;margin-top:6px;color:var(--yellow)">⚠️ 파일 크기 ${Math.round(m.fileSize/1024/1024)}MB — 80MB 이상은 분석 실패 가능성이 높습니다. 파일을 분할하거나 압축 후 재업로드하세요.</div>` : '';
+    bodyHtml += `<div class="dp-section">
+      <div class="no-analysis-box">
+        ⚠️ AI 분석에 실패했습니다.${errMsg}${sizeWarning}
+        <div style="font-size:12px;margin-top:8px">음성 파일이면 상세화면 하단에서 재업로드, 문서 파일이면 재분석 버튼을 시도하세요.</div>
+      </div>
+    </div>`;
+  } else if (m.summary) {
     bodyHtml += `<div class="dp-section">
       <div class="dp-section-title">🤖 AI 핵심 요약</div>`;
 
@@ -1413,24 +1431,6 @@ function renderDetail(m) {
       </div>`;
     }
     bodyHtml += `</div>`;
-  } else if (m.analysisStatus === 'hwp_no_analysis' || m.analysisStatus === 'hwp') {
-    bodyHtml += `<div class="dp-section">
-      <div class="no-analysis-box">
-        ⚠️ <strong>HWP 파일은 AI 분석이 지원되지 않습니다.</strong><br>
-        한글(HWP)에서 "다른 이름으로 저장 → PDF"로 변환 후 다시 업로드하시면<br>
-        AI 자동 요약을 이용하실 수 있습니다.
-      </div>
-    </div>`;
-  } else if (m.analysisStatus !== 'ok') {
-    const errMsg = m.analysisError ? `<div style="font-size:12px;opacity:.75;margin-top:6px">원인: ${esc(m.analysisError)}</div>` : '';
-    const sizeWarning = (m.fileSize && m.fileSize > 80*1024*1024)
-      ? `<div style="font-size:12px;margin-top:6px;color:var(--yellow)">⚠️ 파일 크기 ${Math.round(m.fileSize/1024/1024)}MB — 80MB 이상은 분석 실패 가능성이 높습니다. 파일을 분할하거나 압축 후 재업로드하세요.</div>` : '';
-    bodyHtml += `<div class="dp-section">
-      <div class="no-analysis-box">
-        ⚠️ AI 분석에 실패했습니다.${errMsg}${sizeWarning}
-        <div style="font-size:12px;margin-top:8px">음성 파일이면 상세화면 하단에서 재업로드, 문서 파일이면 재분석 버튼을 시도하세요.</div>
-      </div>
-    </div>`;
   }
 
   document.getElementById('dpBody').innerHTML = bodyHtml;
