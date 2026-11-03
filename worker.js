@@ -304,7 +304,7 @@ async function callGemini(env, parts, thinkingBudget = 2048) {
       thinkingConfig: { thinkingBudget }
     }
   };
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 3; i++) {
     try {
       const res = await fetch(`${GEMINI_URL}?key=${env.GEMINI_API_KEY}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -312,16 +312,19 @@ async function callGemini(env, parts, thinkingBudget = 2048) {
       });
       if (!res.ok) {
         if (res.status === 503 || res.status === 429) {
-          await new Promise(r => setTimeout(r, 2000 * (i + 1))); continue;
+          await new Promise(r => setTimeout(r, 1000 * (i + 1))); continue;
         }
-        console.error('Gemini 오류:', await res.text()); break;
+        const errText = await res.text();
+        console.error('Gemini 오류:', res.status, errText);
+        break;
       }
       const data = await res.json();
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error('빈 응답');
+      if (!text) { console.error('Gemini 빈 응답:', JSON.stringify(data).slice(0,300)); throw new Error('빈 응답'); }
       return JSON.parse(text);
     } catch (e) {
-      await new Promise(r => setTimeout(r, 1500));
+      console.error('Gemini 예외:', e.message);
+      if (i < 2) await new Promise(r => setTimeout(r, 1000));
     }
   }
   return null;
@@ -586,9 +589,25 @@ async function handleAudioUpload(request, env) {
   }
   const fileData = await uploadRes.json();
   const fileUri  = fileData.file?.uri;
+  const fileName_ = fileData.file?.name; // "files/xxxx" 형태
   if (!fileUri) return json({ ok: false, error: '파일 URI 획득 실패' }, 500);
 
-  // ③ Gemini 분석
+  // ③ 파일이 ACTIVE 상태가 될 때까지 폴링 (최대 20초)
+  if (fileName_) {
+    const fileStatusUrl = `https://generativelanguage.googleapis.com/v1beta/${fileName_}?key=${env.GEMINI_API_KEY}`;
+    for (let i = 0; i < 10; i++) {
+      await new Promise(r => setTimeout(r, 2000));
+      try {
+        const statusRes = await fetch(fileStatusUrl);
+        if (statusRes.ok) {
+          const statusData = await statusRes.json();
+          if (statusData.state === 'ACTIVE') break;
+        }
+      } catch (_) {}
+    }
+  }
+
+  // ④ Gemini 분석
   let analysis = null, analysisError = null;
   try {
     analysis = await analyzeAudioWithGemini(env, fileUri, fileName, mimeType, manualAttendees);
