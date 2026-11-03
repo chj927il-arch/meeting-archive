@@ -589,7 +589,13 @@ async function handleAudioUpload(request, env) {
   if (!fileUri) return json({ ok: false, error: '파일 URI 획득 실패' }, 500);
 
   // ③ Gemini 분석
-  const analysis      = await analyzeAudioWithGemini(env, fileUri, fileName, mimeType, manualAttendees);
+  let analysis = null, analysisError = null;
+  try {
+    analysis = await analyzeAudioWithGemini(env, fileUri, fileName, mimeType, manualAttendees);
+    if (!analysis) analysisError = 'Gemini 응답 없음 (파일이 너무 크거나 분석 시간 초과)';
+  } catch (e) {
+    analysisError = e.message || 'Gemini 분석 중 예외 발생';
+  }
   const analysisStatus = analysis ? 'ok' : 'failed';
 
   // ④ KV 저장 (오디오 원본은 저장 안 함 — 용량 문제)
@@ -597,7 +603,7 @@ async function handleAudioUpload(request, env) {
   const now = new Date().toISOString();
   const meta = {
     id, fileName, fileSize: audioBuffer.byteLength, mimeType, fileType: 'audio',
-    uploadedAt: now, analysisStatus, team,
+    uploadedAt: now, analysisStatus, analysisError, team,
     driveFileId, driveUrl,
     meetingTitle: analysis?.meetingTitle || fileName.replace(/\.[^.]+$/, ''),
     meetingDate:  analysis?.meetingDate  || '',
