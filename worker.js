@@ -294,38 +294,53 @@ ${attendeesRule}
 }
 
 async function callGemini(env, parts, thinkingBudget = 2048) {
-  const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent';
+  const MODELS = ['gemini-3.8-flash', 'gemini-2.5-flash'];
   const genConfig = {
     responseMimeType: 'application/json',
     responseSchema: GEMINI_SCHEMA,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 32768,
   };
   if (thinkingBudget > 0) genConfig.thinkingConfig = { thinkingBudget };
   const body = { contents: [{ parts }], generationConfig: genConfig };
-  for (let i = 0; i < 3; i++) {
+  let lastErr = '';
+  // 과부하(503/429) 시 대체 모델로 전환: 각 모델 2회씩
+  for (let i = 0; i < MODELS.length * 2; i++) {
+    const model = MODELS[Math.floor(i / 2)];
     try {
-      const res = await fetch(`${GEMINI_URL}?key=${env.GEMINI_API_KEY}`, {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
       if (!res.ok) {
-        if (res.status === 503 || res.status === 429) {
-          await new Promise(r => setTimeout(r, 1000 * (i + 1))); continue;
+        const t = await res.text();
+        lastErr = res.status === 503 ? 'Gemini 서버 과부하(503) — 잠시 후 재분석 버튼으로 다시 시도하세요'
+                : `HTTP ${res.status}: ${t.slice(0, 200)}`;
+        console.error('Gemini 오류:', model, res.status, t.slice(0, 200));
+        if ([429, 500, 503].includes(res.status)) {
+          await new Promise(r => setTimeout(r, 3000)); continue;
         }
-        const errText = await res.text();
-        console.error('Gemini 오류:', res.status, errText);
         break;
       }
       const data = await res.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) { console.error('Gemini 빈 응답:', JSON.stringify(data).slice(0,300)); throw new Error('빈 응답'); }
-      return JSON.parse(text);
+      const cand = data?.candidates?.[0];
+      const text = (cand?.content?.parts || []).map(p => p.text || '').join('');
+      if (!text) {
+        lastErr = `빈 응답 (finishReason=${cand?.finishReason || '-'}, block=${data?.promptFeedback?.blockReason || '-'})`;
+        console.error('Gemini', lastErr);
+        continue;
+      }
+      try { return JSON.parse(text); }
+      catch (pe) {
+        lastErr = `JSON 파싱 실패 (finishReason=${cand?.finishReason || '-'}, 길이=${text.length})`;
+        console.error('Gemini', lastErr);
+      }
     } catch (e) {
-      console.error('Gemini 예외:', e.message);
-      if (i < 2) await new Promise(r => setTimeout(r, 1000));
+      lastErr = '네트워크 예외: ' + e.message;
+      console.error('Gemini', lastErr);
+      await new Promise(r => setTimeout(r, 1000));
     }
   }
-  return null;
+  throw new Error(lastErr || 'Gemini 응답 없음');
 }
 
 // ── 문서 분석 ─────────────────────────────────────────────────────────
@@ -341,7 +356,7 @@ async function analyzeWithGemini(env, fileBuffer, mimeType, fileName, textConten
   } else if (textContent) {
     parts = [{ text: `${prompt}\n\n--- 회의록 내용 ---\n${textContent}` }];
   } else { return null; }
-  return callGemini(env, parts, 2048);
+  try { return await callGemini(env, parts, 2048); } catch { return null; }
 }
 
 // ── 회의록 Word(HTML) 문서 생성 ──────────────────────────────────────
@@ -548,74 +563,11 @@ async function handleAudioUpload(request, env) {
     }
   }
 
-  // ③ Gemini File API resumable 업로드 초기화
-  const initRes = await fetch(
-    `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${env.GEMINI_API_KEY}&uploadType=resumable`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Goog-Upload-Protocol': 'resumable',
-        'X-Goog-Upload-Command': 'start',
-        'X-Goog-Upload-Header-Content-Length': String(audioBuffer.byteLength),
-        'X-Goog-Upload-Header-Content-Type': mimeType,
-      },
-      body: JSON.stringify({ file: { displayName: fileName } })
-    }
-  );
-  if (!initRes.ok) {
-    const err = await initRes.text();
-    return json({ ok: false, error: 'Gemini 업로드 초기화 실패: ' + err }, 500);
-  }
-  const uploadUrl = initRes.headers.get('X-Goog-Upload-URL');
-  if (!uploadUrl) return json({ ok: false, error: '업로드 URL 발급 실패' }, 500);
-
-  // ④ 버퍼를 Gemini로 전송
-  const uploadRes = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': mimeType,
-      'X-Goog-Upload-Command': 'upload, finalize',
-      'X-Goog-Upload-Offset': '0',
-      'Content-Length': String(audioBuffer.byteLength),
-    },
-    body: audioBuffer,
-  });
-  if (!uploadRes.ok) {
-    const err = await uploadRes.text();
-    return json({ ok: false, error: 'Gemini 파일 업로드 실패: ' + err }, 500);
-  }
-  const fileData = await uploadRes.json();
-  const fileUri  = fileData.file?.uri;
-  const fileName_ = fileData.file?.name; // "files/xxxx" 형태
-  if (!fileUri) return json({ ok: false, error: '파일 URI 획득 실패' }, 500);
-
-  // ③ 파일이 ACTIVE 상태가 될 때까지 폴링 (최대 20초)
-  if (fileName_) {
-    const fileStatusUrl = `https://generativelanguage.googleapis.com/v1beta/${fileName_}?key=${env.GEMINI_API_KEY}`;
-    for (let i = 0; i < 10; i++) {
-      await new Promise(r => setTimeout(r, 2000));
-      try {
-        const statusRes = await fetch(fileStatusUrl);
-        if (statusRes.ok) {
-          const statusData = await statusRes.json();
-          if (statusData.state === 'ACTIVE') break;
-        }
-      } catch (_) {}
-    }
-  }
-
-  // ④ Gemini 분석
-  let analysis = null, analysisError = null;
-  try {
-    analysis = await analyzeAudioWithGemini(env, fileUri, fileName, mimeType, manualAttendees);
-    if (!analysis) analysisError = 'Gemini 응답 없음 (파일이 너무 크거나 분석 시간 초과)';
-  } catch (e) {
-    analysisError = e.message || 'Gemini 분석 중 예외 발생';
-  }
+  const { analysis, analysisError, fatal } = await geminiAudioAnalyze(env, audioBuffer, fileName, mimeType, manualAttendees);
+  if (fatal) return json({ ok: false, error: fatal }, 500);
   const analysisStatus = analysis ? 'ok' : 'failed';
 
-  // ④ KV 저장 (오디오 원본은 저장 안 함 — 용량 문제)
+  // KV 저장 (오디오 원본은 저장 안 함 — 용량 문제)
   const id  = crypto.randomUUID();
   const now = new Date().toISOString();
   const meta = {
@@ -631,17 +583,7 @@ async function handleAudioUpload(request, env) {
     hasDoc: false
   };
 
-  // 분석 성공 시 Word 문서 생성 후 KV 저장
-  if (analysis) {
-    const docHtml = generateMeetingDoc(meta);
-    const encoder = new TextEncoder();
-    const docBytes = encoder.encode(docHtml);
-    let binary = '';
-    for (let i = 0; i < docBytes.length; i += 8192)
-      binary += String.fromCharCode(...docBytes.slice(i, i + 8192));
-    await env.MEETING_KV.put(`doc-${id}`, btoa(binary));
-    meta.hasDoc = true;
-  }
+  if (analysis) await saveMeetingDoc(env, id, meta);
 
   await env.MEETING_KV.put(`meeting-${id}`, JSON.stringify(meta));
 
@@ -651,6 +593,82 @@ async function handleAudioUpload(request, env) {
   await saveIndex(env, idx);
 
   return json({ ok: true, id, analysisStatus, meta });
+}
+
+async function saveMeetingDoc(env, id, meta) {
+  const docBytes = new TextEncoder().encode(generateMeetingDoc(meta));
+  let binary = '';
+  for (let i = 0; i < docBytes.length; i += 8192)
+    binary += String.fromCharCode(...docBytes.slice(i, i + 8192));
+  await env.MEETING_KV.put(`doc-${id}`, btoa(binary));
+  meta.hasDoc = true;
+}
+
+async function downloadFromGDrive(env, fileId) {
+  const sa = JSON.parse(env.GDRIVE_SERVICE_ACCOUNT);
+  const token = await getGDriveToken(sa);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&supportsAllDrives=true`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Drive 다운로드 실패: HTTP ' + res.status);
+  return res.arrayBuffer();
+}
+
+// Gemini File API 업로드 → ACTIVE 대기 → 분석. 반환: { analysis, analysisError, fatal }
+async function geminiAudioAnalyze(env, audioBuffer, fileName, mimeType, manualAttendees) {
+  const initRes = await fetch(
+    `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${env.GEMINI_API_KEY}&uploadType=resumable`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Upload-Protocol': 'resumable',
+        'X-Goog-Upload-Command': 'start',
+        'X-Goog-Upload-Header-Content-Length': String(audioBuffer.byteLength),
+        'X-Goog-Upload-Header-Content-Type': mimeType,
+      },
+      body: JSON.stringify({ file: { displayName: fileName } })
+    }
+  );
+  if (!initRes.ok) return { fatal: 'Gemini 업로드 초기화 실패: ' + await initRes.text() };
+  const uploadUrl = initRes.headers.get('X-Goog-Upload-URL');
+  if (!uploadUrl) return { fatal: '업로드 URL 발급 실패' };
+
+  // ④ 버퍼를 Gemini로 전송
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': mimeType,
+      'X-Goog-Upload-Command': 'upload, finalize',
+      'X-Goog-Upload-Offset': '0',
+      'Content-Length': String(audioBuffer.byteLength),
+    },
+    body: audioBuffer,
+  });
+  if (!uploadRes.ok) return { fatal: 'Gemini 파일 업로드 실패: ' + await uploadRes.text() };
+  const fileData = await uploadRes.json();
+  const fileUri  = fileData.file?.uri;
+  const gName    = fileData.file?.name;
+  if (!fileUri) return { fatal: '파일 URI 획득 실패' };
+
+  // 파일이 ACTIVE가 될 때까지 대기 (최대 ~60초)
+  let state = fileData.file?.state;
+  for (let i = 0; state !== 'ACTIVE' && i < 30; i++) {
+    if (state === 'FAILED') return { analysis: null, analysisError: 'Gemini가 음성 파일 처리에 실패함(FAILED)' };
+    await new Promise(r => setTimeout(r, 2000));
+    try {
+      const s = await fetch(`https://generativelanguage.googleapis.com/v1beta/${gName}?key=${env.GEMINI_API_KEY}`);
+      if (s.ok) state = (await s.json()).state;
+    } catch (_) {}
+  }
+  if (state !== 'ACTIVE') return { analysis: null, analysisError: `Gemini 파일 준비 시간 초과 (state=${state})` };
+
+  try {
+    const analysis = await analyzeAudioWithGemini(env, fileUri, fileName, mimeType, manualAttendees);
+    return { analysis: analysis ? correctAnalysisNames(analysis) : null, analysisError: analysis ? null : 'Gemini 응답 없음' };
+  } catch (e) {
+    return { analysis: null, analysisError: e.message || 'Gemini 분석 중 예외 발생' };
+  }
 }
 
 // ── Word 문서 다운로드 ────────────────────────────────────────────────
@@ -792,8 +810,39 @@ async function handleReanalyze(request, env, id) {
   try { reqBody = await request.json(); } catch {}
   const manualAttendees = reqBody.manualAttendees || '';
 
-  if (meta.fileType === 'audio')
-    return json({ ok: false, error: '음성 파일은 재분석이 지원되지 않습니다. 다시 업로드해주세요.' }, 400);
+  if (meta.fileType === 'audio') {
+    if (!meta.driveFileId || !env.GDRIVE_SERVICE_ACCOUNT)
+      return json({ ok: false, error: '원본 음성파일이 Drive에 없어 재분석할 수 없습니다. 다시 업로드해주세요.' }, 400);
+    let buf;
+    try { buf = await downloadFromGDrive(env, meta.driveFileId); }
+    catch (e) { return json({ ok: false, error: e.message }, 500); }
+    const attendees = manualAttendees || (meta.attendees || []).join(', ');
+    const { analysis, analysisError, fatal } = await geminiAudioAnalyze(env, buf, meta.fileName, meta.mimeType || 'audio/mp4', attendees);
+    if (fatal) return json({ ok: false, error: fatal }, 500);
+    meta.reanalyzedAt = new Date().toISOString();
+    if (analysis) {
+      Object.assign(meta, {
+        meetingTitle: analysis.meetingTitle || meta.meetingTitle,
+        meetingDate:  meta.meetingDate || analysis.meetingDate || '',
+        attendees:    analysis.attendees?.length ? analysis.attendees : meta.attendees,
+        oneLiner:     analysis.oneLiner || '',
+        tags:         analysis.tags || [],
+        summary:      analysis.summary,
+        analysisStatus: 'ok', analysisError: null
+      });
+      await saveMeetingDoc(env, id, meta);
+    } else {
+      meta.analysisStatus = 'failed';
+      meta.analysisError = analysisError;
+    }
+    await env.MEETING_KV.put(`meeting-${id}`, JSON.stringify(meta));
+    const idx  = await getIndex(env);
+    const item = idx.find(m => m.id === id);
+    if (item) Object.assign(item, makeIndexEntry(id, meta, analysis, { fileType: 'audio' }));
+    await saveIndex(env, idx);
+    if (analysis) await autoAddNextMeeting(env, analysis, meta.meetingTitle);
+    return json({ ok: !!analysis, analysisStatus: meta.analysisStatus, error: analysisError, meta });
+  }
 
   const base64 = await env.MEETING_KV.get(`file-${id}`);
   if (!base64) return json({ ok: false, error: 'KV 파일 없음' }, 404);

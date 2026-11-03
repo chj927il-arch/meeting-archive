@@ -971,15 +971,15 @@ input,select,textarea{font-family:var(--font);font-size:16px}
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;width:min(460px,92vw);z-index:510">
     <div style="font-size:16px;font-weight:700;margin-bottom:8px">🔄 재분석</div>
     <div id="reanalyzeAudioNotice" style="display:none;font-size:13px;background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.25);border-radius:8px;padding:10px 14px;margin-bottom:14px;color:var(--yellow)">
-      🎙️ 음성 파일은 AI 재분석이 불가합니다.<br>참석자를 직접 입력하면 즉시 저장됩니다.
+      🎙️ Drive에 저장된 원본 음성으로 AI 재분석합니다 (1~2분 소요).<br>참석자만 고치려면 입력 후 '참석자 저장'을 누르세요.
     </div>
     <div id="reanalyzeDocNotice" style="font-size:13px;color:var(--text2);margin-bottom:16px">참석자를 직접 입력하면 AI 추출보다 우선 적용됩니다.<br>비워두면 AI가 문서에서 자동 추출합니다.</div>
     <label style="font-size:13px;font-weight:600;color:var(--text2);display:block;margin-bottom:6px">참석자 직접 입력 <span id="reanalyzeAttendeesLabel" style="font-weight:400">(선택)</span></label>
     <textarea id="reanalyzeMdAttendeesInput" placeholder="예: 김근욱, 남웅식, 이기열&#10;쉼표 또는 줄바꿈으로 구분" rows="3" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:13px;resize:vertical;font-family:inherit;margin-bottom:16px"></textarea>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn btn-ghost btn-sm" onclick="closeReanalyzeModal()">취소</button>
-      <button id="reanalyzeAiBtn" class="btn btn-primary btn-sm" onclick="confirmReanalyze()">🤖 AI 재분석 실행</button>
-      <button id="reanalyzeSaveBtn" class="btn btn-primary btn-sm" onclick="confirmReanalyze()">✅ 참석자 저장</button>
+      <button id="reanalyzeSaveBtn" class="btn btn-ghost btn-sm" onclick="REANALYZE_SAVE_ONLY=true;confirmReanalyze()">✅ 참석자 저장</button>
+      <button id="reanalyzeAiBtn" class="btn btn-primary btn-sm" onclick="REANALYZE_SAVE_ONLY=false;confirmReanalyze()">🤖 AI 재분석 실행</button>
     </div>
   </div>
 </div>
@@ -1643,6 +1643,7 @@ async function extractDocxText(arrayBuffer) {
 // ── 재분석 ──────────────────────────────────────────────────────────────
 let REANALYZE_ID = null;
 let REANALYZE_IS_AUDIO = false;
+let REANALYZE_SAVE_ONLY = false;
 function reanalyze(id, isAudio) {
   REANALYZE_ID = id;
   REANALYZE_IS_AUDIO = !!isAudio;
@@ -1654,7 +1655,7 @@ function reanalyze(id, isAudio) {
   if (REANALYZE_IS_AUDIO) {
     notice.style.display    = 'block';
     docNotice.style.display = 'none';
-    aiBtn.style.display     = 'none';
+    aiBtn.style.display     = 'inline-flex';
     saveBtn.style.display   = 'inline-flex';
   } else {
     notice.style.display    = 'none';
@@ -1766,8 +1767,7 @@ async function confirmReanalyze() {
   const manualAttendees = document.getElementById('reanalyzeMdAttendeesInput').value.trim();
   closeReanalyzeModal();
 
-  if (isAudio) {
-    // 음성: AI 재분석 불가 → 참석자만 직접 저장
+  if (isAudio && REANALYZE_SAVE_ONLY) {
     if (!manualAttendees) { showToast('참석자를 입력해주세요'); return; }
     showToast('저장 중...');
     try {
@@ -1785,7 +1785,7 @@ async function confirmReanalyze() {
     return;
   }
 
-  showToast('재분석 중...');
+  showToast(isAudio ? '🎙️ 음성 재분석 중... (1~2분 소요, 창을 닫지 마세요)' : '재분석 중...');
   try {
     const res = await fetch(`/api/reanalyze/${id}`, {
       method: 'POST',
