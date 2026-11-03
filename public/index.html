@@ -1132,6 +1132,9 @@ function showView(name) {
   const nb = document.getElementById('nav-' + name);
   if (nb) nb.classList.add('active');
   document.querySelector('.app').classList.remove('navopen');
+  // 상세 패널이 열려있으면 닫기
+  const dp = document.getElementById('detailPanel');
+  if (dp) dp.classList.remove('open');
   if (name === 'upload') {
     document.getElementById('uploadResult').style.display = 'none';
     document.getElementById('uploadProgress').style.display = 'none';
