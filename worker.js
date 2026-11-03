@@ -307,23 +307,36 @@ async function callGemini(env, parts, thinkingBudget = 2048) {
   for (let i = 0; i < MODELS.length * 2; i++) {
     const model = MODELS[Math.floor(i / 2)];
     try {
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${env.GEMINI_API_KEY}`, {
+      // 스트리밍(SSE): 긴 음성 분석 시 중간 연결 100초 타임아웃(524) 회피
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${env.GEMINI_API_KEY}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
       if (!res.ok) {
         const t = await res.text();
         lastErr = res.status === 503 ? 'Gemini 서버 과부하(503) — 잠시 후 재분석 버튼으로 다시 시도하세요'
+                : [504, 524].includes(res.status) ? `Gemini 응답 시간 초과(${res.status}) — 재분석 버튼으로 다시 시도하세요`
                 : `HTTP ${res.status}: ${t.slice(0, 200)}`;
         console.error('Gemini 오류:', model, res.status, t.slice(0, 200));
-        if ([429, 500, 503].includes(res.status)) {
+        if ([429, 500, 502, 503, 504, 524].includes(res.status)) {
           await new Promise(r => setTimeout(r, 3000)); continue;
         }
         break;
       }
-      const data = await res.json();
-      const cand = data?.candidates?.[0];
-      const text = (cand?.content?.parts || []).map(p => p.text || '').join('');
+      const sse = await res.text();
+      let text = '', finishReason = '-', blockReason = '-';
+      for (const line of sse.split('\n')) {
+        if (!line.startsWith('data:')) continue;
+        try {
+          const chunk = JSON.parse(line.slice(5));
+          const c = chunk?.candidates?.[0];
+          text += (c?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
+          if (c?.finishReason) finishReason = c.finishReason;
+          if (chunk?.promptFeedback?.blockReason) blockReason = chunk.promptFeedback.blockReason;
+        } catch (_) {}
+      }
+      const cand = { finishReason };
+      const data = { promptFeedback: { blockReason } };
       if (!text) {
         lastErr = `빈 응답 (finishReason=${cand?.finishReason || '-'}, block=${data?.promptFeedback?.blockReason || '-'})`;
         console.error('Gemini', lastErr);
