@@ -295,15 +295,13 @@ ${attendeesRule}
 
 async function callGemini(env, parts, thinkingBudget = 2048) {
   const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent';
-  const body = {
-    contents: [{ parts }],
-    generationConfig: {
-      responseMimeType: 'application/json',
-      responseSchema: GEMINI_SCHEMA,
-      maxOutputTokens: 8192,
-      thinkingConfig: { thinkingBudget }
-    }
+  const genConfig = {
+    responseMimeType: 'application/json',
+    responseSchema: GEMINI_SCHEMA,
+    maxOutputTokens: 8192,
   };
+  if (thinkingBudget > 0) genConfig.thinkingConfig = { thinkingBudget };
+  const body = { contents: [{ parts }], generationConfig: genConfig };
   for (let i = 0; i < 3; i++) {
     try {
       const res = await fetch(`${GEMINI_URL}?key=${env.GEMINI_API_KEY}`, {
@@ -426,7 +424,7 @@ ${meta.tags?.length ? `<p class="tags">🏷️ 키워드: ${meta.tags.map(t=>esc
 async function analyzeAudioWithGemini(env, fileUri, fileName, mimeType, manualAttendees) {
   const prompt = makePrompt(fileName, true, manualAttendees);
   const parts  = [{ text: prompt }, { fileData: { mimeType, fileUri } }];
-  return callGemini(env, parts, 4096);
+  return callGemini(env, parts, 0); // thinkingBudget 0: 오디오는 빠른 응답 우선
 }
 
 // ── 인덱스 항목 공통 생성 ─────────────────────────────────────────────
