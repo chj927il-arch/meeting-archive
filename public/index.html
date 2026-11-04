@@ -2048,9 +2048,14 @@ function scanSuspiciousWords(text) {
   return hits;
 }
 
+// 띄어쓰기 차이 무시 매칭 ("잇올 스파르타" == "잇올스파르타")
+function fuzzyRe(s) {
+  const chars = [...String(s).replace(/\s+/g, '')].map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(chars.join('\\s*'), 'g');
+}
 function countIn(text, term) {
-  if (!term) return 0;
-  return text.split(term).length - 1;
+  if (!term || !term.trim()) return 0;
+  return (text.match(fuzzyRe(term)) || []).length;
 }
 
 // AI가 표시한 불확실 단어 + 고정 패턴 → 하나의 확인 목록
@@ -2079,7 +2084,7 @@ function buildWordCheckItems(meta) {
   return items;
 }
 
-function replaceAllIn(s, from, to) { return typeof s === 'string' ? s.split(from).join(to) : s; }
+function replaceAllIn(s, from, to) { return typeof s === 'string' && from.trim() ? s.replace(fuzzyRe(from), () => to) : s; }
 
 function applyWordFixes(meta, fixes) {
   const m = { ...meta, summary: meta.summary ? { ...meta.summary } : meta.summary };
@@ -2145,10 +2150,12 @@ function closeWordCheckModal(proceed) {
   if (proceed) {
     const fixes = [...document.querySelectorAll('#wordCheckList .wc-input')]
       .map(inp => ({ from: WORD_CHECK_ITEMS[+inp.dataset.i].target, to: inp.value.trim() }))
-      .filter(f => f.to && f.to !== f.from);
+      .filter(f => f.to);
+    // 같은 표기여도 적용(띄어쓰기 통일)
     const meta = fixes.length ? applyWordFixes(WORD_CHECK_META, fixes) : WORD_CHECK_META;
     openReviewModal(WORD_CHECK_ID, meta);
-    if (fixes.length) showToast(`✏️ ${fixes.length}개 단어를 수정했습니다. 저장해야 반영됩니다.`);
+    const changed = fixes.filter(f => f.to !== f.from).length;
+    if (changed) showToast(`✏️ ${changed}개 단어를 수정했습니다. 저장해야 반영됩니다.`);
   }
   WORD_CHECK_ID = null;
   WORD_CHECK_META = null;
