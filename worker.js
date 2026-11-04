@@ -242,7 +242,19 @@ const GEMINI_SCHEMA = {
     },
     tags:            { type: 'array', items: { type: 'string' } },
     oneLiner:        { type: 'string' },
-    nextMeetingDate: { type: 'string' }
+    nextMeetingDate: { type: 'string' },
+    uncertainTerms: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          term:       { type: 'string' },
+          suggestion: { type: 'string' },
+          reason:     { type: 'string' }
+        },
+        required: ['term', 'reason']
+      }
+    }
   },
   required: ['meetingTitle', 'meetingDate', 'attendees', 'summary', 'tags', 'oneLiner']
 };
@@ -290,7 +302,9 @@ ${attendeesRule}
 - summary.actionItems: 후속 조치와 담당자 (예: "마케팅팀 — 제안서 초안 작성 (~10/20)")
 - tags: 핵심 키워드 5~10개
 - oneLiner: 가장 핵심적인 한 줄 요약 (30자 이내)
-- nextMeetingDate: 다음 회의 날짜(YYYY-MM-DD). "다음 회의", "다음 주 N요일", "N월 N일에 다시" 등 언급이 있으면 추출. 없으면 빈 문자열`;
+- nextMeetingDate: 다음 회의 날짜(YYYY-MM-DD). "다음 회의", "다음 주 N요일", "N월 N일에 다시" 등 언급이 있으면 추출. 없으면 빈 문자열
+- uncertainTerms: 위 결과(제목·참석자·요약·태그)에 쓴 단어 중 정확한지 확신이 낮아 사람 확인이 필요한 것. ${isAudio ? '발음이 불명확했던 고유명사·사람이름·브랜드/학원명·제품명·숫자/금액/날짜, 업계 약어' : '오탈자 의심 고유명사, 문맥상 의미가 모호한 약어, 숫자/금액/날짜'} 위주로 최대 8개. term은 결과에 실제로 쓴 표기 그대로, suggestion은 맞을 가능성이 높은 표기(없으면 빈 문자열), reason은 15자 이내 사유. 확실한 단어는 넣지 말 것. 없으면 빈 배열.
+  ※ 참고 고유명사: 이투스247, 잇올스파르타, 대성디랩, 수만휘스파르타, 수능선배, 작심스터디카페, LMCT, LMTI, LMAT`;
 }
 
 async function callGemini(env, parts, thinkingBudget = 2048) {
@@ -536,7 +550,8 @@ async function handleUpload(request, env) {
     attendees:    analysis?.attendees    || (manualAttendees ? manualAttendees.split(/[,\n]/).map(s=>s.trim()).filter(Boolean) : []),
     oneLiner:     analysis?.oneLiner     || '',
     tags:         analysis?.tags         || [],
-    summary:      analysis?.summary      || null
+    summary:      analysis?.summary      || null,
+    uncertainTerms: analysis?.uncertainTerms || []
   };
   await env.MEETING_KV.put(`meeting-${id}`, JSON.stringify(meta));
 
@@ -593,6 +608,7 @@ async function handleAudioUpload(request, env) {
     oneLiner:     analysis?.oneLiner     || '',
     tags:         analysis?.tags         || [],
     summary:      analysis?.summary      || null,
+    uncertainTerms: analysis?.uncertainTerms || [],
     hasDoc: false
   };
 
@@ -841,6 +857,7 @@ async function handleReanalyze(request, env, id) {
         oneLiner:     analysis.oneLiner || '',
         tags:         analysis.tags || [],
         summary:      analysis.summary,
+        uncertainTerms: analysis.uncertainTerms || [],
         analysisStatus: 'ok', analysisError: null
       });
       await saveMeetingDoc(env, id, meta);
@@ -889,6 +906,7 @@ async function handleReanalyze(request, env, id) {
       oneLiner:     analysis.oneLiner     || meta.oneLiner,
       tags:         analysis.tags         || meta.tags,
       summary:      analysis.summary,
+      uncertainTerms: analysis.uncertainTerms || [],
       analysisStatus: 'ok',
       reanalyzedAt: new Date().toISOString()
     });
