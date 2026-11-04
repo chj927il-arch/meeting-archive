@@ -572,7 +572,7 @@ async function handleUpload(request, env) {
   if (idx.length > 500) idx.splice(500);
   await saveIndex(env, idx);
 
-  await autoAddNextMeeting(env, analysis, meta.meetingTitle);
+  await autoAddNextMeeting(env, analysis, meta.meetingTitle, id);
 
   return json({ ok: true, id, analysisStatus, meta });
 }
@@ -632,6 +632,8 @@ async function handleAudioUpload(request, env) {
   idx.unshift(makeIndexEntry(id, meta, analysis, { fileType: 'audio' }));
   if (idx.length > 500) idx.splice(500);
   await saveIndex(env, idx);
+
+  if (analysis) await autoAddNextMeeting(env, analysis, meta.meetingTitle, id);
 
   return json({ ok: true, id, analysisStatus, meta });
 }
@@ -882,7 +884,7 @@ async function handleReanalyze(request, env, id) {
     const item = idx.find(m => m.id === id);
     if (item) Object.assign(item, makeIndexEntry(id, meta, analysis, { fileType: 'audio' }));
     await saveIndex(env, idx);
-    if (analysis) await autoAddNextMeeting(env, analysis, meta.meetingTitle);
+    if (analysis) await autoAddNextMeeting(env, analysis, meta.meetingTitle, id);
     return json({ ok: !!analysis, analysisStatus: meta.analysisStatus, error: analysisError, meta });
   }
 
@@ -929,21 +931,25 @@ async function handleReanalyze(request, env, id) {
     if (item) Object.assign(item, makeIndexEntry(id, meta, analysis));
     await saveIndex(env, idx);
 
-    await autoAddNextMeeting(env, analysis, meta.meetingTitle);
+    await autoAddNextMeeting(env, analysis, meta.meetingTitle, id);
   }
 
   return json({ ok: true, analysisStatus, meta });
 }
 
 // ── 로그인/로그아웃 ───────────────────────────────────────────────────
-async function autoAddNextMeeting(env, analysis, meetingTitle) {
+async function autoAddNextMeeting(env, analysis, meetingTitle, sourceMeetingId) {
   const nmd = analysis?.nextMeetingDate;
   if (!nmd || !/^\d{4}-\d{2}-\d{2}$/.test(nmd)) return;
   const raw = await env.MEETING_KV.get('calendar-events');
   const events = raw ? JSON.parse(raw) : [];
   const title = `다음 회의: ${meetingTitle || ''}`.trim();
-  if (events.some(e => e.date === nmd && e.title === title)) return; // 중복 방지
-  events.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), title, date: nmd, note: '회의록 자동 추출', createdAt: new Date().toISOString() });
+  const dup = events.find(e => e.date === nmd && (e.title === title || (sourceMeetingId && e.sourceMeetingId === sourceMeetingId)));
+  if (dup) { // 중복 방지 (기존 일정에 출처만 보강)
+    if (sourceMeetingId && !dup.sourceMeetingId) { dup.sourceMeetingId = sourceMeetingId; await env.MEETING_KV.put('calendar-events', JSON.stringify(events)); }
+    return;
+  }
+  events.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,6), title, date: nmd, note: '회의록 자동 추출', sourceMeetingId: sourceMeetingId || null, createdAt: new Date().toISOString() });
   await env.MEETING_KV.put('calendar-events', JSON.stringify(events));
 }
 

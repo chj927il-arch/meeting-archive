@@ -241,6 +241,8 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 .meeting-card{transition:all .18s}
 .meeting-card:hover{border-left-color:var(--accent);background:var(--bg3);box-shadow:0 4px 20px rgba(0,0,0,.08);transform:translateY(-1px)}
 .meeting-card.selected{border-left-color:var(--accent);background:rgba(59,130,246,.05)}
+.meeting-card.flash-highlight{animation:cardFlash 2s ease}
+@keyframes cardFlash{0%,40%{box-shadow:0 0 0 3px #f59e0b;background:rgba(245,158,11,.12)}100%{box-shadow:none}}
 .mc-left{width:112px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:2px;gap:4px;border-right:1px solid var(--border);padding-right:16px}
 .mc-center{flex:1;min-width:0}
 .mc-right{width:180px;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;border-left:1px solid var(--border);padding-left:16px}
@@ -2399,10 +2401,15 @@ function calDayClick(e, dateStr) {
   }
   if (evs.length) {
     inner += `<div style="font-size:11px;font-weight:700;color:var(--text2);margin:6px 0 2px">일정 (${evs.length}건)</div>` +
-      evs.map(ev => `<div class="cal-popup-item" style="display:flex;justify-content:space-between;align-items:center">
-        <div>🗓 ${esc(ev.title)}${ev.note ? '<div class="cal-popup-date">' + esc(ev.note) + '</div>' : ''}</div>
-        <button onclick="event.stopPropagation();calDeleteEvent('${ev.id}')" style="border:none;background:none;color:var(--text2);cursor:pointer;font-size:14px">🗑</button>
-      </div>`).join('');
+      evs.map(ev => {
+        const src = calEventSource(ev);
+        const srcLine = src
+          ? `<div class="cal-popup-date" style="color:var(--accent2)">↪ 언급된 회의: ${esc(src.meetingTitle)}${src.meetingDate ? ' (' + esc(src.meetingDate) + ')' : ''} · 클릭해서 보기</div>`
+          : (ev.note ? '<div class="cal-popup-date">' + esc(ev.note) + '</div>' : '');
+        return `<div class="cal-popup-item" style="display:flex;justify-content:space-between;align-items:center;gap:6px${src ? ';cursor:pointer' : ''}" ${src ? `onclick="calClosePopup();goToMeeting('${src.id}')" title="이 일정이 언급된 회의록으로 이동"` : ''}>
+        <div style="flex:1;min-width:0">🗓 ${esc(ev.title)}${srcLine}</div>
+        <button onclick="event.stopPropagation();calDeleteEvent('${ev.id}')" style="flex-shrink:0;border:none;background:none;color:var(--text2);cursor:pointer;font-size:14px">🗑</button>
+      </div>`; }).join('');
   }
   inner += `<button onclick="calClosePopup();showCalAddModal('${dateStr}')" style="margin-top:8px;width:100%;padding:6px;border-radius:6px;border:1px dashed var(--border);background:none;color:var(--text2);cursor:pointer;font-size:13px">+ 일정 추가</button>`;
   popup.innerHTML = inner;
@@ -2422,6 +2429,38 @@ function calDayClick(e, dateStr) {
 
   // 외부 클릭 닫기
   setTimeout(() => document.addEventListener('click', calClosePopup, {once:true}), 10);
+}
+
+// 자동 추출된 "다음 회의" 일정의 출처 회의록 (옛 일정은 제목으로 매칭)
+function calEventSource(ev) {
+  if (ev.sourceMeetingId) {
+    const m = MEETINGS.find(x => x.id === ev.sourceMeetingId);
+    if (m) return m;
+  }
+  const t = (ev.title || '').match(/^다음 회의:\s*(.+)$/);
+  if (!t) return null;
+  const cands = MEETINGS.filter(x => x.meetingTitle === t[1].trim() && (x.meetingDate || x.uploadedAt.slice(0, 10)) <= ev.date);
+  return cands.sort((a, b) => (b.uploadedAt > a.uploadedAt ? 1 : -1))[0] || null;
+}
+
+// 회의록 목록으로 이동 → 해당 카드로 스크롤·강조 → 상세 열기
+function goToMeeting(id) {
+  if (typeof mobileTabSwitch === 'function') mobileTabSwitch('list'); // 좁은 화면: 목록 탭으로
+  showView('list');
+  const findCard = () => [...document.querySelectorAll('.meeting-card')].find(c => (c.getAttribute('onclick') || '').includes(id));
+  if (!findCard()) { // 필터에 가려져 있으면 필터 해제
+    ACTIVE_TEAM = ''; ACTIVE_TAG = null;
+    ['searchInput', 'filterYear', 'filterType'].forEach(k => { const el = document.getElementById(k); if (el) el.value = ''; });
+    renderList();
+  }
+  openDetail(id);
+  setTimeout(() => {
+    const card = findCard();
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('flash-highlight');
+    setTimeout(() => card.classList.remove('flash-highlight'), 2000);
+  }, 150);
 }
 
 function calClosePopup() {
