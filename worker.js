@@ -784,14 +784,34 @@ async function handleFile(request, env, id) {
 // ── 삭제 ─────────────────────────────────────────────────────────────
 async function handleDelete(request, env, id) {
   if (!isAuthed(request, env)) return authResponse();
-  if (!await env.MEETING_KV.get(`meeting-${id}`)) return json({ ok: false, error: '없음' }, 404);
+  const raw = await env.MEETING_KV.get(`meeting-${id}`);
+  if (!raw) return json({ ok: false, error: '없음' }, 404);
+  const meta = JSON.parse(raw);
 
   await env.MEETING_KV.delete(`meeting-${id}`);
   await env.MEETING_KV.delete(`file-${id}`);
+  await env.MEETING_KV.delete(`doc-${id}`);
 
   const idx = await getIndex(env);
-  await saveIndex(env, idx.filter(m => m.id !== id));
-  return json({ ok: true });
+  const rest = idx.filter(m => m.id !== id);
+  await saveIndex(env, rest);
+
+  // 이 회의록에서 자동 추출된 '다음 회의' 일정도 삭제
+  // (출처 ID가 없는 옛 일정은 같은 제목의 다른 회의록이 남아있지 않을 때만)
+  const calRaw = await env.MEETING_KV.get('calendar-events');
+  let removedEvents = 0;
+  if (calRaw) {
+    const events = JSON.parse(calRaw);
+    const legacyTitle = `다음 회의: ${meta.meetingTitle || ''}`.trim();
+    const titleStillUsed = rest.some(m => m.meetingTitle === meta.meetingTitle);
+    const kept = events.filter(e => {
+      if (e.sourceMeetingId) return e.sourceMeetingId !== id;
+      return !(e.note === '회의록 자동 추출' && e.title === legacyTitle && !titleStillUsed);
+    });
+    removedEvents = events.length - kept.length;
+    if (removedEvents) await env.MEETING_KV.put('calendar-events', JSON.stringify(kept));
+  }
+  return json({ ok: true, removedEvents });
 }
 
 // ── 회의록 편집 (PUT) ─────────────────────────────────────────────────

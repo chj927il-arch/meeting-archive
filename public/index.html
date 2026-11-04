@@ -1815,14 +1815,17 @@ async function confirmReanalyze() {
 
 // ── 삭제 ──────────────────────────────────────────────────────────────
 async function deleteMeeting(id) {
-  if (!confirm('이 회의록을 삭제하시겠습니까?\n원본 파일과 AI 분석 결과가 모두 삭제되며 복구되지 않습니다.')) return;
+  if (!confirm('이 회의록을 삭제하시겠습니까?\n원본 파일과 AI 분석 결과, 이 회의록에서 자동 등록된 캘린더 일정이 모두 삭제되며 복구되지 않습니다.')) return;
   try {
     const res = await fetch(`/api/meetings/${id}`, { method: 'DELETE' });
     const data = await res.json();
     if (data.ok) {
-      showToast('🗑️ 삭제되었습니다');
+      showToast(data.removedEvents ? `🗑️ 삭제되었습니다 (연결된 일정 ${data.removedEvents}건 포함)` : '🗑️ 삭제되었습니다');
       closeDetail();
       await loadMeetings();
+      await loadCalEvents();
+      renderCalendar();
+      if (typeof renderCalendarM === 'function') renderCalendarM();
     } else {
       showToast('삭제 실패');
     }
