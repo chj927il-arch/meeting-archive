@@ -2072,6 +2072,7 @@ function buildWordCheckItems(meta) {
     // AI가 이미 추천 표기로 고쳐 적은 경우: 본문의 추천 표기를 교체 대상으로
     const target = !cnt && sug && countIn(text, sug) ? sug : term;
     const already = target !== term;
+    if (!countIn(text, target)) continue; // 본문에 없는 단어는 고칠 대상이 없으므로 묻지 않음
     items.push({ term, target, value: sug || term, source: 'AI', count: countIn(text, target),
       hint: (u.reason || '') + (already ? ` · 들린 표기 "${term}" → 결과엔 "${sug}"로 기재됨` : '') });
   }

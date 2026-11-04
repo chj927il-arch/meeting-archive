@@ -303,7 +303,7 @@ ${attendeesRule}
 - tags: 핵심 키워드 5~10개
 - oneLiner: 가장 핵심적인 한 줄 요약 (30자 이내)
 - nextMeetingDate: 다음 회의 날짜(YYYY-MM-DD). "다음 회의", "다음 주 N요일", "N월 N일에 다시" 등 언급이 있으면 추출. 없으면 빈 문자열
-- uncertainTerms: 위 결과(제목·참석자·요약·태그)에 쓴 단어 중 정확한지 확신이 낮아 사람 확인이 필요한 것. ${isAudio ? '발음이 불명확했던 고유명사·사람이름·브랜드/학원명·제품명·숫자/금액/날짜, 업계 약어' : '오탈자 의심 고유명사, 문맥상 의미가 모호한 약어, 숫자/금액/날짜'} 위주로 최대 8개. term은 결과에 실제로 쓴 표기 그대로, suggestion은 맞을 가능성이 높은 표기(없으면 빈 문자열), reason은 15자 이내 사유. 확실한 단어는 넣지 말 것. 없으면 빈 배열.
+- uncertainTerms: 반드시 위 결과(제목·참석자·요약·태그)에 실제로 적어 넣은 단어 중에서만, 정확한지 확신이 낮아 사람 확인이 필요한 것. 결과에 쓰지 않은 단어(녹음에서 들렸지만 요약에 안 넣은 말)는 절대 넣지 말 것. ${isAudio ? '발음이 불명확했던 고유명사·사람이름·브랜드/학원명·제품명·숫자/금액/날짜, 업계 약어' : '오탈자 의심 고유명사, 문맥상 의미가 모호한 약어, 숫자/금액/날짜'} 위주로 최대 8개. term은 결과에 실제로 쓴 표기 그대로, suggestion은 맞을 가능성이 높은 표기(없으면 빈 문자열), reason은 15자 이내 사유. 확실한 단어는 넣지 말 것. 없으면 빈 배열.
   ※ 참고 고유명사: 이투스247, 잇올스파르타, 대성디랩, 수만휘스파르타, 수능선배, 작심스터디카페, LMCT, LMTI, LMAT`;
 }
 
@@ -383,7 +383,7 @@ async function analyzeWithGemini(env, fileBuffer, mimeType, fileName, textConten
   } else if (textContent) {
     parts = [{ text: `${prompt}\n\n--- 회의록 내용 ---\n${textContent}` }];
   } else { return null; }
-  try { return await callGemini(env, parts, 2048); } catch { return null; }
+  try { return keepUncertainInText(await callGemini(env, parts, 2048)); } catch { return null; }
 }
 
 // ── 회의록 Word(HTML) 문서 생성 ──────────────────────────────────────
@@ -463,10 +463,22 @@ ${meta.tags?.length ? `<p class="tags">🏷️ 키워드: ${meta.tags.map(t=>esc
 }
 
 // ── 오디오 분석 (fileUri 방식) ────────────────────────────────────────
+// 결과 본문에 실제로 없는 불확실 단어는 제거 (고칠 대상이 없으므로)
+function keepUncertainInText(analysis) {
+  if (!analysis || !Array.isArray(analysis.uncertainTerms)) return analysis;
+  const s = analysis.summary || {};
+  const text = [analysis.meetingTitle, analysis.oneLiner, ...(analysis.attendees || []), ...(analysis.tags || []),
+    ...(s.result || []), ...(s.implications || []), ...(s.decisions || []), ...(s.actionItems || [])]
+    .join(' ').replace(/\s+/g, '');
+  const has = w => !!w && !!w.replace(/\s+/g, '') && text.includes(w.replace(/\s+/g, ''));
+  analysis.uncertainTerms = analysis.uncertainTerms.filter(u => has(u.term) || has(u.suggestion));
+  return analysis;
+}
+
 async function analyzeAudioWithGemini(env, fileUri, fileName, mimeType, manualAttendees) {
   const prompt = makePrompt(fileName, true, manualAttendees);
   const parts  = [{ text: prompt }, { fileData: { mimeType, fileUri } }];
-  return callGemini(env, parts, 0); // thinkingBudget 0: 오디오는 빠른 응답 우선
+  return keepUncertainInText(await callGemini(env, parts, 0));
 }
 
 // ── 인덱스 항목 공통 생성 ─────────────────────────────────────────────
