@@ -2062,13 +2062,19 @@ function buildWordCheckItems(meta) {
     const term = (u.term || '').trim();
     if (!term || seen.has(term)) continue;
     seen.add(term);
-    items.push({ term, value: (u.suggestion || '').trim() || term, hint: u.reason || '', source: 'AI', count: countIn(text, term) });
+    const sug = (u.suggestion || '').trim();
+    const cnt = countIn(text, term);
+    // AI가 이미 추천 표기로 고쳐 적은 경우: 본문의 추천 표기를 교체 대상으로
+    const target = !cnt && sug && countIn(text, sug) ? sug : term;
+    const already = target !== term;
+    items.push({ term, target, value: sug || term, source: 'AI', count: countIn(text, target),
+      hint: (u.reason || '') + (already ? ` · 들린 표기 "${term}" → 결과엔 "${sug}"로 기재됨` : '') });
   }
   for (const h of scanSuspiciousWords(text)) {
     if (seen.has(h.term)) continue;
     seen.add(h.term);
     const concrete = h.suggest && !/확인|인지/.test(h.suggest);
-    items.push({ term: h.term, value: concrete ? h.suggest : h.term, hint: concrete ? h.desc : h.suggest, source: '규칙', count: h.count });
+    items.push({ term: h.term, target: h.term, value: concrete ? h.suggest : h.term, hint: concrete ? h.desc : h.suggest, source: '규칙', count: h.count });
   }
   return items;
 }
@@ -2127,7 +2133,7 @@ function openWordCheckModal(id, meta) {
       <div style="display:flex;align-items:center;gap:6px">
         <span style="font-size:12px;color:var(--text2);white-space:nowrap">→ 바꿀 표기</span>
         <input class="wc-input" data-i="${i}" value="${esc(it.value)}" style="flex:1;min-width:0;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:13px;font-family:inherit">
-        <button type="button" class="btn btn-ghost btn-sm" style="white-space:nowrap" onclick="this.previousElementSibling.value=WORD_CHECK_ITEMS[${i}].term">원래대로</button>
+        <button type="button" class="btn btn-ghost btn-sm" style="white-space:nowrap" onclick="this.previousElementSibling.value=WORD_CHECK_ITEMS[${i}].target">원래대로</button>
       </div>
     </div>`).join('');
 
@@ -2138,7 +2144,7 @@ function closeWordCheckModal(proceed) {
   document.getElementById('wordCheckBackdrop').style.display = 'none';
   if (proceed) {
     const fixes = [...document.querySelectorAll('#wordCheckList .wc-input')]
-      .map(inp => ({ from: WORD_CHECK_ITEMS[+inp.dataset.i].term, to: inp.value.trim() }))
+      .map(inp => ({ from: WORD_CHECK_ITEMS[+inp.dataset.i].target, to: inp.value.trim() }))
       .filter(f => f.to && f.to !== f.from);
     const meta = fixes.length ? applyWordFixes(WORD_CHECK_META, fixes) : WORD_CHECK_META;
     openReviewModal(WORD_CHECK_ID, meta);
