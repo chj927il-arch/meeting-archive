@@ -640,8 +640,8 @@ input,select,textarea{font-family:var(--font);font-size:16px}
   <!-- 모바일 탑바 -->
   <div class="mobile-topbar">
     <button class="mtb-menu" id="navToggle">☰</button>
-    <span class="mtb-logo" onclick="showView('list')" style="cursor:pointer">📋</span>
-    <span class="mtb-title" onclick="showView('list')" style="cursor:pointer">회의록 관리 시스템</span>
+    <span class="mtb-logo" onclick="mobileTabSwitch('list');showView('list')" style="cursor:pointer">📋</span>
+    <span class="mtb-title" onclick="mobileTabSwitch('list');showView('list')" style="cursor:pointer">회의록 관리 시스템</span>
   </div>
   <div class="nav-backdrop" id="navBackdrop"></div>
 
@@ -1323,7 +1323,9 @@ function cardHtml(m) {
 let _closingByHistory = false;
 
 async function openDetail(id) {
-  history.pushState({ detailOpen: id }, '');
+  // 상세에서 상세로 이동 시 히스토리를 쌓지 않음 (닫기 1번에 닫히도록)
+  if (history.state?.detailOpen) history.replaceState({ detailOpen: id }, '');
+  else history.pushState({ detailOpen: id }, '');
   CURRENT_ID = id;
   renderList(); // 선택 하이라이트
 
@@ -1346,16 +1348,16 @@ async function openDetail(id) {
 }
 
 function closeDetail() {
-  if (history.state?.detailOpen && !_closingByHistory) {
-    _closingByHistory = true;
-    history.back();
-    setTimeout(() => { _closingByHistory = false; }, 400);
-    return;
-  }
+  // 항상 즉시 닫고, 상세용 히스토리 항목이 있으면 함께 정리
   CURRENT_ID = null;
   document.getElementById('detailPanel').classList.remove('open');
   document.getElementById('detailBackdrop').classList.remove('open');
   renderList();
+  if (history.state?.detailOpen && !_closingByHistory) {
+    _closingByHistory = true;
+    history.back();
+    setTimeout(() => { _closingByHistory = false; }, 400);
+  }
 }
 
 function renderDetail(m) {
@@ -1754,7 +1756,7 @@ async function saveReview() {
       })
     });
     const data = await res.json();
-    if (data.ok) { showToast('✅ 저장 완료!'); await loadMeetings(); openDetail(id); showView('list'); }
+    if (data.ok) { showToast('✅ 저장 완료!'); await loadMeetings(); goToMeeting(id); }
     else showToast('⚠️ 저장 실패');
   } catch(e) { showToast('오류: ' + e.message); }
 }
@@ -2639,6 +2641,7 @@ let _mobileTab = 'list';
 function mobileTabSwitch(tab) {
   if (window.innerWidth > 1280) return;
   _mobileTab = tab;
+  if (tab !== 'list' && document.getElementById('detailPanel')?.classList.contains('open')) closeDetail();
   // 탭 활성화
   ['list','cal','kb','upload'].forEach(t => {
     const btn = document.getElementById('mbt-' + t);
