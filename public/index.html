@@ -2065,6 +2065,9 @@ function countIn(text, term) {
   return (text.match(fuzzyRe(term)) || []).length;
 }
 
+// 이미 정확한 표기로 알려진 고유명사 — AI가 물어봐도 생략
+const KNOWN_TERMS = ['이투스247', '잇올스파르타', '대성디랩', '수만휘스파르타', '수능선배', '작심스터디카페', '윈터스쿨', 'LMCT', 'LMTI', 'LMAT'];
+
 // AI가 표시한 불확실 단어 + 고정 패턴 → 하나의 확인 목록
 function buildWordCheckItems(meta) {
   const text = buildSuspiciousText(meta);
@@ -2075,6 +2078,8 @@ function buildWordCheckItems(meta) {
     if (!term || seen.has(term)) continue;
     seen.add(term);
     const sug = (u.suggestion || '').trim();
+    const norm = s => s.replace(/\s+/g, '');
+    if (KNOWN_TERMS.includes(norm(term)) && (!sug || norm(sug) === norm(term))) continue;
     const cnt = countIn(text, term);
     // AI가 이미 추천 표기로 고쳐 적은 경우: 본문의 추천 표기를 교체 대상으로
     const target = !cnt && sug && countIn(text, sug) ? sug : term;
