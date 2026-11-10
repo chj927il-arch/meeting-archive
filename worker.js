@@ -234,11 +234,22 @@ const GEMINI_SCHEMA = {
       type: 'object',
       properties: {
         result:       { type: 'array', items: { type: 'string' } },
+        agenda: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              title:  { type: 'string' },
+              points: { type: 'array', items: { type: 'string' } }
+            },
+            required: ['title', 'points']
+          }
+        },
         implications: { type: 'array', items: { type: 'string' } },
         decisions:    { type: 'array', items: { type: 'string' } },
         actionItems:  { type: 'array', items: { type: 'string' } }
       },
-      required: ['result', 'implications', 'decisions', 'actionItems']
+      required: ['result', 'agenda', 'implications', 'decisions', 'actionItems']
     },
     tags:            { type: 'array', items: { type: 'string' } },
     oneLiner:        { type: 'string' },
@@ -296,10 +307,15 @@ function makePrompt(fileName, isAudio, manualAttendees) {
 - meetingTitle: 회의 제목. 문서/음성의 실제 제목을 사용하되, 없으면 핵심 주제로 간결하게 생성. 연도가 내용에 언급되더라도 제목에 포함하지 말 것(예: "2023년 ..." 금지). 30자 이내.
 - meetingDate: 회의 날짜(YYYY-MM-DD). 문서 내 명시된 날짜 우선. 없으면 파일명 힌트 사용. 파일명 힌트도 없으면 빈 문자열. ※ 연도는 반드시 4자리(2026 등)로, 파일명의 앞 두 자리가 연도(예: 26→2026).
 ${attendeesRule}
-- summary.result: 회의 결과를 핵심만 뽑아 3~5개 개조식 bullet (각 항목 15~30자, 명사형으로 끝낼 것)
-- summary.implications: 시사점을 핵심만 뽑아 3~5개 개조식 bullet (각 항목 15~30자, 명사형으로 끝낼 것)
-- summary.decisions: 결정된 사항들 개조식 목록
-- summary.actionItems: 후속 조치와 담당자 (예: "마케팅팀 — 제안서 초안 작성 (~10/20)")
+[요약 작성 원칙 — 회의에 참석하지 않은 사람이 이 회의록만 읽고도 무엇이 왜 논의·결정됐는지 파악할 수 있을 만큼 밀도 있게]
+- 모든 항목은 개조식(명사형/음슴체 종결). 막연한 표현("논의함", "검토 필요") 단독 사용 금지 — 무엇을·왜·어떻게를 담을 것.
+- 회의에 나온 숫자·금액·비율·날짜·기한·고유명사(사람·팀·브랜드·경쟁사·제품명)는 빠짐없이 그대로 살릴 것.
+- 내용에 없는 사실을 지어내지 말 것.
+- summary.result: 회의 결과·핵심 내용 4~7개 (각 30~70자, 구체 수치/대상/일정 포함)
+- summary.agenda: 회의에서 다룬 안건(주제)별 상세 논의. 안건 수는 실제 회의 흐름대로(보통 2~6개). title은 안건명(20자 이내), points는 해당 안건의 논의 내용 3~6개(각 30~90자) — 현황·문제 제기, 제시된 의견·근거, 대안·반론, 합의 방향 순으로 맥락이 드러나게
+- summary.implications: 시사점 3~5개 (각 30~70자, "무엇 때문에 → 무엇이 필요/우려"처럼 근거와 영향을 함께)
+- summary.decisions: 확정된 결정사항 전부 (각 항목에 무엇을·언제까지·누가가 있으면 포함)
+- summary.actionItems: 후속 조치 전부, 형식 "담당자 또는 팀 — 할 일 (~기한)" (예: "마케팅팀 — 겨울방학 프로모션 제안서 초안 작성 (~10/20)"), 담당·기한이 언급 안 됐으면 생략 가능
 - tags: 핵심 키워드 5~10개
 - oneLiner: 가장 핵심적인 한 줄 요약 (30자 이내)
 - nextMeetingDate: 다음 회의 날짜(YYYY-MM-DD). "다음 회의", "다음 주 N요일", "N월 N일에 다시" 등 언급이 있으면 추출. 없으면 빈 문자열
@@ -453,6 +469,7 @@ ${onelinerBox}
   <tr><td class="lbl">등록일</td><td>${esc(meta.uploadedAt?.slice(0,10) || '')}</td></tr>
 </table>
 ${meta.summary?.result?.length ? sectionHeader('■ 회의 결과') + listHtml(meta.summary.result) : ''}
+${meta.summary?.agenda?.length ? sectionHeader('■ 안건별 상세 논의') + meta.summary.agenda.map((a, i) => `<p style="margin:8pt 0 2pt;"><b>${i + 1}. ${esc(a.title)}</b></p>` + listHtml(a.points || [])).join('') : ''}
 ${meta.summary?.implications?.length ? sectionHeader('■ 시사점') + listHtml(meta.summary.implications) : ''}
 ${meta.summary?.decisions?.length ? sectionHeader('■ 핵심 결정사항') + listHtml(meta.summary.decisions) : ''}
 ${meta.summary?.actionItems?.length ? sectionHeader('■ 후속 조치') + listHtml(meta.summary.actionItems) : ''}
@@ -468,7 +485,8 @@ function keepUncertainInText(analysis) {
   if (!analysis || !Array.isArray(analysis.uncertainTerms)) return analysis;
   const s = analysis.summary || {};
   const text = [analysis.meetingTitle, analysis.oneLiner, ...(analysis.attendees || []), ...(analysis.tags || []),
-    ...(s.result || []), ...(s.implications || []), ...(s.decisions || []), ...(s.actionItems || [])]
+    ...(s.result || []), ...(s.implications || []), ...(s.decisions || []), ...(s.actionItems || []),
+    ...(s.agenda || []).flatMap(a => [a.title, ...(a.points || [])])]
     .join(' ').replace(/\s+/g, '');
   const has = w => !!w && !!w.replace(/\s+/g, '') && text.includes(w.replace(/\s+/g, ''));
   analysis.uncertainTerms = analysis.uncertainTerms.filter(u => has(u.term) || has(u.suggestion));
@@ -829,7 +847,8 @@ async function handleEdit(request, env, id) {
   if (body.attendees    !== undefined) meta.attendees    = body.attendees;
   if (body.oneLiner     !== undefined) meta.oneLiner     = body.oneLiner;
   if (body.tags         !== undefined) meta.tags         = body.tags;
-  if (body.summary      !== undefined) meta.summary      = body.summary;
+  // 편집 화면에 없는 요약 항목(안건별 논의 등)은 유지
+  if (body.summary      !== undefined) meta.summary      = { ...(meta.summary || {}), ...body.summary };
   meta.editedAt = new Date().toISOString();
 
   await env.MEETING_KV.put(`meeting-${id}`, JSON.stringify(meta));
@@ -872,6 +891,8 @@ async function handleReanalyze(request, env, id) {
   let reqBody = {};
   try { reqBody = await request.json(); } catch {}
   const manualAttendees = reqBody.manualAttendees || '';
+  // keepMeta: 사람이 확인·수정한 제목·날짜·참석자는 유지하고 요약 내용만 다시 분석
+  const keep = !!reqBody.keepMeta;
 
   if (meta.fileType === 'audio') {
     if (!meta.driveFileId || !env.GDRIVE_SERVICE_ACCOUNT)
@@ -885,9 +906,9 @@ async function handleReanalyze(request, env, id) {
     meta.reanalyzedAt = new Date().toISOString();
     if (analysis) {
       Object.assign(meta, {
-        meetingTitle: analysis.meetingTitle || meta.meetingTitle,
+        meetingTitle: keep ? meta.meetingTitle : (analysis.meetingTitle || meta.meetingTitle),
         meetingDate:  meta.meetingDate || analysis.meetingDate || '',
-        attendees:    analysis.attendees?.length ? analysis.attendees : meta.attendees,
+        attendees:    keep && meta.attendees?.length ? meta.attendees : (analysis.attendees?.length ? analysis.attendees : meta.attendees),
         oneLiner:     analysis.oneLiner || '',
         tags:         analysis.tags || [],
         summary:      analysis.summary,
@@ -934,9 +955,9 @@ async function handleReanalyze(request, env, id) {
 
   if (analysis) {
     Object.assign(meta, {
-      meetingTitle: analysis.meetingTitle || meta.meetingTitle,
-      meetingDate:  analysis.meetingDate  || meta.meetingDate,
-      attendees:    analysis.attendees    || meta.attendees,
+      meetingTitle: keep ? meta.meetingTitle : (analysis.meetingTitle || meta.meetingTitle),
+      meetingDate:  keep && meta.meetingDate ? meta.meetingDate : (analysis.meetingDate || meta.meetingDate),
+      attendees:    keep && meta.attendees?.length ? meta.attendees : (analysis.attendees || meta.attendees),
       oneLiner:     analysis.oneLiner     || meta.oneLiner,
       tags:         analysis.tags         || meta.tags,
       summary:      analysis.summary,

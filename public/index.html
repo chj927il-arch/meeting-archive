@@ -343,6 +343,8 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 .sb-label{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px}
 .sb-text{font-size:15px;line-height:1.75;color:var(--text)}
 .sb-list{list-style:none;margin:0;padding:0}
+.sb-agenda-title{font-size:14px;font-weight:700;color:var(--text);margin:12px 0 2px}
+.sb-agenda-title:first-of-type{margin-top:0}
 .sb-list li{
   padding:7px 0 7px 20px;position:relative;font-size:15px;line-height:1.65;color:var(--text);
   border-bottom:1px solid var(--border);
@@ -1418,6 +1420,14 @@ function renderDetail(m) {
         <ul class="sb-list">${items.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>
       </div>`;
     }
+    if (m.summary.agenda?.length) {
+      bodyHtml += `<div class="summary-box">
+        <div class="sb-label">🗂 안건별 상세 논의</div>
+        ${m.summary.agenda.map((a, i) => `
+          <div class="sb-agenda-title">${i + 1}. ${esc(a.title)}</div>
+          <ul class="sb-list">${(a.points || []).map(p => `<li>${esc(p)}</li>`).join('')}</ul>`).join('')}
+      </div>`;
+    }
     if (m.summary.implications?.length) {
       const items = Array.isArray(m.summary.implications) ? m.summary.implications : [m.summary.implications];
       bodyHtml += `<div class="summary-box">
@@ -1749,6 +1759,7 @@ async function saveReview() {
         ...(rm.oneLiner !== undefined ? { oneLiner: rm.oneLiner } : {}),
         summary: {
           actionItems: rm.summary?.actionItems || [],
+          ...(rm.summary?.agenda ? { agenda: rm.summary.agenda } : {}),
           result:       (document.getElementById('rvSumResult')?.value       || '').split('\n').map(s=>s.trim()).filter(Boolean),
           implications: (document.getElementById('rvSumImplications')?.value || '').split('\n').map(s=>s.trim()).filter(Boolean),
           decisions:    (document.getElementById('rvSumDecisions')?.value    || '').split('\n').map(s=>s.trim()).filter(Boolean),
@@ -2108,6 +2119,7 @@ function applyWordFixes(meta, fixes) {
     m.tags         = (m.tags || []).map(t => replaceAllIn(t, from, to));
     if (m.summary) for (const k of ['result', 'implications', 'decisions', 'actionItems'])
       if (Array.isArray(m.summary[k])) m.summary[k] = m.summary[k].map(x => replaceAllIn(x, from, to));
+    if (m.summary?.agenda) m.summary.agenda = m.summary.agenda.map(a => ({ title: replaceAllIn(a.title, from, to), points: (a.points || []).map(p => replaceAllIn(p, from, to)) }));
   }
   return m;
 }
@@ -2122,6 +2134,7 @@ function buildSuspiciousText(meta) {
   if (meta.summary?.implications) parts.push(...meta.summary.implications);
   if (meta.summary?.decisions)    parts.push(...meta.summary.decisions);
   if (meta.summary?.actionItems)  parts.push(...meta.summary.actionItems);
+  if (meta.summary?.agenda)       meta.summary.agenda.forEach(a => parts.push(a.title, ...(a.points || [])));
   if (meta.promotions)            parts.push(...meta.promotions.map(p => p.title || ''));
   return parts.join(' ');
 }
