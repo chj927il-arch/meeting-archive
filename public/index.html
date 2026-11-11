@@ -2735,7 +2735,7 @@ function onFileSelected(file) {
   const ext = file.name.split('.').pop().toLowerCase();
   const allowed = ['pdf','docx','doc','hwp','hwpx'];
   if (!allowed.includes(ext)) { showToast('⚠️ PDF, DOCX, DOC, HWP 파일만 가능합니다'); return; }
-  if (file.size > 20*1024*1024) { showToast('⚠️ 20MB 이하 파일만 가능합니다'); return; }
+  if (file.size > 15*1024*1024) { showToast('⚠️ 문서 파일은 15MB 이하만 가능합니다'); return; }
   startUpload(file);
 }
 
