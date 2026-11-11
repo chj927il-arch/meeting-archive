@@ -1099,6 +1099,11 @@ select.login-input{appearance:auto}
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:28px;width:min(600px,94vw);z-index:510;margin:auto">
     <div style="font-size:17px;font-weight:700;margin-bottom:4px">📋 등록 내용 확인 및 수정</div>
     <div style="font-size:13px;color:var(--text2);margin-bottom:20px">AI가 추출한 내용을 확인하고 수정 후 저장하세요.</div>
+    <div class="ed-bulk">
+      <div class="ed-bulk-title">🔁 단어 일괄 바꾸기 <span>— 제목·참석자·태그·요약 등 모든 칸에서 한 번에 바꿔요</span></div>
+      <div class="ed-bulk-row"><input id="rvFind" placeholder="찾을 단어 (예: 와꾸)"><span>→</span><input id="rvRepl" placeholder="바꿀 단어 (예: 외관)" onkeydown="if(event.key==='Enter')bulkReplaceReview()"><button class="btn btn-primary btn-sm" onclick="bulkReplaceReview()">모두 바꾸기</button></div>
+      <div id="rvBulkMsg" class="ed-bulk-msg"></div>
+    </div>
 
     <!-- 제목 -->
     <div style="margin-bottom:14px">
@@ -2204,6 +2209,8 @@ function openReviewModal(id, meta) {
   document.getElementById('rvTitle').value = meta.meetingTitle || '';
   document.getElementById('rvDate').value  = meta.meetingDate  || '';
   document.getElementById('rvAttendeeInput').value = '';
+  ['rvFind', 'rvRepl'].forEach(i => document.getElementById(i).value = '');
+  document.getElementById('rvBulkMsg').textContent = '';
 
   renderReviewChips();
 
@@ -2225,6 +2232,17 @@ function openReviewModal(id, meta) {
   document.getElementById('reviewBackdrop').style.display = 'flex';
 }
 
+const RV_FIELDS = ['rvTitle', 'rvTags', 'rvSumResult', 'rvSumAgenda', 'rvSumImplications', 'rvSumDecisions', 'rvSumActions'];
+function bulkReplaceReview() {
+  const from = document.getElementById('rvFind').value.trim(), to = document.getElementById('rvRepl').value.trim();
+  const msg = document.getElementById('rvBulkMsg');
+  if (!from) { msg.textContent = '찾을 단어를 입력하세요.'; return; }
+  let n = 0;
+  RV_FIELDS.forEach(i => { const el = document.getElementById(i); if (!el) return; const parts = el.value.split(from); if (parts.length > 1) { n += parts.length - 1; el.value = parts.join(to); } });
+  REVIEW_ATTENDEES = REVIEW_ATTENDEES.map(a => { const parts = a.split(from); n += parts.length - 1; return parts.join(to); });
+  renderReviewChips();
+  msg.textContent = n ? '✅ ' + n + '곳을 바꿨어요. 아래 [저장 완료]를 눌러야 반영돼요.' : '"' + from + '" 단어를 찾지 못했어요.';
+}
 function renderReviewChips() {
   const wrap = document.getElementById('rvChips');
   wrap.innerHTML = REVIEW_ATTENDEES.map((n, i) =>
