@@ -279,6 +279,13 @@ select.login-input{appearance:auto}
 .rv-label{font-size:12.5px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px}
 .rv-hint{font-weight:400;font-size:11.5px;color:var(--text2);opacity:.85}
 .rv-input{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit}
+.ed-bulk{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px}
+.ed-bulk-title{font-size:13px;font-weight:700;margin-bottom:8px}
+.ed-bulk-title span{font-weight:400;color:var(--text2);font-size:12px}
+.ed-bulk-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.ed-bulk-row input{flex:1;min-width:120px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit}
+.ed-bulk-msg{font-size:12px;color:var(--accent);margin-top:6px}
+.resize-tip{font-size:12px;color:var(--text2);background:rgba(59,130,246,.08);border-radius:8px;padding:7px 10px;margin-bottom:12px}
 .rv-ta{width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;line-height:1.6;min-height:72px}
 .lv-badge{display:inline-flex;align-items:center;gap:2px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;margin-top:4px}
 .lv-S{background:rgba(240,68,82,.12);color:var(--red)}
@@ -1126,6 +1133,7 @@ select.login-input{appearance:auto}
     <!-- AI 요약 편집 — 상세보기와 같은 항목·순서 -->
     <div id="rvSummarySection" style="margin-bottom:18px;display:none">
       <div style="font-size:12.5px;font-weight:700;color:var(--text2);margin-bottom:8px">🤖 AI 핵심 요약 <span class="rv-hint">(각 줄이 항목 하나)</span></div>
+      <div class="resize-tip">↘ 입력 칸 <b>오른쪽 아래 모서리</b>를 마우스로 끌면 칸을 늘리거나 줄일 수 있어요.</div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <div><label class="rv-label">📊 회의 결과</label><textarea id="rvSumResult" class="rv-ta" placeholder="결과 항목 (줄바꿈으로 구분)"></textarea></div>
         <div><label class="rv-label">🗂 안건별 상세 논의 <span class="rv-hint">('■ 안건명' 줄 아래에 논의 내용을 한 줄씩)</span></label><textarea id="rvSumAgenda" class="rv-ta" placeholder="■ 안건명&#10;논의 내용&#10;논의 내용"></textarea></div>
@@ -1190,6 +1198,12 @@ select.login-input{appearance:auto}
     <div style="font-size:17px;font-weight:700">✏️ 회의록 편집</div>
     <button onclick="closeEdit()" style="background:none;border:none;font-size:20px;color:var(--text2);cursor:pointer">✕</button>
   </div>
+  <div class="ed-bulk">
+    <div class="ed-bulk-title">🔁 단어 일괄 바꾸기 <span>— 제목·참석자·요약 등 모든 칸에서 한 번에 바꿔요</span></div>
+    <div class="ed-bulk-row"><input id="edFind" placeholder="찾을 단어 (예: 와꾸)"><span>→</span><input id="edRepl" placeholder="바꿀 단어 (예: 외관)" onkeydown="if(event.key==='Enter')bulkReplaceEdit()"><button class="btn btn-primary btn-sm" onclick="bulkReplaceEdit()">모두 바꾸기</button></div>
+    <div id="edBulkMsg" class="ed-bulk-msg"></div>
+  </div>
+  <div class="resize-tip">↘ 입력 칸 <b>오른쪽 아래 모서리</b>를 마우스로 끌면 칸을 늘리거나 줄일 수 있어요.</div>
   <div style="display:flex;flex-direction:column;gap:14px">
     <div>
       <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">팀</label>
@@ -1226,6 +1240,10 @@ select.login-input{appearance:auto}
     <div>
       <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">회의 결과 <span style="font-weight:400;color:var(--text2)">(줄바꿈으로 구분)</span></label>
       <textarea id="editResult" rows="3" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font);resize:vertical;line-height:1.6"></textarea>
+    </div>
+    <div>
+      <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">안건별 상세 논의 <span style="font-weight:400;color:var(--text2)">('■ 안건명' 줄 아래에 논의 내용을 한 줄씩)</span></label>
+      <textarea id="editAgenda" rows="6" placeholder="■ 안건명&#10;논의 내용&#10;논의 내용" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font);resize:vertical;line-height:1.6"></textarea>
     </div>
     <div>
       <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">시사점 <span style="font-weight:400;color:var(--text2)">(줄바꿈으로 구분)</span></label>
@@ -1957,17 +1975,31 @@ function openEdit(id) {
     document.getElementById('editImplications').value = (detail.summary.implications || []).join('\n');
     document.getElementById('editDecisions').value = (detail.summary.decisions || []).join('\n');
     document.getElementById('editActionItems').value = (detail.summary.actionItems || []).join('\n');
+    document.getElementById('editAgenda').value = agendaToText(detail.summary.agenda);
   } else {
     document.getElementById('editResult').value = '';
     document.getElementById('editImplications').value = '';
     document.getElementById('editDecisions').value = '';
     document.getElementById('editActionItems').value = '';
+    document.getElementById('editAgenda').value = '';
   }
 
+  ['edFind', 'edRepl'].forEach(i => document.getElementById(i).value = '');
+  document.getElementById('edBulkMsg').textContent = '';
+  EDIT_FIELDS.forEach(i => { const el = document.getElementById(i); if (el.tagName === 'TEXTAREA') el.rows = Math.min(14, Math.max(3, el.value.split('\n').length + 1)); });
   document.getElementById('editBackdrop').style.display = 'block';
   document.getElementById('editModal').style.display = 'block';
 }
 
+const EDIT_FIELDS = ['editTitle', 'editAttendees', 'editOneLiner', 'editTags', 'editResult', 'editAgenda', 'editImplications', 'editDecisions', 'editActionItems'];
+function bulkReplaceEdit() {
+  const from = document.getElementById('edFind').value.trim(), to = document.getElementById('edRepl').value.trim();
+  const msg = document.getElementById('edBulkMsg');
+  if (!from) { msg.textContent = '찾을 단어를 입력하세요.'; return; }
+  let n = 0;
+  EDIT_FIELDS.forEach(i => { const el = document.getElementById(i); const parts = el.value.split(from); if (parts.length > 1) { n += parts.length - 1; el.value = parts.join(to); } });
+  msg.textContent = n ? '✅ ' + n + '곳을 바꿨어요. 아래 [저장]을 눌러야 반영돼요.' : '"' + from + '" 단어를 찾지 못했어요.';
+}
 function closeEdit() {
   document.getElementById('editBackdrop').style.display = 'none';
   document.getElementById('editModal').style.display = 'none';
@@ -1994,7 +2026,8 @@ async function saveEdit() {
       result:      toLines(document.getElementById('editResult').value),
       implications:toLines(document.getElementById('editImplications').value),
       decisions:   toLines(document.getElementById('editDecisions').value),
-      actionItems: toLines(document.getElementById('editActionItems').value)
+      actionItems: toLines(document.getElementById('editActionItems').value),
+      agenda:      textToAgenda(document.getElementById('editAgenda').value)
     }
   };
 
