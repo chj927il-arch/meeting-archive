@@ -143,7 +143,27 @@ input,select,textarea{font-family:var(--font);font-size:16px}
   background:var(--bg3);color:var(--text);font-size:16px;margin-bottom:12px;
 }
 .login-input:focus{outline:none;border-color:var(--accent)}
-.login-err{color:var(--red);font-size:12.5px;margin-top:6px;display:none}
+.login-err{color:var(--red);font-size:13px;margin-top:10px;display:none;line-height:1.5}
+.login-ok{color:var(--green);font-size:13px;margin-top:10px;display:none;line-height:1.5}
+.login-hint{font-size:12px;color:var(--text2);margin-top:10px;line-height:1.5}
+.login-tabs{display:flex;gap:4px;background:var(--bg3);border-radius:10px;padding:4px;margin-bottom:16px}
+.login-tab{flex:1;padding:8px;border:none;border-radius:7px;background:none;color:var(--text2);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.login-tab.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+select.login-input{appearance:auto}
+/* ── 회원 관리 ── */
+.sb-me{padding:10px 12px;font-size:13px;color:var(--text2);line-height:1.4}
+.sb-me b{color:var(--text);font-size:14px}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;border-radius:999px;font-size:11px;font-weight:700;padding:1px 7px}
+.um-section{margin-bottom:28px}
+.um-section h3{font-size:16px;font-weight:700;margin:0 0 10px}
+.um-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--bg2)}
+.um-table{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
+.um-table th{text-align:left;font-size:12px;color:var(--text2);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--border)}
+.um-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.um-table tr:last-child td{border-bottom:none}
+.um-actions{display:flex;gap:6px;flex-wrap:wrap}
+.um-role{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(139,92,246,.15);color:#8b5cf6;margin-left:6px}
+.um-empty{padding:16px;color:var(--text2);font-size:14px}
 
 /* ── 뷰 래퍼 ─────────────────────────────────────────────────────────── */
 .view{display:none}
@@ -630,10 +650,38 @@ input,select,textarea{font-family:var(--font);font-size:16px}
   <div class="login-box">
     <div class="login-logo">📋</div>
     <div class="login-title">회의록 관리 시스템</div>
-    <div class="login-sub">팀 공유 회의록 관리 시스템</div>
-    <input type="password" class="login-input" id="loginPw" placeholder="비밀번호 입력" autocomplete="current-password">
-    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">로그인</button>
-    <div class="login-err" id="loginErr">비밀번호가 틀렸습니다.</div>
+    <div class="login-sub">이투스ECI 임직원 전용</div>
+    <div class="login-tabs">
+      <button type="button" class="login-tab active" id="ltabLogin" onclick="switchLoginTab('login')">로그인</button>
+      <button type="button" class="login-tab" id="ltabSignup" onclick="switchLoginTab('signup')">회원가입 신청</button>
+    </div>
+
+    <form id="loginForm" onsubmit="event.preventDefault();doLogin()">
+      <input class="login-input" id="loginEmpNo" placeholder="사번 (예: BE210302)" autocomplete="username" autocapitalize="characters">
+      <input type="password" class="login-input" id="loginPw" placeholder="비밀번호" autocomplete="current-password">
+      <button class="btn btn-primary" style="width:100%;justify-content:center">로그인</button>
+    </form>
+
+    <form id="signupForm" style="display:none" onsubmit="event.preventDefault();doSignup()">
+      <input class="login-input" id="suEmpNo" placeholder="사번 (아이디로 사용)" autocomplete="username" autocapitalize="characters" oninput="onSignupEmpNoInput()">
+      <input class="login-input" id="suName" placeholder="이름" autocomplete="name">
+      <select class="login-input" id="suDept">
+        <option value="">소속 선택</option>
+        <option>임원</option><option>사업기획실</option><option>기획팀</option><option>에듀테크팀</option>
+        <option>가맹사업성장실</option><option>사업팀</option><option>가맹마케팅지원팀</option>
+        <option>경영관리실</option><option>운영지원팀</option><option>재무팀</option>
+        <option>입시센터</option><option>지점</option><option>기타</option>
+      </select>
+      <input class="login-input" id="suPosition" placeholder="직책 (예: 실장, 팀장, 원장) — 선택">
+      <input type="password" class="login-input" id="suPw" placeholder="비밀번호 (영문+숫자 8자 이상)" autocomplete="new-password">
+      <input type="password" class="login-input" id="suPw2" placeholder="비밀번호 확인" autocomplete="new-password">
+      <input type="password" class="login-input" id="suAdminCode" placeholder="관리자 확인 코드" autocomplete="off" style="display:none">
+      <button class="btn btn-primary" style="width:100%;justify-content:center">가입 신청</button>
+      <div class="login-hint">신청 후 관리자가 승인하면 로그인할 수 있어요.<br>비밀번호 초기화를 받은 경우에도 이 화면에서 새 비밀번호를 설정하세요.</div>
+    </form>
+
+    <div class="login-err" id="loginErr"></div>
+    <div class="login-ok" id="loginOk"></div>
   </div>
 </div>
 
@@ -677,8 +725,12 @@ input,select,textarea{font-family:var(--font);font-size:16px}
       <button class="nav-btn" onclick="showView('upload')" id="nav-upload">
         <span class="nav-icon">➕</span> 회의록 등록
       </button>
+      <button class="nav-btn" onclick="showView('admin')" id="nav-admin" style="display:none">
+        <span class="nav-icon">👥</span> 회원 관리 <span class="nav-badge" id="adminBadge" style="display:none"></span>
+      </button>
     </div>
     <div class="sb-bottom">
+      <div class="sb-me" id="sbMe"></div>
       <div class="sb-user" style="display:none">
         <span id="meetingCount">0건</span>
       </div>
@@ -808,6 +860,12 @@ input,select,textarea{font-family:var(--font);font-size:16px}
     </div>
 
     <!-- 업로드 뷰 -->
+    <div class="view" id="view-admin">
+      <div class="page-title">👥 회원 관리</div>
+      <div class="page-sub">가입 신청을 승인해야 회의록 대시보드에 접속할 수 있어요.</div>
+      <div id="adminUsers"><div class="um-empty">불러오는 중...</div></div>
+    </div>
+
     <div class="view" id="view-upload">
       <div class="page-title">➕ 회의록 등록</div>
 
@@ -1094,38 +1152,150 @@ function selectTeam(team) {
 }
 
 // ── 로그인 ──────────────────────────────────────────────────────────────
-async function doLogin() {
-  const pw = document.getElementById('loginPw').value;
-  const err = document.getElementById('loginErr');
-  err.style.display = 'none';
-  try {
-    const res = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pw })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      document.getElementById('loginScreen').classList.remove('show');
-      document.getElementById('mainApp').style.display = 'flex';
-      await loadMeetings();
-      showView('list');
-    } else {
-      err.style.display = 'block';
-    }
-  } catch {
-    err.style.display = 'block';
-  }
+const ADMIN_EMP_NO = 'BE210302';
+let ME = null;
+
+function loginMsg(type, text) {
+  const err = document.getElementById('loginErr'), ok = document.getElementById('loginOk');
+  err.style.display = ok.style.display = 'none';
+  if (!text) return;
+  const el = type === 'ok' ? ok : err;
+  el.textContent = text;
+  el.style.display = 'block';
 }
 
-document.getElementById('loginPw').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doLogin();
-});
+function switchLoginTab(tab) {
+  document.getElementById('ltabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('ltabSignup').classList.toggle('active', tab === 'signup');
+  document.getElementById('loginForm').style.display  = tab === 'login'  ? '' : 'none';
+  document.getElementById('signupForm').style.display = tab === 'signup' ? '' : 'none';
+  loginMsg();
+}
+
+function onSignupEmpNoInput() {
+  const v = document.getElementById('suEmpNo').value.trim().toUpperCase();
+  document.getElementById('suAdminCode').style.display = v === ADMIN_EMP_NO ? '' : 'none';
+}
+
+function showLoginScreen() {
+  ME = null;
+  document.getElementById('loginScreen').classList.add('show');
+  document.getElementById('mainApp').style.display = 'none';
+}
+
+async function enterApp(me) {
+  ME = me.user;
+  document.getElementById('sbMe').innerHTML = `<b>${esc(ME.name)}</b>${ME.position ? ' ' + esc(ME.position) : ''}<br>${esc(ME.dept)} · ${esc(ME.empNo)}${ME.role === 'admin' ? '<span class="um-role">관리자</span>' : ''}`;
+  document.getElementById('nav-admin').style.display = ME.role === 'admin' ? '' : 'none';
+  setAdminBadge(me.pendingCount || 0);
+  document.getElementById('loginScreen').classList.remove('show');
+  document.getElementById('mainApp').style.display = 'flex';
+  await loadMeetings();
+  buildYearFilter();
+  buildTagChips();
+  renderList();
+  showView('list');
+  await calInit();
+  renderKanban();
+  if (ME.role === 'admin' && me.pendingCount) showToast(`👥 가입 승인 대기 ${me.pendingCount}명이 있어요`);
+}
+
+function setAdminBadge(n) {
+  const b = document.getElementById('adminBadge');
+  b.textContent = n; b.style.display = n ? '' : 'none';
+}
+
+async function doLogin() {
+  const empNo = document.getElementById('loginEmpNo').value.trim();
+  const password = document.getElementById('loginPw').value;
+  if (!empNo || !password) return loginMsg('err', '사번과 비밀번호를 입력해 주세요.');
+  loginMsg();
+  try {
+    const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ empNo, password }) });
+    const data = await res.json();
+    if (!data.ok) return loginMsg('err', data.error || '로그인에 실패했습니다.');
+    document.getElementById('loginPw').value = '';
+    const me = await (await fetch('/api/me')).json();
+    await enterApp(me);
+  } catch { loginMsg('err', '네트워크 오류가 발생했습니다.'); }
+}
+
+async function doSignup() {
+  const v = id => document.getElementById(id).value.trim();
+  const body = { empNo: v('suEmpNo'), name: v('suName'), dept: v('suDept'), position: v('suPosition'), password: document.getElementById('suPw').value, adminCode: document.getElementById('suAdminCode').value };
+  if (!body.empNo || !body.name || !body.dept) return loginMsg('err', '사번, 이름, 소속을 입력해 주세요.');
+  if (body.password !== document.getElementById('suPw2').value) return loginMsg('err', '비밀번호 확인이 일치하지 않습니다.');
+  loginMsg();
+  try {
+    const res = await fetch('/api/signup', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (!data.ok) {
+      if (data.needAdminCode) document.getElementById('suAdminCode').style.display = '';
+      return loginMsg('err', data.error || '가입 신청에 실패했습니다.');
+    }
+    ['suPw', 'suPw2', 'suAdminCode'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('loginEmpNo').value = body.empNo.toUpperCase();
+    switchLoginTab('login');
+    loginMsg('ok', data.status === 'approved'
+      ? '비밀번호가 설정됐어요. 바로 로그인하세요.'
+      : '가입 신청이 접수됐어요. 관리자 승인 후 로그인할 수 있어요.');
+  } catch { loginMsg('err', '네트워크 오류가 발생했습니다.'); }
+}
 
 async function doLogout() {
   await fetch('/api/logout', { method: 'POST' });
-  document.getElementById('loginScreen').classList.add('show');
-  document.getElementById('mainApp').style.display = 'none';
+  showLoginScreen();
+}
+
+// ── 회원 관리 (관리자) ────────────────────────────────────────────────────
+const UM_STATUS = { pending: '승인 대기', approved: '승인됨', rejected: '반려', reset: '비밀번호 재설정 대기' };
+
+async function loadAdminUsers() {
+  const box = document.getElementById('adminUsers');
+  try {
+    const data = await (await fetch('/api/admin/users')).json();
+    if (!data.ok) { box.innerHTML = `<div class="um-empty">${esc(data.error || '불러오기 실패')}</div>`; return; }
+    const users = data.users;
+    setAdminBadge(users.filter(u => u.status === 'pending').length);
+    const fmt = s => s ? s.slice(0, 16).replace('T', ' ') : '—';
+    const btn = (u, action, label, cls = 'btn-ghost') => `<button class="btn ${cls} btn-sm" onclick="adminUserAction('${u.empNo}','${action}')">${label}</button>`;
+    const section = (title, list, actions, cols) => `
+      <div class="um-section"><h3>${title} <span style="color:var(--text2);font-weight:500">${list.length}명</span></h3>
+      ${list.length ? `<div class="um-table-wrap"><table class="um-table">
+        <tr><th>사번</th><th>이름</th><th>소속 · 직책</th><th>${cols}</th><th></th></tr>
+        ${list.map(u => `<tr>
+          <td>${esc(u.empNo)}</td>
+          <td>${esc(u.name)}${u.role === 'admin' ? '<span class="um-role">관리자</span>' : ''}${ME && u.empNo === ME.empNo ? ' <span style="color:var(--text2);font-size:12px">(나)</span>' : ''}</td>
+          <td>${esc(u.dept)}${u.position ? ' · ' + esc(u.position) : ''}</td>
+          <td style="font-size:13px;color:var(--text2)">${cols === '신청일' ? fmt(u.createdAt) : cols === '최근 로그인' ? fmt(u.lastLoginAt) : UM_STATUS[u.status]}</td>
+          <td><div class="um-actions">${actions(u)}</div></td>
+        </tr>`).join('')}
+      </table></div>` : `<div class="um-table-wrap"><div class="um-empty">없음</div></div>`}</div>`;
+    const isMe = u => ME && u.empNo === ME.empNo;
+    box.innerHTML =
+      section('⏳ 승인 대기', users.filter(u => u.status === 'pending'), u => btn(u, 'approve', '✅ 승인', 'btn-primary') + btn(u, 'reject', '반려'), '신청일') +
+      section('✅ 승인된 회원', users.filter(u => u.status === 'approved'), u => isMe(u) ? '' :
+        (u.role === 'admin' ? btn(u, 'revokeAdmin', '관리자 해제') : btn(u, 'makeAdmin', '관리자 지정')) + btn(u, 'reset', '비밀번호 초기화') + btn(u, 'delete', '삭제'), '최근 로그인') +
+      section('기타 (반려·재설정 대기)', users.filter(u => u.status === 'rejected' || u.status === 'reset'), u =>
+        (u.status === 'rejected' ? btn(u, 'approve', '승인') : '') + btn(u, 'delete', '삭제'), '상태');
+  } catch { box.innerHTML = '<div class="um-empty">불러오기 실패</div>'; }
+}
+
+const UM_CONFIRM = {
+  reject: '가입 신청을 반려할까요?',
+  reset: '비밀번호를 초기화할까요?\n해당 직원은 회원가입 화면에서 같은 사번·이름으로 새 비밀번호를 설정해야 합니다.',
+  delete: '이 회원을 삭제할까요? 다시 이용하려면 새로 가입 신청해야 합니다.',
+  makeAdmin: '이 회원을 관리자로 지정할까요? 가입 승인 등 모든 관리 권한이 생깁니다.',
+  revokeAdmin: '관리자 권한을 해제할까요?'
+};
+
+async function adminUserAction(empNo, action) {
+  if (UM_CONFIRM[action] && !confirm(UM_CONFIRM[action])) return;
+  try {
+    const data = await (await fetch('/api/admin/users/' + encodeURIComponent(empNo), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) })).json();
+    showToast(data.ok ? '✅ 처리됐어요' : '⚠️ ' + (data.error || '실패'));
+  } catch { showToast('⚠️ 네트워크 오류'); }
+  loadAdminUsers();
 }
 
 // ── 뷰 전환 ─────────────────────────────────────────────────────────────
@@ -1139,6 +1309,7 @@ function showView(name) {
   // 상세 패널이 열려있으면 닫기
   const dp = document.getElementById('detailPanel');
   if (dp) dp.classList.remove('open');
+  if (name === 'admin') loadAdminUsers();
   if (name === 'upload') {
     document.getElementById('uploadResult').style.display = 'none';
     document.getElementById('uploadProgress').style.display = 'none';
@@ -2870,22 +3041,10 @@ function toggleRpSection(titleEl) {
 // ── 초기화 ──────────────────────────────────────────────────────────────
 (async function init() {
   applyTheme();
-  // 이미 로그인된 경우 쿠키 확인
+  // 이미 로그인된 경우 (승인된 회원 세션)
   try {
-    const res = await fetch('/api/meetings');
-    if (res.ok) {
-      const data = await res.json();
-      MEETINGS = data.meetings || [];
-      document.getElementById('meetingCount').textContent = MEETINGS.length + '건';
-      document.getElementById('loginScreen').classList.remove('show');
-      document.getElementById('mainApp').style.display = 'flex';
-      buildYearFilter();
-      buildTagChips();
-      renderList();
-      showView('list');
-      await calInit();
-      renderKanban();
-    }
+    const res = await fetch('/api/me');
+    if (res.ok) await enterApp(await res.json());
   } catch {}
 })();
 </script>

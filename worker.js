@@ -85,14 +85,166 @@ async function uploadToGDrive(env, buffer, fileName) {
 }
 
 const INDEX_KEY  = 'meetings-index';
-const AUTH_COOKIE = 'ma_auth';
+const SESSION_COOKIE = 'ma_sess';
+const SESSION_TTL = 60 * 60 * 24 * 30; // 30일
+const ADMIN_EMP_NO = 'BE210302';       // 최초 관리자 사번 (가입 시 관리자 확인 코드 = SITE_PW 필요)
+const PBKDF2_ITER = 100000;
 
-// ── 인증 ─────────────────────────────────────────────────────────────
-function isAuthed(request, env) {
-  const cookie = request.headers.get('cookie') || '';
-  const match  = cookie.match(new RegExp(`${AUTH_COOKIE}=([^;]+)`));
-  return match && match[1] === env.SITE_PW;
+// ── 계정·세션 ─────────────────────────────────────────────────────────
+// KV: user-{사번} = { empNo, name, dept, position, salt, hash, status: pending|approved|rejected|reset, role: user|admin, ... }
+//     sess-{token} = 사번 (TTL 30일)
+const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const normEmpNo = s => String(s || '').trim().toUpperCase();
+
+async function hashPassword(pw, saltB64) {
+  const salt = saltB64 ? unb64(saltB64) : crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: PBKDF2_ITER }, key, 256);
+  return { salt: b64(salt), hash: b64(bits) };
 }
+function sameStr(a, b) { // 길이·내용 비교 시간 일정
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  let r = 0; for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return r === 0;
+}
+async function getUser(env, empNo) {
+  const raw = await env.MEETING_KV.get(`user-${normEmpNo(empNo)}`);
+  return raw ? JSON.parse(raw) : null;
+}
+const putUser = (env, u) => env.MEETING_KV.put(`user-${u.empNo}`, JSON.stringify(u));
+const publicUser = u => ({ empNo: u.empNo, name: u.name, dept: u.dept, position: u.position || '', status: u.status, role: u.role, createdAt: u.createdAt, approvedAt: u.approvedAt || null, lastLoginAt: u.lastLoginAt || null });
+
+function getCookie(request, name) {
+  const m = (request.headers.get('cookie') || '').match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
+  return m ? m[1] : null;
+}
+// 로그인 + 승인된 사용자만 반환
+async function getSessionUser(request, env) {
+  const token = getCookie(request, SESSION_COOKIE);
+  if (!token || !/^[A-Za-z0-9_-]{20,}$/.test(token)) return null;
+  const empNo = await env.MEETING_KV.get(`sess-${token}`);
+  if (!empNo) return null;
+  const u = await getUser(env, empNo);
+  return u && u.status === 'approved' ? u : null;
+}
+
+async function handleSignup(request, env) {
+  const body = await request.json().catch(() => ({}));
+  const empNo = normEmpNo(body.empNo);
+  const name = String(body.name || '').trim();
+  const dept = String(body.dept || '').trim();
+  const position = String(body.position || '').trim().slice(0, 20);
+  const pw = String(body.password || '');
+  if (!/^[A-Z0-9]{4,12}$/.test(empNo)) return json({ ok: false, error: '사번은 영문·숫자 4~12자로 입력해 주세요.' }, 400);
+  if (!name || name.length > 20) return json({ ok: false, error: '이름을 입력해 주세요.' }, 400);
+  if (!dept) return json({ ok: false, error: '소속을 선택해 주세요.' }, 400);
+  if (pw.length < 8 || !/[A-Za-z]/.test(pw) || !/[0-9]/.test(pw)) return json({ ok: false, error: '비밀번호는 영문과 숫자를 섞어 8자 이상으로 정해 주세요.' }, 400);
+
+  const isAdminSeat = empNo === ADMIN_EMP_NO;
+  if (isAdminSeat && !sameStr(String(body.adminCode || ''), env.SITE_PW || '\u0000'))
+    return json({ ok: false, error: '관리자 사번은 관리자 확인 코드가 필요합니다.', needAdminCode: true }, 403);
+
+  const existing = await getUser(env, empNo);
+  if (existing && !isAdminSeat) {
+    if (existing.status === 'reset' && existing.name !== name)
+      return json({ ok: false, error: '등록된 이름과 일치하지 않습니다.' }, 403);
+    if (existing.status === 'pending')  return json({ ok: false, error: '이미 가입 신청한 사번입니다. 관리자 승인을 기다려 주세요.' }, 409);
+    if (existing.status === 'approved') return json({ ok: false, error: '이미 가입된 사번입니다. 비밀번호를 잊었다면 관리자에게 초기화를 요청하세요.' }, 409);
+  }
+  const { salt, hash } = await hashPassword(pw);
+  const now = new Date().toISOString();
+  const u = {
+    ...(existing || {}), empNo, name, dept, position, salt, hash,
+    failCount: 0, lockUntil: 0,
+    createdAt: existing?.createdAt || now, updatedAt: now,
+  };
+  if (isAdminSeat) { u.status = 'approved'; u.role = 'admin'; u.approvedAt = u.approvedAt || now; }
+  else if (existing?.status === 'reset') { u.status = 'approved'; } // 관리자가 초기화한 계정: 새 비밀번호 설정 후 바로 사용
+  else { u.status = 'pending'; u.role = existing?.role || 'user'; delete u.approvedAt; }
+  await putUser(env, u);
+  return json({ ok: true, status: u.status });
+}
+
+async function handleLogin(request, env) {
+  const body = await request.json().catch(() => ({}));
+  const empNo = normEmpNo(body.empNo);
+  const u = empNo ? await getUser(env, empNo) : null;
+  const fail = (msg, code = 401) => json({ ok: false, error: msg }, code);
+  if (!u || !u.hash) return fail('사번 또는 비밀번호가 맞지 않습니다.');
+  if (u.lockUntil && Date.now() < u.lockUntil) return fail('비밀번호를 여러 번 틀려 10분간 로그인이 잠겼습니다.', 429);
+  const { hash } = await hashPassword(String(body.password || ''), u.salt);
+  if (!sameStr(hash, u.hash)) {
+    u.failCount = (u.failCount || 0) + 1;
+    if (u.failCount >= 5) { u.lockUntil = Date.now() + 10 * 60 * 1000; u.failCount = 0; }
+    await putUser(env, u);
+    return fail('사번 또는 비밀번호가 맞지 않습니다.');
+  }
+  if (u.status === 'pending')  return json({ ok: false, status: 'pending',  error: '가입 승인 대기 중입니다. 관리자 승인 후 이용할 수 있어요.' }, 403);
+  if (u.status === 'rejected') return json({ ok: false, status: 'rejected', error: '가입 신청이 반려되었습니다. 관리자에게 문의해 주세요.' }, 403);
+  if (u.status === 'reset')    return json({ ok: false, status: 'reset',    error: '비밀번호가 초기화되었습니다. 회원가입 화면에서 같은 사번으로 새 비밀번호를 설정해 주세요.' }, 403);
+  u.failCount = 0; u.lockUntil = 0; u.lastLoginAt = new Date().toISOString();
+  await putUser(env, u);
+  const token = b64(crypto.getRandomValues(new Uint8Array(32))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  await env.MEETING_KV.put(`sess-${token}`, u.empNo, { expirationTtl: SESSION_TTL });
+  return new Response(JSON.stringify({ ok: true, user: publicUser(u) }), {
+    headers: {
+      'Content-Type': 'application/json',
+      'Set-Cookie': `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${SESSION_TTL}`
+    }
+  });
+}
+
+async function handleLogout(request, env) {
+  const token = getCookie(request, SESSION_COOKIE);
+  if (token) await env.MEETING_KV.delete(`sess-${token}`);
+  const h = new Headers({ 'Content-Type': 'application/json' });
+  h.append('Set-Cookie', `${SESSION_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
+  h.append('Set-Cookie', `ma_auth=; Path=/; Max-Age=0`); // 예전 공용 비밀번호 쿠키 정리
+  return new Response(JSON.stringify({ ok: true }), { headers: h });
+}
+
+async function handleMe(request, env) {
+  const u = await getSessionUser(request, env);
+  if (!u) return authResponse();
+  const out = { ok: true, user: publicUser(u) };
+  if (u.role === 'admin') {
+    const list = await env.MEETING_KV.list({ prefix: 'user-' });
+    let pending = 0;
+    for (const k of list.keys) { const x = await env.MEETING_KV.get(k.name); if (x && JSON.parse(x).status === 'pending') pending++; }
+    out.pendingCount = pending;
+  }
+  return json(out);
+}
+
+async function handleAdminUsers(env) {
+  const list = await env.MEETING_KV.list({ prefix: 'user-' });
+  const users = [];
+  for (const k of list.keys) { const x = await env.MEETING_KV.get(k.name); if (x) users.push(publicUser(JSON.parse(x))); }
+  users.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  return json({ ok: true, users });
+}
+
+async function handleAdminUserAction(request, env, admin, empNo) {
+  const { action } = await request.json().catch(() => ({}));
+  const u = await getUser(env, empNo);
+  if (!u) return json({ ok: false, error: '없는 사번입니다.' }, 404);
+  const self = u.empNo === admin.empNo;
+  if (self && ['reject', 'delete', 'revokeAdmin', 'reset'].includes(action))
+    return json({ ok: false, error: '본인 계정에는 할 수 없는 작업입니다.' }, 400);
+  const now = new Date().toISOString();
+  if (action === 'approve')      { u.status = 'approved'; u.approvedAt = now; u.approvedBy = admin.empNo; }
+  else if (action === 'reject')  { u.status = 'rejected'; }
+  else if (action === 'reset')   { u.status = 'reset'; u.hash = null; u.salt = null; }
+  else if (action === 'makeAdmin')   { if (u.status !== 'approved') return json({ ok: false, error: '승인된 회원만 관리자로 지정할 수 있습니다.' }, 400); u.role = 'admin'; }
+  else if (action === 'revokeAdmin') { u.role = 'user'; }
+  else if (action === 'delete')  { await env.MEETING_KV.delete(`user-${u.empNo}`); return json({ ok: true }); }
+  else return json({ ok: false, error: '알 수 없는 작업' }, 400);
+  u.updatedAt = now;
+  await putUser(env, u);
+  return json({ ok: true, user: publicUser(u) });
+}
+
 function authResponse() {
   return new Response(JSON.stringify({ ok: false, error: '인증 필요' }), {
     status: 401, headers: { 'Content-Type': 'application/json' }
@@ -517,7 +669,6 @@ function makeIndexEntry(id, meta, analysis, extra = {}) {
 
 // ── 문서 업로드 ───────────────────────────────────────────────────────
 async function handleUpload(request, env) {
-  if (!isAuthed(request, env)) return authResponse();
 
   const formData = await request.formData();
   const file = formData.get('file');
@@ -597,7 +748,6 @@ async function handleUpload(request, env) {
 
 // ── 오디오 업로드 (브라우저 → Worker → Google File API → Gemini) ──────
 async function handleAudioUpload(request, env) {
-  if (!isAuthed(request, env)) return authResponse();
 
   const fileName        = decodeURIComponent(request.headers.get('X-File-Name') || 'recording');
   const fileSize        = parseInt(request.headers.get('X-File-Size') || '0');
@@ -734,7 +884,6 @@ async function geminiAudioAnalyze(env, audioBuffer, fileName, mimeType, manualAt
 
 // ── Word 문서 다운로드 ────────────────────────────────────────────────
 async function handleDoc(request, env, id) {
-  if (!isAuthed(request, env)) return authResponse();
   const raw = await env.MEETING_KV.get(`meeting-${id}`);
   if (!raw) return json({ ok: false, error: '없음' }, 404);
   const meta   = JSON.parse(raw);
@@ -756,13 +905,11 @@ async function handleDoc(request, env, id) {
 
 // ── 목록 ─────────────────────────────────────────────────────────────
 async function handleList(request, env) {
-  if (!isAuthed(request, env)) return authResponse();
   return json({ ok: true, meetings: await getIndex(env) });
 }
 
 // ── 상세 ─────────────────────────────────────────────────────────────
 async function handleDetail(request, env, id) {
-  if (!isAuthed(request, env)) return authResponse();
   const raw = await env.MEETING_KV.get(`meeting-${id}`);
   if (!raw) return json({ ok: false, error: '없는 회의록입니다.' }, 404);
   return json({ ok: true, meeting: JSON.parse(raw) });
@@ -770,7 +917,6 @@ async function handleDetail(request, env, id) {
 
 // ── 파일 다운로드 ─────────────────────────────────────────────────────
 async function handleFile(request, env, id) {
-  if (!isAuthed(request, env)) return authResponse();
   const raw = await env.MEETING_KV.get(`meeting-${id}`);
   if (!raw) return json({ ok: false, error: '없음' }, 404);
   const meta = JSON.parse(raw);
@@ -801,7 +947,6 @@ async function handleFile(request, env, id) {
 
 // ── 삭제 ─────────────────────────────────────────────────────────────
 async function handleDelete(request, env, id) {
-  if (!isAuthed(request, env)) return authResponse();
   const raw = await env.MEETING_KV.get(`meeting-${id}`);
   if (!raw) return json({ ok: false, error: '없음' }, 404);
   const meta = JSON.parse(raw);
@@ -834,7 +979,6 @@ async function handleDelete(request, env, id) {
 
 // ── 회의록 편집 (PUT) ─────────────────────────────────────────────────
 async function handleEdit(request, env, id) {
-  if (!isAuthed(request, env)) return authResponse();
   const raw = await env.MEETING_KV.get(`meeting-${id}`);
   if (!raw) return json({ ok: false, error: '없음' }, 404);
   const meta = JSON.parse(raw);
@@ -883,7 +1027,6 @@ async function handleEdit(request, env, id) {
 
 // ── 재분석 ───────────────────────────────────────────────────────────
 async function handleReanalyze(request, env, id) {
-  if (!isAuthed(request, env)) return authResponse();
   const raw = await env.MEETING_KV.get(`meeting-${id}`);
   if (!raw) return json({ ok: false, error: '없음' }, 404);
   const meta = JSON.parse(raw);
@@ -1039,23 +1182,6 @@ async function handleTodoSet(request, env) {
   return json({ ok: true });
 }
 
-async function handleLogin(request, env) {
-  const { pw } = await request.json();
-  if (pw !== env.SITE_PW) return json({ ok: false, error: '비밀번호가 틀렸습니다.' }, 401);
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Set-Cookie': `${AUTH_COOKIE}=${env.SITE_PW}; Path=/; HttpOnly; SameSite=Strict; Max-Age=2592000`
-    }
-  });
-}
-async function handleLogout() {
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json', 'Set-Cookie': `${AUTH_COOKIE}=; Path=/; Max-Age=0` }
-  });
-}
 
 // ── 메인 라우터 ───────────────────────────────────────────────────────
 export default {
@@ -1074,8 +1200,25 @@ export default {
       });
     }
 
+    // 공개 API (로그인 전)
     if (pathname === '/api/login'         && method === 'POST') return handleLogin(request, env);
-    if (pathname === '/api/logout'        && method === 'POST') return handleLogout();
+    if (pathname === '/api/signup'        && method === 'POST') return handleSignup(request, env);
+    if (pathname === '/api/logout'        && method === 'POST') return handleLogout(request, env);
+    if (pathname === '/api/me'            && method === 'GET')  return handleMe(request, env);
+
+    // 그 외 모든 API는 승인된 회원만
+    if (pathname.startsWith('/api/')) {
+      const user = await getSessionUser(request, env);
+      if (!user) return authResponse();
+      if (pathname.startsWith('/api/admin/')) {
+        if (user.role !== 'admin') return json({ ok: false, error: '관리자만 사용할 수 있습니다.' }, 403);
+        if (pathname === '/api/admin/users' && method === 'GET') return handleAdminUsers(env);
+        const um = pathname.match(/^\/api\/admin\/users\/([A-Za-z0-9]+)$/);
+        if (um && method === 'POST') return handleAdminUserAction(request, env, user, um[1]);
+        return json({ ok: false, error: '없음' }, 404);
+      }
+    }
+
     if (pathname === '/api/upload'        && method === 'POST') return handleUpload(request, env);
     if (pathname === '/api/audio/upload'  && method === 'POST') return handleAudioUpload(request, env);
     if (pathname === '/api/meetings'      && method === 'GET')  return handleList(request, env);
