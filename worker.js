@@ -139,7 +139,8 @@ async function handleSignup(request, env) {
   if (!/^[A-Z0-9]{4,12}$/.test(empNo)) return json({ ok: false, error: '사번은 영문·숫자 4~12자로 입력해 주세요.' }, 400);
   if (!name || name.length > 20) return json({ ok: false, error: '이름을 입력해 주세요.' }, 400);
   if (!dept) return json({ ok: false, error: '소속을 선택해 주세요.' }, 400);
-  if (pw.length < 8 || !/[A-Za-z]/.test(pw) || !/[0-9]/.test(pw)) return json({ ok: false, error: '비밀번호는 영문과 숫자를 섞어 8자 이상으로 정해 주세요.' }, 400);
+  if (!pw) return json({ ok: false, error: '비밀번호를 입력해 주세요.' }, 400);
+  if (pw.length > 100) return json({ ok: false, error: '비밀번호가 너무 깁니다.' }, 400);
 
   const isAdminSeat = empNo === ADMIN_EMP_NO;
   if (isAdminSeat && !sameStr(String(body.adminCode || ''), env.SITE_PW || '\u0000'))
