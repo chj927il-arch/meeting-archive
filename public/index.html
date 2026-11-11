@@ -145,6 +145,10 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 .login-input:focus{outline:none;border-color:var(--accent)}
 .login-err{color:var(--red);font-size:13px;margin-top:10px;display:none;line-height:1.5}
 .login-ok{color:var(--green);font-size:13px;margin-top:10px;display:none;line-height:1.5}
+.login-confidential{display:inline-flex;align-items:center;gap:6px;background:#dc2626;color:#fff;font-weight:800;font-size:15px;letter-spacing:1px;padding:6px 16px;border-radius:999px;margin-bottom:14px;box-shadow:0 2px 8px rgba(220,38,38,.35)}
+.login-confidential span{font-size:11px;font-weight:700;letter-spacing:1.5px;opacity:.9}
+.login-conf-note{margin-top:18px;padding:10px 12px;border:1px solid rgba(220,38,38,.35);background:rgba(220,38,38,.08);color:#dc2626;border-radius:8px;font-size:12.5px;line-height:1.55}
+[data-theme="dark"] .login-conf-note{color:#f87171}
 .login-hint{font-size:12px;color:var(--text2);margin-top:10px;line-height:1.5}
 .login-tabs{display:flex;gap:4px;background:var(--bg3);border-radius:10px;padding:4px;margin-bottom:16px}
 .login-tab{flex:1;padding:8px;border:none;border-radius:7px;background:none;color:var(--text2);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
@@ -268,7 +272,7 @@ select.login-input{appearance:auto}
 .rv-hint{font-weight:400;font-size:11.5px;color:var(--text2);opacity:.85}
 .rv-input{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit}
 .rv-ta{width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;line-height:1.6;min-height:72px}
-.mc-team{font-size:11px;color:var(--text2);margin-top:3px;display:flex;flex-direction:column;align-items:center;gap:1px;text-align:center;line-height:1.45;max-width:100%;word-break:keep-all;overflow-wrap:anywhere}
+.mc-team{min-width:0;font-size:11px;color:var(--text2);margin-top:3px;display:flex;flex-direction:column;align-items:center;gap:1px;text-align:center;line-height:1.45;max-width:100%;word-break:keep-all;overflow-wrap:anywhere}
 .mc-center{flex:1;min-width:0}
 .mc-right{width:180px;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;border-left:1px solid var(--border);padding-left:16px}
 
@@ -324,7 +328,20 @@ select.login-input{appearance:auto}
 }
 @media(max-width:540px){
   .meeting-card{flex-wrap:wrap;gap:10px}
-  .mc-left{width:100%;flex-direction:row;border-right:none;border-bottom:1px solid var(--border);padding-right:0;padding-bottom:8px}
+  .mc-left{width:100%;flex-direction:row;border-right:none;border-bottom:1px solid var(--border);padding-right:0;padding-bottom:8px;flex-wrap:wrap;align-items:center}
+  .mc-team{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:0 6px;text-align:left;margin-top:0;flex-basis:100%}
+  .mc-team span+span::before{content:'· ';opacity:.5}
+  /* 회원 관리: 표 → 카드 */
+  .um-table{min-width:0}
+  .um-table tr:first-child{display:none}
+  .um-table tr{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:12px 14px;border-bottom:1px solid var(--border)}
+  .um-table tr:last-child{border-bottom:none}
+  .um-table td{padding:0;border:none}
+  .um-table td:nth-child(1){grid-column:1;font-weight:700}
+  .um-table td:nth-child(2){grid-column:2}
+  .um-table td:nth-child(3),.um-table td:nth-child(4){grid-column:1/-1;color:var(--text2);font-size:13px}
+  .um-table td:nth-child(5){grid-column:1/-1;margin-top:6px}
+  .um-table td:nth-child(5):empty,.um-table td:nth-child(5) .um-actions:empty{display:none}
   .mc-right{width:100%;border-left:none;border-top:1px solid var(--border);padding-left:0;padding-top:8px;flex-direction:row;align-items:center}
 }
 
@@ -432,6 +449,22 @@ select.login-input{appearance:auto}
   }
   .app.navopen .sidebar{transform:none}
   .app.navopen .nav-backdrop{display:block}
+  /* 드로어 메뉴가 상단바·하단 탭바에 가리지 않게 */
+  .sidebar{padding-top:52px;padding-bottom:calc(56px + env(safe-area-inset-bottom,0px));overflow-y:auto}
+  /* 알림(토스트)이 하단 탭바·버튼을 가리지 않게 */
+  body #toast{bottom:calc(76px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 32px);text-align:center}
+  /* To-Do: 상태 탭 + 넓은 카드 */
+  .kbm-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+  .kbm-tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:10px;border:2px solid transparent;background:var(--bg3);color:var(--text2);font-family:var(--font);font-size:12.5px;font-weight:700;cursor:pointer}
+  .kbm-tab b{font-size:15px;color:var(--text)}
+  .kbm-tab.active{background:var(--c);color:#fff;border-color:var(--c)}
+  .kbm-tab.active b{color:#fff}
+  .kbm-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+  .kbm-card{padding:12px 14px !important;border-radius:10px !important;min-height:0 !important}
+  .kbm-card .kc-text{font-size:14px !important;line-height:1.5 !important;-webkit-line-clamp:unset !important;display:block !important;overflow:visible !important;white-space:normal !important}
+  .kbm-card .kc-team{font-size:12px !important}
+  .kbm-meeting{font-size:12px;opacity:.75;margin:8px 0 6px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  .kbm-card .kc-col-select{font-size:13px !important;padding:4px 6px !important}
   /* 메인: 탑바+하단탭 높이만큼 padding */
   .main{padding:60px 14px 72px;min-width:0;width:100%;flex:none}
   .detail-panel{width:100vw}
@@ -472,6 +505,7 @@ select.login-input{appearance:auto}
     padding:0;
   }
   .mobile-rp-view.active{display:flex}
+  #mobile-cal-view{max-width:640px;width:100%;margin:0 auto}
 
   /* 목록 뷰에서 우측 패널 숨기기 */
   .list-two-col{flex-direction:column}
@@ -653,6 +687,7 @@ select.login-input{appearance:auto}
 <!-- 로그인 -->
 <div id="loginScreen" class="show">
   <div class="login-box">
+    <div class="login-confidential">🔒 대외비 <span>CONFIDENTIAL</span></div>
     <div class="login-logo">📋</div>
     <div class="login-title">회의록 관리 시스템</div>
     <div class="login-sub">이투스ECI 임직원 전용</div>
@@ -687,6 +722,7 @@ select.login-input{appearance:auto}
 
     <div class="login-err" id="loginErr"></div>
     <div class="login-ok" id="loginOk"></div>
+    <div class="login-conf-note">본 시스템의 회의록은 <b>대외비</b>입니다.<br>무단 열람·복제·외부 유출을 금합니다.</div>
   </div>
 </div>
 
@@ -1556,7 +1592,7 @@ function renderDetail(m) {
   bodyHtml += `<div class="dp-section">
     <div class="dp-section-title">📌 기본 정보</div>
     <div class="dp-row"><span class="dp-row-label">회의 일자</span><span class="dp-row-val">${esc(displayDate)}</span></div>
-    <div class="dp-row"><span class="dp-row-label">주관부서</span><span class="dp-row-val">${esc(teamStr)}</span></div>
+    <div class="dp-row"><span class="dp-row-label">주관부서</span><span class="dp-row-val">${esc(String(teamStr || '').split(',').map(s => s.trim()).filter(Boolean).join(', ') || teamStr)}</span></div>
     <div class="dp-row"><span class="dp-row-label">참석자</span><span class="dp-row-val">${esc(attendeeStr)}</span></div>
     <div class="dp-row"><span class="dp-row-label">파일명</span><span class="dp-row-val" style="font-size:12.5px;color:var(--text2)">${esc(m.fileName)}</span></div>
   </div>`;
@@ -2897,11 +2933,13 @@ function mobileTabSwitch(tab) {
     if (kbView)   kbView.classList.remove('active');
     showView('list');
   } else if (tab === 'cal') {
+    showView('list'); // 등록·회원관리 화면이 남지 않게
     if (listLeft) listLeft.style.display = 'none';
     if (calView)  { calView.classList.add('active'); calView.classList.remove('kb'); }
     if (kbView)   kbView.classList.remove('active');
     renderCalendarM();
   } else if (tab === 'kb') {
+    showView('list');
     if (listLeft) listLeft.style.display = 'none';
     if (calView)  calView.classList.remove('active');
     if (kbView)   { kbView.classList.add('active'); }
@@ -2967,31 +3005,28 @@ async function renderKanbanM() {
     hold:  { bg:'#e8eaf6', text:'#283593' },
     done:  { bg:'#c8e6c9', text:'#1b5e20' },
   };
-  const cols = KANBAN_COLS.map(col => {
-    const colCards = cards.filter(c => c.col === col.id);
-    const nc = NOTE_COLORS[col.id];
-    const cardsHtml = colCards.length
-      ? colCards.map(c => `<div class="kanban-card" style="background:${nc.bg};color:${nc.text}" title="${esc(c.meetingTitle)}">
-          <div class="kc-team">${c.team ? esc(c.team) : ''}</div>
-          <div class="kc-text">${esc(c.text)}</div>
-          <div class="kc-source">
-            <button onclick="openDetail('${c.meetingId}')" style="color:${nc.text}">📋</button>
-            <select class="kc-col-select" onchange="kanbanMove('${esc(c.id)}',this.value);renderKanbanM()" style="color:${nc.text}">
-              ${KANBAN_COLS.map(oc=>`<option value="${oc.id}"${oc.id===col.id?' selected':''}>${oc.emoji}${oc.label}</option>`).join('')}
-            </select>
-          </div>
-        </div>`).join('')
-      : `<div class="kb-empty-col">없음</div>`;
-    return `<div class="kb-col-wrap">
-      <div class="kb-col-header" style="background:${col.color}">
-        <span class="kb-emoji">${col.emoji}</span>
-        <span class="kb-label">${col.label}</span>
-        <span class="kb-cnt-badge">${colCards.length}</span>
-      </div>
-      <div class="kb-cards">${cardsHtml}</div>
-    </div>`;
+  // 모바일·태블릿: 상태별 탭 + 선택한 상태의 카드만 넓게
+  const active = KANBAN_COLS.find(c => c.id === KB_ACTIVE_COL) || KANBAN_COLS[0];
+  const tabs = KANBAN_COLS.map(col => {
+    const n = cards.filter(c => c.col === col.id).length;
+    return `<button class="kbm-tab${col.id === active.id ? ' active' : ''}" style="--c:${col.color}" onclick="KB_ACTIVE_COL='${col.id}';renderKanbanM()">
+      <span>${col.emoji} ${col.label}</span><b>${n}</b></button>`;
   }).join('');
-  board.innerHTML = `<div class="kb-board">${cols}</div>`;
+  const nc = NOTE_COLORS[active.id];
+  const colCards = cards.filter(c => c.col === active.id);
+  const cardsHtml = colCards.length
+    ? colCards.map(c => `<div class="kanban-card kbm-card" style="background:${nc.bg};color:${nc.text}">
+        <div class="kc-team">${c.team ? esc(c.team) : ''}</div>
+        <div class="kc-text">${esc(c.text)}</div>
+        <div class="kbm-meeting" onclick="openDetail('${c.meetingId}')">📋 ${esc(c.meetingTitle)} · ${esc(c.meetingDate)}</div>
+        <div class="kc-source">
+          <select class="kc-col-select" onchange="kanbanMove('${esc(c.id)}',this.value);renderKanbanM()" style="color:${nc.text}">
+            ${KANBAN_COLS.map(oc => `<option value="${oc.id}"${oc.id === active.id ? ' selected' : ''}>${oc.emoji}${oc.label}</option>`).join('')}
+          </select>
+        </div>
+      </div>`).join('')
+    : `<div class="kb-empty-col" style="grid-column:1/-1;padding:24px 0">${active.label} 항목이 없어요</div>`;
+  board.innerHTML = `<div class="kbm-tabs">${tabs}</div><div class="kbm-cards">${cardsHtml}</div>`;
 }
 
 // ── 패널 리사이저 ────────────────────────────────────────────────────────
