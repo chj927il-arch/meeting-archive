@@ -3411,5 +3411,446 @@ function toggleRpSection(titleEl) {
   } catch {}
 })();
 </script>
+<!-- ═══════════════════════════════════════════════════════════════════════
+     AI 채팅 애드온 (다글로 벤치마크): index.html의 </body> 바로 앞에 이 파일 내용을 통째로 붙여넣는다.
+     기존 코드는 한 줄도 고치지 않는다. 메뉴, 화면, 상세 패널 영역은 스크립트가 직접 끼워 넣는다.
+     서버 쪽은 POST /api/chat (chat-api.js) 하나만 필요하다.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<style id="chatAddonStyle">
+/* ── AI 채팅 화면 ── */
+#view-chat.active{display:block}
+.ch-wrap{display:flex;flex-direction:column;height:calc(100vh - 64px);max-width:920px;margin:0 auto}
+.ch-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.ch-sub{font-size:14.5px;color:var(--text2)}
+.ch-scope{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.ch-seg{display:inline-flex;background:var(--bg3);border-radius:12px;padding:3px;border:1px solid var(--border)}
+.ch-seg button{border:none;background:none;padding:7px 14px;border-radius:9px;font-size:14px;font-weight:600;color:var(--text2)}
+.ch-seg button.active{background:var(--bg2);color:var(--accent2);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.ch-scope select{padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px}
+.ch-thread{flex:1;overflow-y:auto;padding:4px 2px 12px;display:flex;flex-direction:column;gap:16px;scroll-behavior:smooth}
+.ch-empty{margin:auto;text-align:center;max-width:640px;padding:24px 8px}
+.ch-empty-icon{width:56px;height:56px;border-radius:18px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px}
+.ch-empty-title{font-size:24px;font-weight:800;margin-bottom:6px}
+.ch-empty-sub{font-size:15px;color:var(--text2);margin-bottom:20px}
+.ch-sugs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;text-align:left}
+.ch-sug{display:flex;gap:10px;align-items:flex-start;padding:14px;border-radius:14px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14.5px;line-height:1.45;text-align:left;transition:all .15s}
+.ch-sug:hover{border-color:var(--accent);background:var(--accent-soft)}
+.ch-sug i{font-style:normal;font-size:18px;line-height:1.2}
+.ch-sug small{display:block;color:var(--text2);font-size:12.5px;margin-top:2px}
+.ch-msg{display:flex;gap:10px;align-items:flex-start}
+.ch-msg.user{justify-content:flex-end}
+.ch-bubble{max-width:78%;background:var(--accent);color:#fff;padding:11px 15px;border-radius:18px 18px 4px 18px;font-size:15.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.ch-avatar{flex:none;width:32px;height:32px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+.ch-card{flex:1;min-width:0;background:var(--bg2);border:1px solid var(--border);border-radius:4px 18px 18px 18px;padding:16px 18px}
+.ch-meta{font-size:12.5px;color:var(--text2);margin-bottom:8px}
+.ch-answer{font-size:15.5px;line-height:1.65}
+.ch-answer p{margin:0 0 8px}
+.ch-answer ul{margin:0 0 8px;padding-left:0;list-style:none}
+.ch-answer li{position:relative;padding:3px 0 3px 16px}
+.ch-answer li::before{content:'▸';position:absolute;left:0;color:var(--accent2)}
+.ch-ref{display:inline-flex;align-items:center;justify-content:center;min-width:19px;height:19px;padding:0 5px;margin:0 2px;border-radius:999px;border:none;background:var(--accent-soft);color:var(--accent2);font-size:11.5px;font-weight:700;vertical-align:2px}
+.ch-ref:hover{background:var(--accent);color:#fff}
+.ch-block-title{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.4px;margin:14px 0 8px}
+.ch-acts{display:flex;flex-direction:column;gap:8px}
+.ch-act{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:11px 12px;border-radius:12px;background:var(--bg3)}
+.ch-act select{padding:5px 6px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:12.5px;font-weight:600}
+.ch-act[data-col="done"] .ch-act-text{text-decoration:line-through;opacity:.6}
+.ch-act-team{display:inline-block;font-size:12px;font-weight:700;color:var(--accent2);background:var(--accent-soft);padding:1px 8px;border-radius:999px;margin-right:6px}
+.ch-act-text{font-size:14.5px;line-height:1.5}
+.ch-act-src{display:block;border:none;background:none;padding:0;margin-top:4px;font-size:12.5px;color:var(--text2);text-align:left;text-decoration:underline;text-underline-offset:2px}
+.ch-srcs{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}
+.ch-src{display:block;text-align:left;padding:11px 12px;border-radius:12px;border:1px solid var(--border);background:var(--bg2);color:var(--text);transition:all .15s}
+.ch-src:hover{border-color:var(--accent);background:var(--accent-soft)}
+.ch-src-top{display:flex;gap:6px;align-items:center;font-size:13.5px;font-weight:700;line-height:1.35}
+.ch-src-n{flex:none;display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:999px;background:var(--accent);color:#fff;font-size:11px}
+.ch-src-sub{font-size:12px;color:var(--text2);margin-top:3px}
+.ch-src-quote{font-size:12.5px;color:var(--text2);margin-top:6px;padding-left:8px;border-left:2px solid var(--border);line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ch-fups{display:flex;flex-wrap:wrap;gap:6px}
+.ch-fup{padding:7px 12px;border-radius:999px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13.5px}
+.ch-fup:hover{border-color:var(--accent);color:var(--accent2)}
+.ch-tools{display:flex;gap:6px;margin-top:12px}
+.ch-tool{border:none;background:none;color:var(--text2);font-size:12.5px;padding:4px 8px;border-radius:8px}
+.ch-tool:hover{background:var(--bg3);color:var(--text)}
+.ch-err{color:var(--red);font-size:14.5px}
+.ch-typing{display:flex;align-items:center;gap:8px;color:var(--text2);font-size:14px}
+.ch-dots{display:inline-flex;gap:4px}
+.ch-dots span{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:chDot 1.1s infinite ease-in-out}
+.ch-dots span:nth-child(2){animation-delay:.15s}.ch-dots span:nth-child(3){animation-delay:.3s}
+@keyframes chDot{0%,80%,100%{opacity:.25;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+.ch-composer{display:flex;align-items:flex-end;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:8px 8px 8px 16px;box-shadow:0 2px 12px rgba(0,0,0,.05)}
+.ch-composer:focus-within{border-color:var(--accent)}
+.ch-composer textarea{flex:1;border:none;outline:none;resize:none;background:none;color:var(--text);font-size:16px;line-height:1.5;max-height:140px;padding:6px 0}
+.ch-send{flex:none;width:38px;height:38px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-size:18px;font-weight:700}
+.ch-send:disabled{opacity:.4;cursor:not-allowed}
+.ch-foot{font-size:12px;color:var(--text2);text-align:center;margin-top:8px}
+/* ── 상세 패널: 이 회의에 질문하기 ── */
+.bc-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.bc-thread{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
+.bc-q{align-self:flex-end;max-width:85%;background:var(--accent);color:#fff;padding:8px 12px;border-radius:14px 14px 4px 14px;font-size:14px}
+.bc-a{background:var(--bg3);border-radius:4px 14px 14px 14px;padding:12px 14px}
+.bc-a .ch-answer{font-size:14.5px}
+.bc-a .ch-src{background:var(--bg2)}
+.bc-a .ch-act{background:var(--bg2)}
+.bc-composer{display:flex;gap:6px}
+.bc-composer input{flex:1;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14.5px;outline:none}
+.bc-composer input:focus{border-color:var(--accent)}
+@media(max-width:1280px){
+  .ch-wrap{height:calc(100dvh - 60px - 72px - env(safe-area-inset-bottom,0px))}
+  .ch-head .page-title{font-size:22px}
+  .ch-sugs{grid-template-columns:1fr}
+  .ch-bubble{max-width:88%}
+  .ch-avatar{display:none}
+  .ch-card{padding:14px}
+  .ch-empty-title{font-size:20px}
+}
+</style>
+
+<script id="chatAddonScript">
+(function () {
+  'use strict';
+  if (window.__chatAddon) return; window.__chatAddon = true;
+
+  const E = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  const $ = id => document.getElementById(id);
+  const COLS = [['todo', '📌 할 일'], ['doing', '⚡ 진행'], ['hold', '⏸️ 보류'], ['done', '✅ 완료']];
+  const CHAT = { msgs: [], busy: false, mode: 'all', team: '', period: '', built: false };
+  const BOARD = {}; // 회의록별 질문 기록 (메모리에만 둔다. 대외비라 브라우저 저장소에 남기지 않는다)
+
+  // ── 서버 호출 ──────────────────────────────────────────────────────────
+  async function chatApi(payload) {
+    const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (res.status === 401) { if (typeof showLoginScreen === 'function') showLoginScreen(); throw new Error('로그인이 만료됐어요. 다시 로그인해 주세요.'); }
+    let data = null;
+    try { data = await res.json(); } catch {}
+    if (!data || typeof data.ok === 'undefined' || (res.status === 404 && !data.error)) {
+      throw new Error(res.status === 404 || res.status === 405 ? 'AI 채팅 서버 기능(/api/chat)이 아직 배포되지 않았어요.' : `서버 응답 오류 (${res.status})`);
+    }
+    if (!data.ok) throw new Error(data.error || '답변을 받지 못했어요.');
+    return data;
+  }
+
+  // ── 답변 렌더링 ─────────────────────────────────────────────────────────
+  function inline(s, cites) {
+    return s
+      .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      .replace(/\[(\d+)\]/g, (all, n) => {
+        const c = (cites || []).find(x => String(x.n) === n);
+        return c ? `<button class="ch-ref" data-mid="${E(c.meetingId)}" title="${E(c.title)}">${n}</button>` : '';
+      });
+  }
+  function md(text, cites) {
+    let html = '', inUl = false;
+    for (const ln of E(text).split('\n')) {
+      const li = ln.match(/^\s*(?:[-•*]|\d+[.)])\s+(.*)$/);
+      if (li) { if (!inUl) { html += '<ul>'; inUl = true; } html += `<li>${inline(li[1], cites)}</li>`; }
+      else { if (inUl) { html += '</ul>'; inUl = false; } if (ln.trim()) html += `<p>${inline(ln, cites)}</p>`; }
+    }
+    return html + (inUl ? '</ul>' : '');
+  }
+  const shortDate = d => (d ? d.replace(/^(\d{4})-(\d{2})-(\d{2})$/, (_, y, m, dd) => `${y}.${+m}.${+dd}`) : '');
+
+  function actionsHtml(actions) {
+    if (!actions || !actions.length) return '';
+    const open = actions.filter(a => a.col !== 'done').length;
+    return `<div class="ch-block-title">📋 액션플랜 ${actions.length}건 (미완료 ${open}건)</div><div class="ch-acts">` + actions.map(a => `
+      <div class="ch-act" data-col="${E(a.col)}">
+        <select data-act="${E(a.id)}" title="상태 변경 (To-Do 보드에 바로 반영)">${COLS.map(([v, l]) => `<option value="${v}"${v === a.col ? ' selected' : ''}>${l}</option>`).join('')}</select>
+        <div>
+          <div class="ch-act-text">${a.team ? `<span class="ch-act-team">${E(a.team)}</span>` : ''}${E(a.text)}</div>
+          <button class="ch-act-src" data-mid="${E(a.meetingId)}">${E(a.meetingTitle)}${a.meetingDate ? ' / ' + E(shortDate(a.meetingDate)) : ''}</button>
+        </div>
+      </div>`).join('') + '</div>';
+  }
+  function sourcesHtml(cites, single) {
+    if (!cites || !cites.length) return '';
+    if (single) { // 회의록 1건 질문: 원문 인용만 보여준다
+      const qs = cites.filter(c => c.quote);
+      return qs.length ? `<div class="ch-block-title">근거 문장</div>` + qs.map(c => `<div class="ch-src-quote" style="margin-top:0">${E(c.quote)}</div>`).join('') : '';
+    }
+    return `<div class="ch-block-title">출처 ${cites.length}건</div><div class="ch-srcs">` + cites.map(c => `
+      <button class="ch-src" data-mid="${E(c.meetingId)}">
+        <div class="ch-src-top"><span class="ch-src-n">${c.n}</span><span>${E(c.title)}</span></div>
+        <div class="ch-src-sub">${E(shortDate(c.date))}${c.team ? ' / ' + E(c.team) : ''}</div>
+        ${c.quote ? `<div class="ch-src-quote">${E(c.quote)}</div>` : ''}
+      </button>`).join('') + '</div>';
+  }
+  function metaLine(meta) {
+    if (!meta) return '';
+    const parts = [`열람 가능한 회의록 ${meta.searched}건 중 ${meta.used}건을 읽고 답했어요`];
+    if (meta.range) parts.push(`기간 ${shortDate(meta.range.from)}~${shortDate(meta.range.to)}`);
+    return `<div class="ch-meta">${E(parts.join(' / '))}</div>`;
+  }
+  function answerHtml(a, idx, single) {
+    if (a.error) return `<div class="ch-err">⚠️ ${E(a.error)}</div><div class="ch-tools"><button class="ch-tool" data-retry="${idx}">다시 시도</button></div>`;
+    return (single ? '' : metaLine(a.meta)) +
+      `<div class="ch-answer">${md(a.answer || '', single ? [] : a.citations)}</div>` + // 회의록 1건 질문에서는 번호 표시가 필요 없다
+      actionsHtml(a.actions) + sourcesHtml(a.citations, single) +
+      (a.followUps && a.followUps.length ? `<div class="ch-block-title">연결 질문</div><div class="ch-fups">${a.followUps.map(f => `<button class="ch-fup" data-ask="${E(f)}">${E(f)}</button>`).join('')}</div>` : '') +
+      (single ? '' : `<div class="ch-tools"><button class="ch-tool" data-copy="${idx}">답변 복사</button></div>`);
+  }
+  const typingHtml = label => `<div class="ch-typing"><span class="ch-dots"><span></span><span></span><span></span></span><span>${E(label)}</span></div>`;
+
+  function plainText(a) {
+    let t = (a.answer || '').replace(/\*\*/g, '');
+    if (a.actions && a.actions.length) t += '\n\n[액션플랜]\n' + a.actions.map(x => `- ${x.team ? x.team + ': ' : ''}${x.text} (${(COLS.find(c => c[0] === x.col) || ['', ''])[1].replace(/^\S+\s/, '')}, ${x.meetingTitle} ${shortDate(x.meetingDate)})`).join('\n');
+    if (a.citations && a.citations.length) t += '\n\n[출처]\n' + a.citations.map(c => `[${c.n}] ${c.title} (${shortDate(c.date)})`).join('\n');
+    return t;
+  }
+  async function copyText(t, okMsg) {
+    try { await navigator.clipboard.writeText(t); showToast(okMsg); }
+    catch { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showToast(okMsg); } catch { showToast('복사하지 못했어요'); } ta.remove(); }
+  }
+
+  // ── 전체 채팅 화면 ──────────────────────────────────────────────────────
+  function suggestions() {
+    const dept = (typeof ME !== 'undefined' && ME && ME.dept) || '우리 부서';
+    return [
+      { i: '✅', q: '지난주 회의에서 결정된 내용 정리해줘', s: '기간을 말로 쓰면 그 기간만 찾아요' },
+      { i: '📋', q: `${dept} 후속 조치 중 아직 완료 안 된 것 알려줘`, s: '액션플랜 조회', mode: 'actions' },
+      { i: '🙋', q: '내가 참석하지 않은 최근 2주 회의를 요약해줘', s: '놓친 회의 따라잡기' },
+      { i: '🔁', q: '이번 달 회의에서 반복해서 나온 이슈가 뭐야?', s: '여러 회의를 묶어서 보기' },
+      { i: '🏁', q: '경쟁사 관련 논의만 모아서 회의별로 정리해줘', s: '주제로 찾기' },
+      { i: '⏳', q: '보류 중이거나 진행 중인 액션플랜을 담당별로 보여줘', s: '액션플랜 조회', mode: 'actions' },
+    ];
+  }
+  function renderThread() {
+    const el = $('chThread'); if (!el) return;
+    if (!CHAT.msgs.length) {
+      el.innerHTML = `<div class="ch-empty">
+        <div class="ch-empty-icon">✦</div>
+        <div class="ch-empty-title">어떤 회의 내용을 찾아드릴까요?</div>
+        <div class="ch-empty-sub">과거 회의의 결정사항과 후속 조치를 물어보세요. 답변마다 근거가 된 회의록이 함께 표시돼요.</div>
+        <div class="ch-sugs">${suggestions().map(s => `<button class="ch-sug" data-ask="${E(s.q)}"${s.mode ? ` data-mode="${s.mode}"` : ''}><i>${s.i}</i><span>${E(s.q)}<small>${E(s.s)}</small></span></button>`).join('')}</div>
+      </div>`;
+      return;
+    }
+    el.innerHTML = CHAT.msgs.map((m, i) => m.role === 'user'
+      ? `<div class="ch-msg user"><div class="ch-bubble">${E(m.text)}</div></div>`
+      : `<div class="ch-msg ai"><div class="ch-avatar">AI</div><div class="ch-card">${m.pending ? typingHtml('회의록을 찾아 읽는 중이에요') : answerHtml(m, i, false)}</div></div>`).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+  function periodScope() {
+    const p = CHAT.period; if (!p) return {};
+    const now = new Date(Date.now() + 9 * 3600 * 1000), iso = d => d.toISOString().slice(0, 10);
+    if (p === 'year') return { from: `${now.getUTCFullYear()}-01-01`, to: iso(now) };
+    return { from: iso(new Date(now.getTime() - (+p) * 86400000)), to: iso(now) };
+  }
+  async function send(q, modeOverride) {
+    q = String(q || '').trim();
+    if (!q || CHAT.busy) return;
+    if (modeOverride) setMode(modeOverride);
+    const history = CHAT.msgs.filter(m => !m.error && !m.pending).slice(-6).map(m => ({ role: m.role, text: m.role === 'user' ? m.text : m.answer }));
+    const lastAi = [...CHAT.msgs].reverse().find(m => m.role === 'assistant' && m.citations);
+    const pinIds = lastAi ? lastAi.citations.map(c => c.meetingId) : [];
+    CHAT.msgs.push({ role: 'user', text: q }, { role: 'assistant', pending: true, q });
+    CHAT.busy = true; syncComposer(); renderThread();
+    const slot = CHAT.msgs[CHAT.msgs.length - 1];
+    try {
+      const data = await chatApi({ question: q, history, pinIds, scope: { mode: CHAT.mode, ...(CHAT.team ? { team: CHAT.team } : {}), ...periodScope() } });
+      Object.assign(slot, { pending: false, answer: data.answer, citations: data.citations || [], actions: data.actions || [], followUps: data.followUps || [], meta: data.meta });
+    } catch (e) {
+      Object.assign(slot, { pending: false, error: e.message || String(e) });
+    }
+    CHAT.busy = false; syncComposer(); renderThread();
+  }
+  function syncComposer() {
+    const b = $('chSend'), t = $('chInput');
+    if (b) b.disabled = CHAT.busy || !(t && t.value.trim());
+  }
+  function setMode(mode) {
+    CHAT.mode = mode;
+    document.querySelectorAll('#chMode button').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    const t = $('chInput');
+    if (t) t.placeholder = mode === 'actions' ? '예: 가맹마케팅지원팀이 맡은 후속 조치 중 진행 중인 것' : '예: 지난달 가맹 관련해서 결정된 내용 알려줘';
+  }
+  function resetChat() { if (CHAT.busy) return; CHAT.msgs = []; renderThread(); const t = $('chInput'); if (t) { t.value = ''; t.style.height = 'auto'; t.focus(); } syncComposer(); }
+
+  async function moveAction(id, col, selectEl) {
+    try {
+      if (typeof kanbanSaveState === 'function') await kanbanSaveState(id, col);
+      for (const m of CHAT.msgs) (m.actions || []).forEach(a => { if (a.id === id) a.col = col; });
+      Object.values(BOARD).forEach(list => list.forEach(m => (m.actions || []).forEach(a => { if (a.id === id) a.col = col; })));
+      const card = selectEl && selectEl.closest('.ch-act'); if (card) card.dataset.col = col;
+      if (typeof renderKanban === 'function') renderKanban();
+      if (typeof renderKanbanM === 'function' && $('mobile-kb-view')?.classList.contains('active')) renderKanbanM();
+      showToast('To-Do 상태를 바꿨어요');
+    } catch { showToast('상태를 바꾸지 못했어요'); }
+  }
+
+  /** 스레드 공통 클릭 처리 (전체 채팅, 상세 패널 질문 모두) */
+  function onThreadClick(e, ask) {
+    const t = e.target.closest('[data-mid],[data-ask],[data-copy],[data-retry]');
+    if (!t) return;
+    if (t.dataset.mid) { if (typeof openDetail === 'function') openDetail(t.dataset.mid); }
+    else if (t.dataset.ask) ask(t.dataset.ask, t.dataset.mode);
+    else if (t.dataset.copy != null) { const m = CHAT.msgs[+t.dataset.copy]; if (m) copyText(plainText(m), '답변을 복사했어요'); }
+    else if (t.dataset.retry != null) { const m = CHAT.msgs[+t.dataset.retry]; if (m && m.q) { CHAT.msgs.splice(+t.dataset.retry - 1, 2); send(m.q); } }
+  }
+  function onThreadChange(e) {
+    const s = e.target.closest('select[data-act]');
+    if (s) moveAction(s.dataset.act, s.value, s);
+  }
+
+  function buildView() {
+    if (CHAT.built) return; CHAT.built = true;
+    const main = document.querySelector('.main'); if (!main) return;
+    const teams = (typeof TEAMS !== 'undefined' ? TEAMS : []);
+    const v = document.createElement('div');
+    v.className = 'view'; v.id = 'view-chat';
+    v.innerHTML = `<div class="ch-wrap">
+      <div class="ch-head">
+        <div><div class="page-title" style="margin-bottom:2px">💬 AI 채팅</div>
+          <div class="ch-sub">등록된 회의록만 근거로 답해요. 내 열람 등급으로 볼 수 있는 회의록만 조회합니다.</div></div>
+        <button class="btn btn-ghost btn-sm" id="chNew" style="flex:none;background:var(--bg2);border:1px solid var(--border)">＋ 새 대화</button>
+      </div>
+      <div class="ch-scope">
+        <div class="ch-seg" id="chMode"><button data-mode="all" class="active">회의 내용 조회</button><button data-mode="actions">액션플랜 조회</button></div>
+        <select id="chTeam" title="주관부서"><option value="">전체 부서</option>${teams.map(t => `<option>${E(t)}</option>`).join('')}</select>
+        <select id="chPeriod" title="기간"><option value="">전체 기간</option><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="90">최근 3개월</option><option value="year">올해</option></select>
+      </div>
+      <div class="ch-thread" id="chThread"></div>
+      <div class="ch-composer"><textarea id="chInput" rows="1" maxlength="600" placeholder="예: 지난달 가맹 관련해서 결정된 내용 알려줘"></textarea><button class="ch-send" id="chSend" disabled title="보내기 (Enter)">↑</button></div>
+      <div class="ch-foot">AI 답변은 틀릴 수 있어요. 출처 카드를 눌러 원문을 확인하세요. 대화 내용은 이 창을 닫으면 지워집니다.</div>
+    </div>`;
+    main.appendChild(v);
+    const input = $('chInput');
+    input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 140) + 'px'; syncComposer(); });
+    input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); const q = input.value; input.value = ''; input.style.height = 'auto'; send(q); } });
+    $('chSend').addEventListener('click', () => { const q = input.value; input.value = ''; input.style.height = 'auto'; send(q); });
+    $('chNew').addEventListener('click', resetChat);
+    $('chMode').addEventListener('click', e => { const b = e.target.closest('button[data-mode]'); if (b) setMode(b.dataset.mode); });
+    $('chTeam').addEventListener('change', e => { CHAT.team = e.target.value; });
+    $('chPeriod').addEventListener('change', e => { CHAT.period = e.target.value; });
+    $('chThread').addEventListener('click', e => onThreadClick(e, send));
+    $('chThread').addEventListener('change', onThreadChange);
+    renderThread();
+  }
+
+  function installNav() {
+    if (!$('nav-chat')) {
+      const after = $('nav-list');
+      if (after) {
+        const b = document.createElement('button');
+        b.className = 'nav-btn'; b.id = 'nav-chat';
+        b.innerHTML = '<span class="nav-icon">💬</span> AI 채팅';
+        b.addEventListener('click', () => showView('chat'));
+        after.insertAdjacentElement('afterend', b);
+      }
+    }
+    if (!$('mbt-chat')) {
+      const after = $('mbt-list');
+      if (after) {
+        const b = document.createElement('button');
+        b.className = 'mbt-tab'; b.id = 'mbt-chat';
+        b.innerHTML = '<span class="mbt-icon">💬</span><span>AI 채팅</span>';
+        b.addEventListener('click', () => mobileTabSwitch('chat'));
+        after.insertAdjacentElement('afterend', b);
+      }
+    }
+  }
+
+  // ── 상세 패널: 이 회의에 질문하기 + 요약 복사 ───────────────────────────
+  function boardRender(id) {
+    const el = $('bcThread'); if (!el) return;
+    const list = BOARD[id] || [];
+    el.innerHTML = list.map((m, i) => m.role === 'user'
+      ? `<div class="bc-q">${E(m.text)}</div>`
+      : `<div class="bc-a">${m.pending ? typingHtml('이 회의록을 읽는 중이에요') : answerHtml(m, i, true)}</div>`).join('');
+    const last = el.lastElementChild; if (last) last.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  async function boardAsk(id, q) {
+    q = String(q || '').trim(); if (!q) return;
+    const list = (BOARD[id] = BOARD[id] || []);
+    if (list.some(m => m.pending)) return;
+    const history = list.filter(m => !m.error).slice(-6).map(m => ({ role: m.role, text: m.role === 'user' ? m.text : m.answer }));
+    list.push({ role: 'user', text: q }, { role: 'assistant', pending: true, q });
+    const slot = list[list.length - 1];
+    if (typeof CURRENT_ID !== 'undefined' && CURRENT_ID === id) boardRender(id);
+    try {
+      const data = await chatApi({ question: q, history, scope: { meetingId: id } });
+      Object.assign(slot, { pending: false, answer: data.answer, citations: data.citations || [], actions: data.actions || [], followUps: data.followUps || [] });
+    } catch (e) { Object.assign(slot, { pending: false, error: e.message || String(e) }); }
+    if (typeof CURRENT_ID !== 'undefined' && CURRENT_ID === id) boardRender(id);
+  }
+  function summaryText(m) {
+    const s = m.summary || {}, L = [];
+    const A = v => (Array.isArray(v) ? v : v ? [v] : []);
+    L.push(`[회의록] ${m.meetingTitle}${m.meetingDate ? ` (${shortDate(m.meetingDate)})` : ''}`);
+    const team = Array.isArray(m.team) ? m.team.join(', ') : (m.team || '');
+    if (team) L.push(`주관부서: ${team}`);
+    if (m.attendees && m.attendees.length) L.push(`참석자: ${m.attendees.join(', ')}`);
+    const sec = (t, items) => { if (items.length) L.push('', `■ ${t}`, ...items.map(x => `- ${x}`)); };
+    sec('회의 결과', A(s.result));
+    (s.agenda || []).forEach((a, i) => sec(`안건 ${i + 1}. ${a.title}`, A(a.points)));
+    sec('시사점', A(s.implications));
+    sec('핵심 결정사항', A(s.decisions));
+    sec('후속 조치', A(s.actionItems));
+    return L.join('\n');
+  }
+  function decorateDetail(m) {
+    const body = $('dpBody'), acts = $('dpActions');
+    if (!body || !m || m.analysisStatus !== 'ok' || !m.summary) return;
+    const sec = document.createElement('div');
+    sec.className = 'dp-section'; sec.id = 'bcSection';
+    sec.innerHTML = `<div class="dp-section-title">💬 이 회의에 질문하기</div>
+      <div class="bc-chips">${['결정사항만 정리해줘', '누가 언제까지 무엇을 하기로 했어?', '불참자가 알아야 할 것 3줄로'].map(q => `<button class="ch-fup" data-ask="${E(q)}">${E(q)}</button>`).join('')}</div>
+      <div class="bc-thread" id="bcThread"></div>
+      <div class="bc-composer"><input id="bcInput" maxlength="600" placeholder="이 회의록에 대해 물어보세요"><button class="ch-send" id="bcSend" title="보내기">↑</button></div>`;
+    body.appendChild(sec);
+    const input = $('bcInput');
+    const go = q => { boardAsk(m.id, q != null ? q : input.value); input.value = ''; };
+    input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); go(); } });
+    $('bcSend').addEventListener('click', () => go());
+    sec.addEventListener('click', e => onThreadClick(e, q => go(q)));
+    sec.addEventListener('change', onThreadChange);
+    boardRender(m.id);
+    if (acts && !$('dpCopySummary')) {
+      const b = document.createElement('button');
+      b.className = 'btn btn-ghost btn-sm'; b.id = 'dpCopySummary'; b.textContent = '📋 요약 복사';
+      b.addEventListener('click', () => copyText(summaryText(m), '요약을 복사했어요'));
+      const edit = [...acts.children].find(x => /편집/.test(x.textContent));
+      if (edit) acts.insertBefore(b, edit); else acts.appendChild(b);
+    }
+  }
+
+  // ── 기존 함수에 연결 (원본은 그대로 두고 감싼다) ─────────────────────────
+  const _showView = window.showView;
+  window.showView = function (name) {
+    if (name === 'chat') { installNav(); buildView(); }
+    _showView.apply(this, arguments);
+    if (name === 'chat') setTimeout(() => { const t = $('chInput'); if (t && window.innerWidth > 1280) t.focus(); }, 50);
+  };
+  const _mobileTabSwitch = window.mobileTabSwitch;
+  window.mobileTabSwitch = function (tab) {
+    if (window.innerWidth > 1280) return;
+    const mine = $('mbt-chat');
+    if (tab !== 'chat') { if (mine) mine.classList.remove('active'); return _mobileTabSwitch.apply(this, arguments); }
+    if ($('detailPanel')?.classList.contains('open')) closeDetail();
+    ['list', 'cal', 'kb', 'upload'].forEach(t => $('mbt-' + t)?.classList.remove('active'));
+    if (mine) mine.classList.add('active');
+    $('mobile-cal-view')?.classList.remove('active');
+    $('mobile-kb-view')?.classList.remove('active');
+    try { _mobileTab = 'chat'; } catch {}
+    showView('chat');
+  };
+  const _renderDetail = window.renderDetail;
+  window.renderDetail = function (m) {
+    _renderDetail.apply(this, arguments);
+    try { decorateDetail(m); } catch (e) { console.error('[chat-addon]', e); }
+  };
+  const _enterApp = window.enterApp;
+  window.enterApp = async function () {
+    CHAT.msgs = []; Object.keys(BOARD).forEach(k => delete BOARD[k]); // 다른 계정으로 다시 로그인해도 이전 대화가 남지 않게
+    installNav(); buildView();
+    const r = await _enterApp.apply(this, arguments);
+    renderThread(); // 로그인 사용자 부서가 정해진 뒤 추천 질문을 다시 그린다
+    return r;
+  };
+  window.chatAsk = (q, mode) => { showView('chat'); send(q, mode); }; // 다른 화면에서 채팅으로 바로 질문을 넘길 때 사용
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => { installNav(); buildView(); });
+  else { installNav(); buildView(); }
+})();
+</script>
 </body>
 </html>

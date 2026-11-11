@@ -1,5 +1,6 @@
 // meeting-archive worker.js — Cloudflare Worker
 // KV: MEETING_KV / Secrets: GEMINI_API_KEY, SITE_PW, GDRIVE_SERVICE_ACCOUNT, GDRIVE_FOLDER_ID
+import { handleChat, RESPONSE_SCHEMA as CHAT_SCHEMA } from './chat-api.js';
 
 // ── Google Drive 서비스 계정 인증 ────────────────────────────────────────
 function pemToBuffer(pem) {
@@ -117,6 +118,13 @@ function userGrade(u, roster) {
   return r && RANK[r[3]] ? r[3] : null;
 }
 const levelOf = m => (m && RANK[m.accessLevel]) ? m.accessLevel : 'S';
+// 공개 범위에 따라 제목 앞에 자동 표시: S → (원장단), A → (실장단), B → 없음
+const LEVEL_PREFIX = { S: '(원장단) ', A: '(실장단) ' };
+function titleFor(title, level) {
+  const base = String(title || '').replace(/^\s*(\((원장단|실장단)\)\s*)+/, '');
+  return (LEVEL_PREFIX[level] || '') + base;
+}
+const withLevelTitle = m => (m ? { ...m, meetingTitle: titleFor(m.meetingTitle, levelOf(m)) } : m);
 const canSee = (user, m) => !!user && RANK[user.grade] >= RANK[levelOf(m)];
 // 요청 → 로그인 사용자 (라우터에서 확인 후 저장)
 const REQ_USER = new WeakMap();
@@ -811,7 +819,7 @@ async function handleUpload(request, env) {
   const meta = {
     id, fileName, fileSize, mimeType, uploadedAt: now, analysisStatus,
     team, accessLevel, uploadedBy: { empNo: user.empNo, name: user.name },
-    meetingTitle: analysis?.meetingTitle || fileName.replace(/\.[^.]+$/, ''),
+    meetingTitle: titleFor(analysis?.meetingTitle || fileName.replace(/\.[^.]+$/, ''), accessLevel),
     meetingDate:  analysis?.meetingDate  || '',
     attendees:    analysis?.attendees    || (manualAttendees ? manualAttendees.split(/[,\n]/).map(s=>s.trim()).filter(Boolean) : []),
     oneLiner:     analysis?.oneLiner     || '',
@@ -871,7 +879,7 @@ async function handleAudioUpload(request, env) {
     uploadedAt: now, analysisStatus, analysisError, team,
     accessLevel, uploadedBy: { empNo: user.empNo, name: user.name },
     driveFileId, driveUrl,
-    meetingTitle: analysis?.meetingTitle || fileName.replace(/\.[^.]+$/, ''),
+    meetingTitle: titleFor(analysis?.meetingTitle || fileName.replace(/\.[^.]+$/, ''), accessLevel),
     meetingDate:  analysis?.meetingDate  || '',
     attendees:    analysis?.attendees    || [],
     oneLiner:     analysis?.oneLiner     || '',
@@ -996,7 +1004,50 @@ async function handleDoc(request, env, id) {
 // ── 목록 ─────────────────────────────────────────────────────────────
 async function handleList(request, env) {
   const user = reqUser(request);
-  return json({ ok: true, meetings: (await getIndex(env)).filter(m => canSee(user, m)) });
+  return json({ ok: true, meetings: (await getIndex(env)).filter(m => canSee(user, m)).map(withLevelTitle) });
+}
+
+// 로그인 사용자가 열람할 수 있는 회의록 + 요약 (AI 채팅용) — 목록과 같은 권한 필터(canSee) 재사용
+async function loadReadableMeetings(env, user) {
+  const idx = (await getIndex(env)).filter(m => canSee(user, m) && m.analysisStatus === 'ok');
+  const out = await Promise.all(idx.map(async m => {
+    const raw = await env.MEETING_KV.get(`meeting-${m.id}`);
+    if (!raw) return null;
+    const meta = JSON.parse(raw);
+    if (!canSee(user, meta)) return null; // 상세 데이터 기준으로 한 번 더 확인
+    return withLevelTitle({ ...meta, actionItems: meta.summary?.actionItems || [] });
+  }));
+  return out.filter(Boolean);
+}
+
+// AI 채팅 호출: 업로드 분석과 같은 모델·과부하 시 대체 모델, 스트리밍으로 시간 초과 회피
+async function callChatLLM(env, { system, contents }) {
+  const MODELS = ['gemini-3.8-flash', 'gemini-2.5-flash'];
+  const body = JSON.stringify({
+    systemInstruction: { parts: [{ text: system }] }, contents,
+    generationConfig: { temperature: 0.2, maxOutputTokens: 4096, responseMimeType: 'application/json', responseSchema: CHAT_SCHEMA },
+  });
+  let lastErr = '';
+  for (let i = 0; i < MODELS.length * 2; i++) {
+    const model = MODELS[Math.floor(i / 2)];
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${env.GEMINI_API_KEY}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+      if (!res.ok) {
+        lastErr = `HTTP ${res.status}`;
+        if ([429, 500, 502, 503, 504, 524].includes(res.status)) { await new Promise(r => setTimeout(r, 1500)); continue; }
+        break;
+      }
+      let text = '';
+      for (const line of (await res.text()).split('\n')) {
+        if (!line.startsWith('data:')) continue;
+        try { const c = JSON.parse(line.slice(5))?.candidates?.[0]; text += (c?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join(''); } catch {}
+      }
+      if (!text) { lastErr = '빈 응답'; continue; }
+      try { return JSON.parse(text); } catch { const m = text.match(/\{[\s\S]*\}/); if (m) { try { return JSON.parse(m[0]); } catch {} } return { answer: text }; }
+    } catch (e) { lastErr = e.message; }
+  }
+  throw new Error(lastErr || 'AI 응답 없음');
 }
 
 // ── 상세 ─────────────────────────────────────────────────────────────
@@ -1005,7 +1056,7 @@ async function handleDetail(request, env, id) {
   if (!raw) return json({ ok: false, error: '없는 회의록입니다.' }, 404);
   const meta = JSON.parse(raw);
   if (!canSee(reqUser(request), meta)) return json({ ok: false, error: '없는 회의록입니다.' }, 404);
-  return json({ ok: true, meeting: meta });
+  return json({ ok: true, meeting: withLevelTitle(meta) });
 }
 
 // ── 파일 다운로드 ─────────────────────────────────────────────────────
@@ -1091,6 +1142,7 @@ async function handleEdit(request, env, id) {
   if (body.tags         !== undefined) meta.tags         = body.tags;
   // 편집 화면에 없는 요약 항목(안건별 논의 등)은 유지
   if (body.summary      !== undefined) meta.summary      = { ...(meta.summary || {}), ...body.summary };
+  meta.meetingTitle = titleFor(meta.meetingTitle, levelOf(meta));
   meta.editedAt = new Date().toISOString();
 
   await env.MEETING_KV.put(`meeting-${id}`, JSON.stringify(meta));
@@ -1148,7 +1200,7 @@ async function handleReanalyze(request, env, id) {
     meta.reanalyzedAt = new Date().toISOString();
     if (analysis) {
       Object.assign(meta, {
-        meetingTitle: keep ? meta.meetingTitle : (analysis.meetingTitle || meta.meetingTitle),
+        meetingTitle: titleFor(keep ? meta.meetingTitle : (analysis.meetingTitle || meta.meetingTitle), levelOf(meta)),
         meetingDate:  meta.meetingDate || analysis.meetingDate || '',
         attendees:    keep && meta.attendees?.length ? meta.attendees : (analysis.attendees?.length ? analysis.attendees : meta.attendees),
         oneLiner:     analysis.oneLiner || '',
@@ -1197,7 +1249,7 @@ async function handleReanalyze(request, env, id) {
 
   if (analysis) {
     Object.assign(meta, {
-      meetingTitle: keep ? meta.meetingTitle : (analysis.meetingTitle || meta.meetingTitle),
+      meetingTitle: titleFor(keep ? meta.meetingTitle : (analysis.meetingTitle || meta.meetingTitle), levelOf(meta)),
       meetingDate:  keep && meta.meetingDate ? meta.meetingDate : (analysis.meetingDate || meta.meetingDate),
       attendees:    keep && meta.attendees?.length ? meta.attendees : (analysis.attendees || meta.attendees),
       oneLiner:     analysis.oneLiner     || meta.oneLiner,
@@ -1283,6 +1335,7 @@ async function handleTodoSet(request, env) {
   const { id, col } = await request.json();
   if (!id || !col) return json({ error: 'bad request' }, 400);
   if (id === '__reset__') {
+    if (reqUser(request)?.role !== 'admin') return json({ ok: false, error: '관리자만 사용할 수 있습니다.' }, 403);
     await env.MEETING_KV.put('todo-states', '{}');
     return json({ ok: true });
   }
@@ -1322,6 +1375,17 @@ export default {
       const user = await getSessionUser(request, env);
       if (!user) return authResponse();
       REQ_USER.set(request, user);
+      if (pathname === '/api/chat' && method === 'POST') {
+        return handleChat(request, env, {
+          me: { empNo: user.empNo, name: user.name, dept: user.dept, grade: user.grade, role: user.role },
+          loadMeetings: () => loadReadableMeetings(env, user),          // 목록과 같은 열람 권한 필터
+          loadTodoStates: async () => JSON.parse((await env.MEETING_KV.get('todo-states')) || '{}'),
+          callLLM: ({ system, contents }) => callChatLLM(env, { system, contents }),
+          // 시간당 호출 제한만 사용(KV). 질문 원문 감사 로그는 저장하지 않음
+          kv: { get: k => k.startsWith('chat:rl:') ? env.MEETING_KV.get(k) : null,
+                put: (k, v, o) => k.startsWith('chat:rl:') ? env.MEETING_KV.put(k, v, o) : null },
+        });
+      }
       if (pathname.startsWith('/api/admin/')) {
         if (user.role !== 'admin') return json({ ok: false, error: '관리자만 사용할 수 있습니다.' }, 403);
         if (pathname === '/api/admin/users' && method === 'GET') return handleAdminUsers(env);
