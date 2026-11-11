@@ -263,7 +263,12 @@ select.login-input{appearance:auto}
 .meeting-card.selected{border-left-color:var(--accent);background:rgba(59,130,246,.05)}
 .meeting-card.flash-highlight{animation:cardFlash 2s ease}
 @keyframes cardFlash{0%,40%{box-shadow:0 0 0 3px #f59e0b;background:rgba(245,158,11,.12)}100%{box-shadow:none}}
-.mc-left{width:112px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:2px;gap:4px;border-right:1px solid var(--border);padding-right:16px}
+.mc-left{width:112px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:2px;gap:4px;border-right:1px solid var(--border);padding-right:16px;min-width:0}
+.rv-label{font-size:12.5px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px}
+.rv-hint{font-weight:400;font-size:11.5px;color:var(--text2);opacity:.85}
+.rv-input{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit}
+.rv-ta{width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;line-height:1.6;min-height:72px}
+.mc-team{font-size:11px;color:var(--text2);margin-top:3px;display:flex;flex-direction:column;align-items:center;gap:1px;text-align:center;line-height:1.45;max-width:100%;word-break:keep-all;overflow-wrap:anywhere}
 .mc-center{flex:1;min-width:0}
 .mc-right{width:180px;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;border-left:1px solid var(--border);padding-left:16px}
 
@@ -1003,22 +1008,25 @@ select.login-input{appearance:auto}
       <div id="rvChips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:34px;margin-bottom:7px"></div>
       <input id="rvAttendeeInput" type="text" placeholder="이름 입력 후 Enter" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:13px;font-family:inherit">
     </div>
-    <!-- AI 요약 편집 -->
+    <!-- 주관부서 (등록 시 선택값) -->
+    <div style="margin-bottom:14px">
+      <label class="rv-label">주관부서</label>
+      <div id="rvTeam" style="font-size:14px;color:var(--text)"></div>
+    </div>
+    <!-- 키워드 태그 -->
+    <div style="margin-bottom:14px">
+      <label class="rv-label">🏷️ 키워드 태그 <span class="rv-hint">(쉼표로 구분)</span></label>
+      <input id="rvTags" type="text" class="rv-input">
+    </div>
+    <!-- AI 요약 편집 — 상세보기와 같은 항목·순서 -->
     <div id="rvSummarySection" style="margin-bottom:18px;display:none">
-      <div style="font-size:12.5px;font-weight:700;color:var(--text2);margin-bottom:8px">🤖 AI 분석 요약 <span style="font-weight:400;color:var(--text3)">(각 줄이 항목 하나)</span></div>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <div>
-          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">📊 결과</label>
-          <textarea id="rvSumResult" rows="3" placeholder="결과 항목 (줄바꿈으로 구분)" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:13px;font-family:inherit;resize:vertical;line-height:1.6"></textarea>
-        </div>
-        <div>
-          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">💡 시사점</label>
-          <textarea id="rvSumImplications" rows="3" placeholder="시사점 항목 (줄바꿈으로 구분)" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:13px;font-family:inherit;resize:vertical;line-height:1.6"></textarea>
-        </div>
-        <div>
-          <label style="font-size:12px;color:var(--text2);display:block;margin-bottom:4px">✅ 결정사항</label>
-          <textarea id="rvSumDecisions" rows="3" placeholder="결정사항 항목 (줄바꿈으로 구분)" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:13px;font-family:inherit;resize:vertical;line-height:1.6"></textarea>
-        </div>
+      <div style="font-size:12.5px;font-weight:700;color:var(--text2);margin-bottom:8px">🤖 AI 핵심 요약 <span class="rv-hint">(각 줄이 항목 하나)</span></div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div><label class="rv-label">📊 회의 결과</label><textarea id="rvSumResult" class="rv-ta" placeholder="결과 항목 (줄바꿈으로 구분)"></textarea></div>
+        <div><label class="rv-label">🗂 안건별 상세 논의 <span class="rv-hint">('■ 안건명' 줄 아래에 논의 내용을 한 줄씩)</span></label><textarea id="rvSumAgenda" class="rv-ta" placeholder="■ 안건명&#10;논의 내용&#10;논의 내용"></textarea></div>
+        <div><label class="rv-label">💡 시사점</label><textarea id="rvSumImplications" class="rv-ta" placeholder="시사점 항목 (줄바꿈으로 구분)"></textarea></div>
+        <div><label class="rv-label">✅ 핵심 결정사항</label><textarea id="rvSumDecisions" class="rv-ta" placeholder="결정사항 항목 (줄바꿈으로 구분)"></textarea></div>
+        <div><label class="rv-label">📋 후속 조치 <span class="rv-hint">(담당 — 할 일 (~기한))</span></label><textarea id="rvSumActions" class="rv-ta" placeholder="예: 마케팅팀 — 제안서 초안 작성 (~11/20)"></textarea></div>
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -1470,7 +1478,7 @@ function cardHtml(m) {
         <span style="opacity:.7">회의</span> ${m.meetingDate || '—'}<br>
         <span style="opacity:.7">등록</span> ${m.uploadedAt.slice(0,10)}
       </div>
-      ${m.team ? `<div style="font-size:11px;color:var(--text2);margin-top:3px;white-space:nowrap">주관 ${esc(m.team)}</div>` : ''}
+      ${m.team ? `<div class="mc-team"><span style="opacity:.7">주관</span>${m.team.split(',').map(t => t.trim()).filter(Boolean).map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
     </div>
     <!-- 가운데: 제목+참석자+bullets -->
     <div class="mc-center">
@@ -1854,6 +1862,21 @@ function reanalyze(id, isAudio) {
 let REVIEW_ID = null;
 let REVIEW_ATTENDEES = [];
 
+// 안건별 논의 ↔ 편집용 텍스트 ("■ 안건명" 줄 + 내용 줄들)
+function agendaToText(agenda) {
+  return (agenda || []).map(a => ['■ ' + (a.title || ''), ...(a.points || [])].join('\n')).join('\n\n');
+}
+function textToAgenda(text) {
+  const out = [];
+  for (const raw of String(text || '').split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (/^■/.test(line)) out.push({ title: line.replace(/^■\s*/, ''), points: [] });
+    else { if (!out.length) out.push({ title: '기타', points: [] }); out[out.length - 1].points.push(line.replace(/^[-•▸·]\s*/, '')); }
+  }
+  return out.filter(a => a.title || a.points.length);
+}
+
 let REVIEW_META = null;
 function openReviewModal(id, meta) {
   REVIEW_ID = id;
@@ -1866,18 +1889,19 @@ function openReviewModal(id, meta) {
 
   renderReviewChips();
 
-  // AI 요약 — 편집 가능 textarea
+  document.getElementById('rvTeam').textContent = (meta.team || '').split(',').filter(Boolean).join(', ') || '—';
+  document.getElementById('rvTags').value = (meta.tags || []).join(', ');
+
+  // AI 요약 — 상세보기와 같은 항목을 편집 가능 textarea로
   const sec = document.getElementById('rvSummarySection');
-  if (meta.summary) {
-    sec.style.display = 'block';
-    const s = meta.summary;
-    document.getElementById('rvSumResult').value       = (s.result       || []).join('\n');
-    document.getElementById('rvSumImplications').value = (s.implications || []).join('\n');
-    document.getElementById('rvSumDecisions').value    = (s.decisions    || []).join('\n');
-  } else {
-    sec.style.display = 'none';
-    ['rvSumResult','rvSumImplications','rvSumDecisions'].forEach(id => { document.getElementById(id).value = ''; });
-  }
+  const s = meta.summary || {};
+  const set = (id, v) => { const el = document.getElementById(id); el.value = v; el.rows = Math.min(14, Math.max(3, v.split('\n').length + 1)); };
+  set('rvSumResult',       (s.result       || []).join('\n'));
+  set('rvSumAgenda',       agendaToText(s.agenda));
+  set('rvSumImplications', (s.implications || []).join('\n'));
+  set('rvSumDecisions',    (s.decisions    || []).join('\n'));
+  set('rvSumActions',      (s.actionItems  || []).join('\n'));
+  sec.style.display = meta.summary ? 'block' : 'none';
 
   document.getElementById('reviewBackdrop').style.display = 'flex';
 }
@@ -1926,11 +1950,11 @@ async function saveReview() {
         meetingDate: date || m.meetingDate,
         attendees,
         team: m.team,
-        ...(rm.tags ? { tags: rm.tags } : {}),
+        tags: (document.getElementById('rvTags').value || '').split(',').map(s => s.trim()).filter(Boolean),
         ...(rm.oneLiner !== undefined ? { oneLiner: rm.oneLiner } : {}),
         summary: {
-          actionItems: rm.summary?.actionItems || [],
-          ...(rm.summary?.agenda ? { agenda: rm.summary.agenda } : {}),
+          actionItems: (document.getElementById('rvSumActions')?.value || '').split('\n').map(s=>s.trim()).filter(Boolean),
+          agenda: textToAgenda(document.getElementById('rvSumAgenda')?.value),
           result:       (document.getElementById('rvSumResult')?.value       || '').split('\n').map(s=>s.trim()).filter(Boolean),
           implications: (document.getElementById('rvSumImplications')?.value || '').split('\n').map(s=>s.trim()).filter(Boolean),
           decisions:    (document.getElementById('rvSumDecisions')?.value    || '').split('\n').map(s=>s.trim()).filter(Boolean),
