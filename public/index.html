@@ -3725,7 +3725,7 @@ function toggleRpSection(titleEl) {
 
   function installNav() {
     if (!$('nav-chat')) {
-      const after = $('nav-list');
+      const after = $('nav-upload');
       if (after) {
         const b = document.createElement('button');
         b.className = 'nav-btn'; b.id = 'nav-chat';
@@ -3735,7 +3735,7 @@ function toggleRpSection(titleEl) {
       }
     }
     if (!$('mbt-chat')) {
-      const after = $('mbt-list');
+      const after = $('mbt-upload');
       if (after) {
         const b = document.createElement('button');
         b.className = 'mbt-tab'; b.id = 'mbt-chat';
