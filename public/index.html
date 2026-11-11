@@ -4,44 +4,47 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>회의록 관리 시스템</title>
-<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <script src="https://cdn.jsdelivr.net/npm/docx-preview@0.1.22/dist/docx-preview.min.js"></script>
 <style>
 /* ── 리셋 & 변수 (라이트 기본) ──────────────────────────────────────── */
+/* 토스 디자인 시스템(TDS) 톤: Pretendard + 토스 블루/그레이 팔레트 */
 :root {
-  --bg:       #f5f7fa;
+  --bg:       #f2f4f6;   /* grey100 */
   --bg2:      #ffffff;
-  --bg3:      #eef1f6;
-  --border:   rgba(0,0,0,.10);
-  --text:     #1a1f2e;
-  --text2:    #5a6478;
-  --accent:   #2563eb;
-  --accent2:  #1d4ed8;
-  --grad:     linear-gradient(135deg,#2563eb,#7c3aed);
-  --green:    #16a34a;
-  --yellow:   #ca8a04;
-  --red:      #dc2626;
-  --font:     'Pretendard', 'Apple SD Gothic Neo', sans-serif;
-  --radius:   12px;
+  --bg3:      #f2f4f6;
+  --border:   #e5e8eb;   /* grey200 */
+  --text:     #191f28;   /* grey900 */
+  --text2:    #6b7684;   /* grey600 */
+  --accent:   #3182f6;   /* blue500 */
+  --accent2:  #2272eb;   /* blue600 */
+  --accent-soft: #e8f3ff; /* blue50 */
+  --grad:     #3182f6;
+  --green:    #00c471;
+  --yellow:   #fe9800;
+  --red:      #f04452;
+  --font:     'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --radius:   16px;
   --sidebar-w: 260px;
 }
-/* ── 다크 모드 (선택사항) ────────────────────────────────────────────── */
+/* ── 다크 모드 ─────────────────────────────────────────────────────────── */
 [data-theme="dark"] {
-  --bg:       #0e1117;
-  --bg2:      #161b22;
-  --bg3:      #1c2333;
-  --border:   rgba(255,255,255,.08);
-  --text:     #e6edf3;
-  --text2:    #8b949e;
-  --accent:   #3b82f6;
-  --accent2:  #60a5fa;
-  --grad:     linear-gradient(135deg,#3b82f6,#8b5cf6);
-  --green:    #22c55e;
-  --yellow:   #eab308;
-  --red:      #ef4444;
+  --bg:       #17171c;
+  --bg2:      #202027;
+  --bg3:      #2c2c35;
+  --border:   #2c2c35;
+  --text:     #f9fafb;
+  --text2:    #9e9ea4;
+  --accent:   #3182f6;
+  --accent2:  #4593fc;
+  --accent-soft: rgba(49,130,246,.18);
+  --grad:     #3182f6;
+  --green:    #03b26c;
+  --yellow:   #ffb331;
+  --red:      #f66570;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;font-size:17px}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;font-size:17px;letter-spacing:-0.02em;-webkit-font-smoothing:antialiased;word-break:keep-all}
 a{color:inherit;text-decoration:none}
 button{cursor:pointer;font-family:var(--font)}
 input,select,textarea{font-family:var(--font);font-size:16px}
@@ -67,7 +70,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
   font-size:16px;text-align:left;transition:all .15s;
 }
 .nav-btn:hover{background:var(--bg3);color:var(--text)}
-.nav-btn.active{background:rgba(59,130,246,.15);color:var(--accent2)}
+.nav-btn.active{background:var(--accent-soft);color:var(--accent);font-weight:700}
 .nav-icon{font-size:16px;width:20px;text-align:center}
 .sb-bottom{padding:12px 8px;border-top:1px solid var(--border)}
 .sb-user{display:flex;align-items:center;gap:8px;padding:8px 10px;font-size:13px;color:var(--text2)}
@@ -96,11 +99,13 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 [data-theme="dark"] .glass{background:rgba(22,27,34,.7)}
 
 /* ── 버튼 ────────────────────────────────────────────────────────────── */
-.btn{padding:10px 20px;border-radius:8px;border:none;font-size:15.5px;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
-.btn-primary{background:var(--grad);color:#fff}
-.btn-primary:hover{opacity:.88;transform:translateY(-1px)}
-.btn-ghost{background:none;border:1px solid var(--border);color:var(--text2)}
-.btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.btn{padding:10px 20px;border-radius:12px;border:none;font-size:15.5px;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-primary:active,.btn-ghost:active{transform:scale(.97)}
+.btn-ghost{background:var(--bg3);border:1px solid transparent;color:var(--text)}
+.btn-ghost:hover{background:var(--border);color:var(--text)}
+.btn-sm{border-radius:10px}
 .btn-danger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--red)}
 .btn-danger:hover{background:rgba(239,68,68,.22)}
 .btn-sm{padding:6px 12px;font-size:12.5px}
@@ -239,14 +244,14 @@ select.login-input{appearance:auto}
 }
 .search-wrap{flex:1;min-width:180px;position:relative}
 .search-wrap input{
-  width:100%;padding:10px 14px 10px 38px;border-radius:8px;
+  width:100%;padding:10px 14px 10px 38px;border-radius:12px;
   border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:15px;
 }
 .search-wrap input:focus{outline:none;border-color:var(--accent)}
 .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--text2)}
 .filter-select{
-  padding:10px 13px;border-radius:8px;border:1px solid var(--border);
-  background:var(--bg3);color:var(--text);font-size:15px;
+  padding:10px 13px;border-radius:12px;border:1px solid var(--border);
+  background:var(--bg2);color:var(--text);font-size:15px;font-weight:500;
 }
 .filter-select:focus{outline:none;border-color:var(--accent)}
 
@@ -258,13 +263,13 @@ select.login-input{appearance:auto}
 }
 .meeting-card{
   width:100%;box-sizing:border-box;
-  background:var(--bg2);border:1px solid var(--border);border-left:3px solid transparent;border-radius:var(--radius);
-  padding:14px 20px;cursor:pointer;transition:all .18s;
+  background:var(--bg2);border:1px solid transparent;border-left:3px solid transparent;border-radius:var(--radius);
+  padding:16px 20px;cursor:pointer;transition:all .18s;
   display:flex;align-items:stretch;gap:20px;
 }
 .meeting-card{transition:all .18s}
-.meeting-card:hover{border-left-color:var(--accent);background:var(--bg3);box-shadow:0 4px 20px rgba(0,0,0,.08);transform:translateY(-1px)}
-.meeting-card.selected{border-left-color:var(--accent);background:rgba(59,130,246,.05)}
+.meeting-card:hover{border-left-color:var(--accent);box-shadow:0 6px 20px rgba(0,27,55,.08);transform:translateY(-1px)}
+.meeting-card.selected{border-left-color:var(--accent);background:var(--accent-soft)}
 .meeting-card.flash-highlight{animation:cardFlash 2s ease}
 @keyframes cardFlash{0%,40%{box-shadow:0 0 0 3px #f59e0b;background:rgba(245,158,11,.12)}100%{box-shadow:none}}
 .mc-left{width:112px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:2px;gap:4px;border-right:1px solid var(--border);padding-right:16px;min-width:0}
@@ -381,7 +386,42 @@ select.login-input{appearance:auto}
 .dp-row-label{color:var(--text2);min-width:64px;flex-shrink:0}
 .dp-row-val{flex:1}
 
-.summary-box{background:var(--bg3);border-radius:10px;padding:16px;margin-bottom:12px}
+.summary-box{background:var(--bg3);border-radius:14px;padding:18px;margin-bottom:12px}
+/* ── 통계 ── */
+.st-filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.st-filters .filter-select{min-width:140px}
+.st-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
+.st-kpi{background:var(--bg2);border-radius:var(--radius);padding:18px 20px}
+.st-kpi-label{font-size:13px;color:var(--text2);font-weight:600}
+.st-kpi-val{font-size:28px;font-weight:800;margin:6px 0 4px;letter-spacing:-.03em}
+.st-kpi-sub{font-size:12.5px;color:var(--text2)}
+.st-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.st-card{background:var(--bg2);border-radius:var(--radius);padding:22px 22px 18px;min-width:0}
+.st-card.wide{grid-column:1/-1}
+.st-card-title{font-size:17px;font-weight:700}
+.st-card-desc{font-size:12.5px;color:var(--text2);margin:4px 0 16px}
+.st-sub-title{font-size:12.5px;font-weight:700;color:var(--text2);margin:14px 0 8px}
+.st-bars{display:flex;flex-direction:column;gap:10px}
+.st-bar-row{display:grid;grid-template-columns:minmax(0,130px) 1fr 40px;align-items:center;gap:10px;font-size:14px}
+.st-bar-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.st-bars.wide-label .st-bar-row{grid-template-columns:minmax(0,1fr) minmax(60px,35%) 34px}
+.st-bars.wide-label .st-bar-label{white-space:normal;line-height:1.35}
+.st-rank{display:inline-block;width:18px;color:var(--accent);font-weight:800}
+.st-bar-track{height:12px;background:var(--bg3);border-radius:999px;overflow:hidden}
+.st-bar-fill{height:100%;background:var(--accent);border-radius:999px;transition:width .4s}
+.st-bar-val{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.st-empty{font-size:14px;color:var(--text2);padding:12px 0}
+.st-cols{display:flex;align-items:flex-end;gap:10px;height:170px;padding-top:8px}
+.st-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:6px}
+.st-col-bar{width:100%;max-width:44px;background:var(--accent);border-radius:8px 8px 4px 4px;min-height:4px}
+.st-col-val{font-size:13px;font-weight:700}
+.st-col-label{font-size:12.5px;color:var(--text2)}
+.st-stack{display:flex;height:18px;border-radius:999px;overflow:hidden;gap:2px;margin:6px 0 12px}
+.st-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13.5px;color:var(--text2)}
+.st-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.st-legend b{color:var(--text);margin-left:2px}
+@media(max-width:1100px){ .st-kpis{grid-template-columns:repeat(3,1fr)} }
+@media(max-width:760px){ .st-grid{grid-template-columns:1fr} .st-kpis{grid-template-columns:repeat(2,1fr)} .st-kpi-val{font-size:24px} .st-bar-row{grid-template-columns:minmax(0,100px) 1fr 34px} }
 .sb-label{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px}
 .sb-text{font-size:15px;line-height:1.75;color:var(--text)}
 .sb-list{list-style:none;margin:0;padding:0}
@@ -766,6 +806,9 @@ select.login-input{appearance:auto}
       <button class="nav-btn" onclick="showView('upload')" id="nav-upload">
         <span class="nav-icon">➕</span> 회의록 등록
       </button>
+      <button class="nav-btn" onclick="showView('stats')" id="nav-stats">
+        <span class="nav-icon">📊</span> 통계
+      </button>
       <button class="nav-btn" onclick="showView('admin')" id="nav-admin" style="display:none">
         <span class="nav-icon">👥</span> 회원 관리 <span class="nav-badge" id="adminBadge" style="display:none"></span>
       </button>
@@ -901,6 +944,21 @@ select.login-input{appearance:auto}
     </div>
 
     <!-- 업로드 뷰 -->
+    <div class="view" id="view-stats">
+      <div class="page-title">📊 통계</div>
+      <div class="page-sub">등록된 회의록을 바탕으로 부서별 회의 현황과 주요 이슈를 보여드려요.</div>
+      <div class="st-filters">
+        <select id="stPeriod" class="filter-select" onchange="renderStats()">
+          <option value="all">전체 기간</option>
+          <option value="90">최근 3개월</option>
+          <option value="30">최근 30일</option>
+          <option value="year">올해</option>
+        </select>
+        <select id="stTeam" class="filter-select" onchange="renderStats()"><option value="">전체 부서</option></select>
+      </div>
+      <div id="statsBody"><div class="um-empty">불러오는 중...</div></div>
+    </div>
+
     <div class="view" id="view-admin">
       <div class="page-title">👥 회원 관리</div>
       <div class="page-sub">가입 신청을 승인해야 회의록 대시보드에 접속할 수 있어요.</div>
@@ -1291,6 +1349,134 @@ async function doLogout() {
   showLoginScreen();
 }
 
+// ── 통계 ──────────────────────────────────────────────────────────────────
+const ST_DEPTS = ['기획팀', '에듀테크팀', '사업팀', '가맹마케팅지원팀', '운영지원팀', '재무팀', '입시센터', '사업기획실', '가맹사업성장실', '경영관리실'];
+const ST_COMPETITORS = [
+  ['잇올스파르타', /잇올|이돌\s?스파르타/], ['대성디랩', /디랩/], ['수만휘', /수만휘/],
+  ['메가스터디', /메가\s?스터디/], ['수능선배', /수능선배/], ['작심스터디카페', /작심/], ['시대인재', /시대인재/],
+];
+let ST_DETAILS = null; // 회의록 상세(요약 전문) 캐시
+
+async function stLoadDetails() {
+  if (ST_DETAILS && ST_DETAILS.__n === MEETINGS.length) return ST_DETAILS;
+  const out = {};
+  await Promise.all(MEETINGS.map(async m => {
+    if (DETAIL_CACHE && DETAIL_CACHE[m.id]) { out[m.id] = DETAIL_CACHE[m.id]; return; }
+    try { const d = await (await fetch('/api/meetings/' + m.id)).json(); if (d.ok) out[m.id] = d.meeting; } catch {}
+  }));
+  out.__n = MEETINGS.length;
+  return (ST_DETAILS = out);
+}
+
+const stDate = m => m.meetingDate || (m.uploadedAt || '').slice(0, 10);
+const stTeams = m => String(m.team || '').split(',').map(s => s.trim()).filter(Boolean);
+const stText = d => {
+  const s = (d && d.summary) || {};
+  return [d?.meetingTitle, d?.oneLiner, ...(s.result || []), ...(s.implications || []), ...(s.decisions || []), ...(s.actionItems || []),
+    ...(s.agenda || []).flatMap(a => [a.title, ...(a.points || [])])].filter(Boolean).join(' ');
+};
+const stCount = arr => { const c = {}; arr.forEach(k => { if (k) c[k] = (c[k] || 0) + 1; }); return Object.entries(c).sort((a, b) => b[1] - a[1]); };
+
+function stBars(rows, opt = {}) {
+  if (!rows.length) return `<div class="st-empty">${opt.empty || '데이터가 아직 없어요'}</div>`;
+  const max = Math.max(...rows.map(r => r[1]));
+  return `<div class="st-bars${opt.wideLabel ? ' wide-label' : ''}">${rows.slice(0, opt.top || 10).map(([k, v], i) => `
+    <div class="st-bar-row">
+      <div class="st-bar-label" title="${esc(k)}">${opt.rank ? `<span class="st-rank">${i + 1}</span>` : ''}${esc(k)}</div>
+      <div class="st-bar-track"><div class="st-bar-fill" style="width:${Math.max(4, v / max * 100)}%;${opt.color ? 'background:' + opt.color : ''}"></div></div>
+      <div class="st-bar-val">${v}${opt.unit || ''}</div>
+    </div>`).join('')}</div>`;
+}
+const stCard = (title, desc, body, wide) => `<div class="st-card${wide ? ' wide' : ''}"><div class="st-card-title">${title}</div>${desc ? `<div class="st-card-desc">${desc}</div>` : ''}${body}</div>`;
+
+async function renderStats() {
+  const box = document.getElementById('statsBody');
+  const teamSel = document.getElementById('stTeam');
+  if (teamSel.options.length <= 1) {
+    const teams = stCount(MEETINGS.flatMap(stTeams)).map(r => r[0]);
+    teamSel.innerHTML = '<option value="">전체 부서</option>' + teams.map(t => `<option>${esc(t)}</option>`).join('');
+  }
+  if (!ST_DETAILS) box.innerHTML = '<div class="um-empty">회의록을 분석하는 중...</div>';
+  const det = await stLoadDetails();
+  const states = await kanbanLoadStates();
+
+  // 필터
+  const period = document.getElementById('stPeriod').value, team = teamSel.value;
+  const today = new Date(), iso = d => d.toISOString().slice(0, 10);
+  const from = period === 'all' ? '' : period === 'year' ? `${today.getFullYear()}-01-01` : iso(new Date(Date.now() - Number(period) * 864e5));
+  const list = MEETINGS.filter(m => (!from || stDate(m) >= from) && (!team || stTeams(m).includes(team)));
+  if (!list.length) { box.innerHTML = '<div class="um-empty">조건에 맞는 회의록이 없어요.</div>'; return; }
+
+  // ① 요약 지표
+  const ym = d => d.slice(0, 7);
+  const thisM = iso(today).slice(0, 7), lastM = iso(new Date(today.getFullYear(), today.getMonth() - 1, 15)).slice(0, 7);
+  const nThis = list.filter(m => ym(stDate(m)) === thisM).length, nLast = list.filter(m => ym(stDate(m)) === lastM).length;
+  const att = list.map(m => (m.attendees || []).length).filter(Boolean);
+  const avgAtt = att.length ? (att.reduce((a, b) => a + b, 0) / att.length).toFixed(1) : '—';
+  const decisions = list.reduce((n, m) => n + ((det[m.id]?.summary?.decisions) || []).length, 0);
+  const actions = []; list.forEach(m => (m.actionItems || det[m.id]?.summary?.actionItems || []).forEach((a, i) => actions.push({ m, a, st: states[`${m.id}_${i}`] || 'todo' })));
+  const done = actions.filter(x => x.st === 'done').length;
+  const diff = nThis - nLast;
+  const kpi = (label, val, sub) => `<div class="st-kpi"><div class="st-kpi-label">${label}</div><div class="st-kpi-val">${val}</div>${sub ? `<div class="st-kpi-sub">${sub}</div>` : ''}</div>`;
+  const kpis = `<div class="st-kpis">
+    ${kpi('전체 회의', list.length + '건', `음성 ${list.filter(m => m.fileType === 'audio').length} · 문서 ${list.filter(m => m.fileType !== 'audio').length}`)}
+    ${kpi('이번 달 회의', nThis + '건', `지난달 ${nLast}건 대비 <b style="color:${diff >= 0 ? 'var(--accent)' : 'var(--red)'}">${diff >= 0 ? '+' : ''}${diff}</b>`)}
+    ${kpi('평균 참석 인원', avgAtt + '명', '참석자가 기록된 회의 기준')}
+    ${kpi('결정사항', decisions + '건', `회의당 평균 ${(decisions / list.length).toFixed(1)}건`)}
+    ${kpi('후속조치 완료율', actions.length ? Math.round(done / actions.length * 100) + '%' : '—', `${actions.length}건 중 ${done}건 완료`)}
+  </div>`;
+
+  // ② 월별 추이 (최근 6개월)
+  const months = []; for (let i = 5; i >= 0; i--) { const d = new Date(today.getFullYear(), today.getMonth() - i, 15); months.push(iso(d).slice(0, 7)); }
+  const mCnt = months.map(mo => [mo, list.filter(m => ym(stDate(m)) === mo).length]);
+  const mMax = Math.max(1, ...mCnt.map(r => r[1]));
+  const trend = `<div class="st-cols">${mCnt.map(([mo, v]) => `<div class="st-col"><div class="st-col-val">${v}</div><div class="st-col-bar" style="height:${v / mMax * 100}%"></div><div class="st-col-label">${Number(mo.slice(5))}월</div></div>`).join('')}</div>`;
+
+  // ③ 부서별 주관 회의
+  const byTeam = stCount(list.flatMap(stTeams));
+
+  // ④ 협조 부서: 공동 주관 / 다른 부서 회의에서 언급 / 후속조치 담당
+  const pairs = [];
+  list.forEach(m => { const t = stTeams(m); for (let i = 0; i < t.length; i++) for (let j = i + 1; j < t.length; j++) pairs.push([t[i], t[j]].sort().join(' + ')); });
+  const coHost = stCount(list.flatMap(m => stTeams(m).length > 1 ? stTeams(m) : []));
+  const mentioned = stCount(list.flatMap(m => { const txt = stText(det[m.id]); const own = stTeams(m); return ST_DEPTS.filter(dp => !own.includes(dp) && txt.includes(dp)); }));
+  const TITLE_RE = /\s*(대표|부사장|상무|실장|팀장|센터장|매니저|원장|소장|본부장|책임|선임|사원|과장|차장|부장)?\s*(님)?$/;
+  const owners = actions.map(x => parseActionItem(x.a).team).filter(Boolean).map(o => o.replace(/\(.*?\)/g, '').trim());
+  const isDeptName = o => ST_DEPTS.some(d => o === d || o.includes(d)) || /^[가-힣A-Za-z]+(팀|실|센터|본부)$/.test(o);
+  const ownerDept = stCount(owners.filter(isDeptName).map(o => ST_DEPTS.find(d => o.includes(d)) || o));
+  const ownerPerson = stCount(owners.filter(o => !isDeptName(o)).map(o => o.replace(TITLE_RE, '').trim()).filter(Boolean));
+
+  // ⑤ 키워드: 전체 TOP + 최근 30일 급상승
+  const kw = stCount(list.flatMap(m => m.tags || []));
+  const d30 = iso(new Date(Date.now() - 30 * 864e5));
+  const recent = stCount(list.filter(m => stDate(m) >= d30).flatMap(m => m.tags || []));
+  const older = Object.fromEntries(stCount(list.filter(m => stDate(m) < d30).flatMap(m => m.tags || [])));
+  const hasOlder = list.some(m => stDate(m) < d30);
+  const rising = hasOlder ? recent.filter(([k, v]) => v > (older[k] || 0)).map(([k, v]) => [k + (older[k] ? '' : ' 🆕'), v]) : [];
+
+  // ⑥ 참석 TOP / ⑦ 경쟁사 언급 / ⑧ 후속조치 진행
+  const people = stCount(list.flatMap(m => (m.attendees || []).map(a => a.replace(/\s+(대표|부사장|상무|실장|팀장|센터장|매니저|원장|소장|본부장)(님)?$/, ''))));
+  const comp = ST_COMPETITORS.map(([name, re]) => [name, list.filter(m => re.test(stText(det[m.id]))).length]).filter(r => r[1]).sort((a, b) => b[1] - a[1]);
+  const stLabel = { todo: '할 일', doing: '진행', hold: '보류', done: '완료' };
+  const stColor = { todo: '#3182F6', doing: '#FE9800', hold: '#8B95A1', done: '#00C471' };
+  const prog = ['todo', 'doing', 'hold', 'done'].map(k => [k, actions.filter(x => x.st === k).length]);
+  const progBar = actions.length ? `<div class="st-stack">${prog.filter(r => r[1]).map(([k, v]) => `<div style="flex:${v};background:${stColor[k]}" title="${stLabel[k]} ${v}"></div>`).join('')}</div>
+    <div class="st-legend">${prog.map(([k, v]) => `<span><i style="background:${stColor[k]}"></i>${stLabel[k]} <b>${v}</b></span>`).join('')}</div>` : '<div class="st-empty">후속조치가 아직 없어요</div>';
+
+  box.innerHTML = kpis + `<div class="st-grid">
+    ${stCard('📈 월별 회의 추이', '최근 6개월', trend)}
+    ${stCard('🏢 부서별 주관 회의', '여러 부서가 공동 주관하면 각 부서에 1건씩 집계', stBars(byTeam))}
+    ${stCard('🤝 협조 부서 — 공동 주관', '다른 부서와 함께 회의를 주관한 횟수', stBars(coHost, { empty: '공동 주관 회의가 없어요' }) + (pairs.length ? `<div class="st-sub-title">자주 함께하는 조합</div>` + stBars(stCount(pairs), { top: 5, color: '#8B95A1', wideLabel: true }) : ''))}
+    ${stCard('📣 협조 부서 — 회의에서 언급', '자기 부서가 주관하지 않은 회의에서 이름이 언급된 회의 수', stBars(mentioned, { empty: '다른 부서 언급이 없어요' }))}
+    ${stCard('🔑 주요 키워드 TOP 15', '회의록 키워드 태그 빈도', stBars(kw, { top: 15, rank: true }))}
+    ${stCard('🔥 최근 30일 떠오르는 키워드', '30일 이전보다 더 자주 나온 키워드 · 🆕 새로 등장', stBars(rising, { top: 10, color: '#F04452', empty: hasOlder ? '최근 30일 새로 늘어난 키워드가 없어요' : '30일보다 오래된 회의록이 쌓이면 비교해서 보여드려요' }))}
+    ${stCard('📋 후속조치 담당', '후속조치 담당으로 지정된 부서 / 사람', (ownerDept.length ? `<div class="st-sub-title">부서</div>` + stBars(ownerDept, { top: 6 }) : '') + `<div class="st-sub-title">사람</div>` + stBars(ownerPerson, { top: 8, empty: '담당자가 지정된 후속조치가 없어요' }))}
+    ${stCard('✅ 후속조치 진행 현황', 'To-Do 보드 상태 기준', progBar)}
+    ${stCard('👥 회의 참석 TOP 10', '참석자로 기록된 횟수', stBars(people, { rank: true }))}
+    ${stCard('🎯 경쟁사 언급', '해당 경쟁사가 회의 내용에 언급된 회의 수', stBars(comp, { color: '#F04452', empty: '경쟁사 언급이 없어요' }))}
+  </div>`;
+}
+
 // ── 회원 관리 (관리자) ────────────────────────────────────────────────────
 const UM_STATUS = { pending: '승인 대기', approved: '승인됨', rejected: '반려', reset: '비밀번호 재설정 대기' };
 
@@ -1354,6 +1540,7 @@ function showView(name) {
   const dp = document.getElementById('detailPanel');
   if (dp) dp.classList.remove('open');
   if (name === 'admin') loadAdminUsers();
+  if (name === 'stats') renderStats();
   if (name === 'upload') {
     document.getElementById('uploadResult').style.display = 'none';
     document.getElementById('uploadProgress').style.display = 'none';
