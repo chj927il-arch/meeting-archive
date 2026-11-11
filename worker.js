@@ -182,7 +182,7 @@ async function handleSignup(request, env) {
   const body = await request.json().catch(() => ({}));
   const empNo = normEmpNo(body.empNo);
   const pw = String(body.password || '');
-  if (!/^[A-Z0-9]{4,12}$/.test(empNo)) return json({ ok: false, error: '사번은 영문·숫자 4~12자로 입력해 주세요.' }, 400);
+  if (!/^[A-Z0-9가-힣]{4,16}$/.test(empNo)) return json({ ok: false, error: '사번은 영문·숫자·한글 4~16자로 입력해 주세요.' }, 400);
   if (!String(body.name || '').trim()) return json({ ok: false, error: '이름을 입력해 주세요.' }, 400);
   if (!pw) return json({ ok: false, error: '비밀번호를 입력해 주세요.' }, 400);
   if (pw.length > 100) return json({ ok: false, error: '비밀번호가 너무 깁니다.' }, 400);
@@ -295,7 +295,7 @@ async function handleAdminRoster(request, env) {
   for (const row of rows) {
     const emp = normEmpNo(row.empNo);
     const name = String(row.name || '').trim();
-    if (!/^[A-Z0-9]{4,12}$/.test(emp) || !name) continue;
+    if (!/^[A-Z0-9가-힣]{4,16}$/.test(emp) || !name) continue;
     const pos = String(row.position || '').split('/')[0].trim();
     const grade = gradeFromPosition(pos);
     const dept = String(row.dept || '').split('>').map(s => s.trim()).filter(Boolean).pop() || '';
