@@ -2075,20 +2075,44 @@ async function startAudioUpload(file) {
     const attendeesVal = (document.getElementById('uploadAttendees')?.value || '').trim();
     if (attendeesVal) xhr.setRequestHeader('X-Manual-Attendees', encodeURIComponent(attendeesVal));
 
+    // 전송 완료 후 서버의 AI 분석 단계 — 경과 시간 표시 (멈춘 것처럼 보이지 않게)
+    let analyzeTimer = null;
+    const mb = file.size / 1048576;
+    const expect = mb >= 60 ? '3~6분' : mb >= 20 ? '1~3분' : '1분 내외';
+    const startAnalyzing = () => {
+      if (analyzeTimer) return;
+      const t0 = Date.now();
+      const tick = () => {
+        const s = Math.floor((Date.now() - t0) / 1000);
+        const el = `${Math.floor(s / 60)}분 ${String(s % 60).padStart(2, '0')}초`;
+        progLabel.textContent = `🤖 업로드 완료 — AI가 회의 내용을 분석하고 있어요... (${el} 경과 · 예상 ${expect}) 창을 닫지 마세요.`;
+        progBar.style.width = (60 + 35 * (1 - Math.exp(-s / 120))) + '%'; // 60%→95%로 천천히
+      };
+      tick();
+      analyzeTimer = setInterval(tick, 1000);
+    };
+    const stopAnalyzing = () => { if (analyzeTimer) clearInterval(analyzeTimer); analyzeTimer = null; };
+
     xhr.upload.addEventListener('progress', e => {
       if (e.lengthComputable) {
+        if (e.loaded >= e.total) { startAnalyzing(); return; }
         const pct = (e.loaded / e.total) * 60; // 업로드 60%까지
         progBar.style.width   = pct + '%';
         progLabel.textContent = `📤 업로드 중... ${Math.round(e.loaded / e.total * 100)}% (${formatSize(e.loaded)} / ${formatSize(file.size)})`;
       }
     });
+    xhr.upload.addEventListener('load', startAnalyzing);
+    ['load', 'error', 'timeout'].forEach(ev => xhr.addEventListener(ev, stopAnalyzing));
 
     xhr.addEventListener('load', async () => {
       progBar.style.width   = '85%';
       progLabel.textContent = '🤖 Gemini AI 전사·분석 완료 중...';
 
       try {
-        const data = JSON.parse(xhr.responseText);
+        if (xhr.status === 401) { showLoginScreen(); throw new Error('로그인이 만료되었습니다. 다시 로그인 후 올려주세요.'); }
+        let data;
+        try { data = JSON.parse(xhr.responseText); }
+        catch { throw new Error(`서버 응답 오류(${xhr.status}). 잠시 후 다시 시도하거나, 목록에 이미 등록됐는지 확인해 주세요.`); }
         if (!data.ok) throw new Error(data.error || '처리 실패');
 
         progBar.style.width = '100%';
