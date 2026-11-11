@@ -3552,7 +3552,7 @@ function toggleRpSection(titleEl) {
   function actionsHtml(actions) {
     if (!actions || !actions.length) return '';
     const open = actions.filter(a => a.col !== 'done').length;
-    return `<div class="ch-block-title">📋 액션플랜 ${actions.length}건 (미완료 ${open}건)</div><div class="ch-acts">` + actions.map(a => `
+    return `<div class="ch-block-title">📋 후속 조치 ${actions.length}건 (미완료 ${open}건)</div><div class="ch-acts">` + actions.map(a => `
       <div class="ch-act" data-col="${E(a.col)}">
         <select data-act="${E(a.id)}" title="상태 변경 (To-Do 보드에 바로 반영)">${COLS.map(([v, l]) => `<option value="${v}"${v === a.col ? ' selected' : ''}>${l}</option>`).join('')}</select>
         <div>
@@ -3592,7 +3592,7 @@ function toggleRpSection(titleEl) {
 
   function plainText(a) {
     let t = (a.answer || '').replace(/\*\*/g, '');
-    if (a.actions && a.actions.length) t += '\n\n[액션플랜]\n' + a.actions.map(x => `- ${x.team ? x.team + ': ' : ''}${x.text} (${(COLS.find(c => c[0] === x.col) || ['', ''])[1].replace(/^\S+\s/, '')}, ${x.meetingTitle} ${shortDate(x.meetingDate)})`).join('\n');
+    if (a.actions && a.actions.length) t += '\n\n[후속 조치]\n' + a.actions.map(x => `- ${x.team ? x.team + ': ' : ''}${x.text} (${(COLS.find(c => c[0] === x.col) || ['', ''])[1].replace(/^\S+\s/, '')}, ${x.meetingTitle} ${shortDate(x.meetingDate)})`).join('\n');
     if (a.citations && a.citations.length) t += '\n\n[출처]\n' + a.citations.map(c => `[${c.n}] ${c.title} (${shortDate(c.date)})`).join('\n');
     return t;
   }
@@ -3606,11 +3606,11 @@ function toggleRpSection(titleEl) {
     const dept = (typeof ME !== 'undefined' && ME && ME.dept) || '우리 부서';
     return [
       { i: '✅', q: '지난주 회의에서 결정된 내용 정리해줘', s: '기간을 말로 쓰면 그 기간만 찾아요' },
-      { i: '📋', q: `${dept} 후속 조치 중 아직 완료 안 된 것 알려줘`, s: '액션플랜 조회', mode: 'actions' },
+      { i: '📋', q: `${dept} 후속 조치 중 아직 완료 안 된 것 알려줘`, s: '할 일·담당을 물으면 카드로 모아 보여줘요' },
       { i: '🙋', q: '내가 참석하지 않은 최근 2주 회의를 요약해줘', s: '놓친 회의 따라잡기' },
       { i: '🔁', q: '이번 달 회의에서 반복해서 나온 이슈가 뭐야?', s: '여러 회의를 묶어서 보기' },
       { i: '🏁', q: '경쟁사 관련 논의만 모아서 회의별로 정리해줘', s: '주제로 찾기' },
-      { i: '⏳', q: '보류 중이거나 진행 중인 액션플랜을 담당별로 보여줘', s: '액션플랜 조회', mode: 'actions' },
+      { i: '⏳', q: '보류 중이거나 진행 중인 후속 조치를 담당별로 보여줘', s: '상태별로 모아 보기' },
     ];
   }
   function renderThread() {
@@ -3646,7 +3646,7 @@ function toggleRpSection(titleEl) {
     CHAT.busy = true; syncComposer(); renderThread();
     const slot = CHAT.msgs[CHAT.msgs.length - 1];
     try {
-      const data = await chatApi({ question: q, history, pinIds, scope: { mode: CHAT.mode, ...(CHAT.team ? { team: CHAT.team } : {}), ...periodScope() } });
+      const data = await chatApi({ question: q, history, pinIds, scope: { ...(CHAT.team ? { team: CHAT.team } : {}), ...periodScope() } }); // 조회 방식은 서버가 질문으로 판단
       Object.assign(slot, { pending: false, answer: data.answer, citations: data.citations || [], actions: data.actions || [], followUps: data.followUps || [], meta: data.meta });
     } catch (e) {
       Object.assign(slot, { pending: false, error: e.message || String(e) });
@@ -3661,7 +3661,6 @@ function toggleRpSection(titleEl) {
     CHAT.mode = mode;
     document.querySelectorAll('#chMode button').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
     const t = $('chInput');
-    if (t) t.placeholder = mode === 'actions' ? '예: 가맹마케팅지원팀이 맡은 후속 조치 중 진행 중인 것' : '예: 지난달 가맹 관련해서 결정된 내용 알려줘';
   }
   function resetChat() { if (CHAT.busy) return; CHAT.msgs = []; renderThread(); const t = $('chInput'); if (t) { t.value = ''; t.style.height = 'auto'; t.focus(); } syncComposer(); }
 
@@ -3704,7 +3703,6 @@ function toggleRpSection(titleEl) {
         <button class="btn btn-ghost btn-sm" id="chNew" style="flex:none;background:var(--bg2);border:1px solid var(--border)">＋ 새 대화</button>
       </div>
       <div class="ch-scope">
-        <div class="ch-seg" id="chMode"><button data-mode="all" class="active">회의 내용 조회</button><button data-mode="actions">액션플랜 조회</button></div>
         <select id="chTeam" title="주관부서"><option value="">전체 부서</option>${teams.map(t => `<option>${E(t)}</option>`).join('')}</select>
         <select id="chPeriod" title="기간"><option value="">전체 기간</option><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="90">최근 3개월</option><option value="year">올해</option></select>
       </div>
@@ -3718,7 +3716,6 @@ function toggleRpSection(titleEl) {
     input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); const q = input.value; input.value = ''; input.style.height = 'auto'; send(q); } });
     $('chSend').addEventListener('click', () => { const q = input.value; input.value = ''; input.style.height = 'auto'; send(q); });
     $('chNew').addEventListener('click', resetChat);
-    $('chMode').addEventListener('click', e => { const b = e.target.closest('button[data-mode]'); if (b) setMode(b.dataset.mode); });
     $('chTeam').addEventListener('change', e => { CHAT.team = e.target.value; });
     $('chPeriod').addEventListener('change', e => { CHAT.period = e.target.value; });
     $('chThread').addEventListener('click', e => onThreadClick(e, send));

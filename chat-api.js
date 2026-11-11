@@ -31,6 +31,7 @@ export const CHAT_DEFAULTS = {
 };
 
 const COL_LABEL = { todo: '할 일', doing: '진행', hold: '보류', done: '완료' };
+export const ACTION_Q = /(후속\s*조치|액션\s*플랜|할\s*일|해야\s*할|담당|맡은|맡기로|미완료|안\s*끝난|완료\s*안|안\s*된\s*(것|일)|진행\s*(중|상황)|보류|to-?do|투두|기한|마감|언제까지|누가[^?]*기로)/i;
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
 
@@ -333,7 +334,9 @@ export async function handleChat(request, env, deps) {
   try { body = await request.json(); } catch { return json({ ok: false, error: '잘못된 요청입니다.' }, 400); }
   const question = String(body?.question || '').trim().slice(0, cfg.maxQuestionChars);
   if (!question) return json({ ok: false, error: '질문을 입력해 주세요.' }, 400);
-  const scope = body?.scope && typeof body.scope === 'object' ? body.scope : {};
+  const scope = body?.scope && typeof body.scope === 'object' ? { ...body.scope } : {};
+  // 조회 방식은 질문으로 자동 판단: 할 일·후속 조치·담당·진행 상황을 물으면 액션플랜 방식
+  if (!scope.mode) scope.mode = ACTION_Q.test(question) ? 'actions' : 'all';
   const history = (Array.isArray(body?.history) ? body.history : [])
     .filter(h => h && (h.role === 'user' || h.role === 'assistant') && h.text)
     .slice(-cfg.maxHistoryTurns)
