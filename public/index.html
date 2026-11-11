@@ -149,7 +149,7 @@ input,select,textarea{font-family:var(--font);font-size:16px}
 }
 .login-input:focus{outline:none;border-color:var(--accent)}
 .login-err{color:var(--red);font-size:13px;margin-top:10px;display:none;line-height:1.5}
-.login-ok{color:var(--green);font-size:13px;margin-top:10px;display:none;line-height:1.5}
+.login-ok{color:var(--green);font-size:13px;margin-top:10px;display:none;line-height:1.5;white-space:pre-line}
 .login-confidential{display:inline-flex;align-items:center;gap:6px;background:#dc2626;color:#fff;font-weight:800;font-size:15px;letter-spacing:1px;padding:6px 16px;border-radius:999px;margin-bottom:14px;box-shadow:0 2px 8px rgba(220,38,38,.35)}
 .login-confidential span{font-size:11px;font-weight:700;letter-spacing:1.5px;opacity:.9}
 .login-conf-note{margin-top:18px;padding:10px 12px;border:1px solid rgba(220,38,38,.35);background:rgba(220,38,38,.08);color:#dc2626;border-radius:8px;font-size:12.5px;line-height:1.55}
@@ -164,6 +164,8 @@ select.login-input{appearance:auto}
 .sb-me b{color:var(--text);font-size:14px}
 .nav-badge{margin-left:auto;background:var(--red);color:#fff;border-radius:999px;font-size:11px;font-weight:700;padding:1px 7px}
 .um-section{margin-bottom:28px}
+.um-roster{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:var(--bg2);border-radius:var(--radius);padding:16px 18px;font-size:14px;line-height:1.6}
+.um-roster-sub{font-size:12.5px;color:var(--text2)}
 .um-section h3{font-size:16px;font-weight:700;margin:0 0 10px}
 .um-table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--bg2)}
 .um-table{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
@@ -277,6 +279,11 @@ select.login-input{appearance:auto}
 .rv-hint{font-weight:400;font-size:11.5px;color:var(--text2);opacity:.85}
 .rv-input{width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:14px;font-family:inherit}
 .rv-ta{width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;line-height:1.6;min-height:72px}
+.lv-badge{display:inline-flex;align-items:center;gap:2px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;margin-top:4px}
+.lv-S{background:rgba(240,68,82,.12);color:var(--red)}
+.lv-A{background:rgba(254,152,0,.14);color:#e08600}
+.lv-B{background:var(--accent-soft);color:var(--accent)}
+.level-chips{display:flex;flex-wrap:wrap;gap:6px}
 .mc-team{min-width:0;font-size:11px;color:var(--text2);margin-top:3px;display:flex;flex-direction:column;align-items:center;gap:1px;text-align:center;line-height:1.45;max-width:100%;word-break:keep-all;overflow-wrap:anywhere}
 .mc-center{flex:1;min-width:0}
 .mc-right{width:180px;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;border-left:1px solid var(--border);padding-left:16px}
@@ -744,20 +751,12 @@ select.login-input{appearance:auto}
 
     <form id="signupForm" style="display:none" onsubmit="event.preventDefault();doSignup()">
       <input class="login-input" id="suEmpNo" placeholder="사번 (아이디로 사용)" autocomplete="username" autocapitalize="characters" oninput="onSignupEmpNoInput()">
-      <input class="login-input" id="suName" placeholder="이름" autocomplete="name">
-      <select class="login-input" id="suDept">
-        <option value="">소속 선택</option>
-        <option>임원</option><option>사업기획실</option><option>기획팀</option><option>에듀테크팀</option>
-        <option>가맹사업성장실</option><option>사업팀</option><option>가맹마케팅지원팀</option>
-        <option>경영관리실</option><option>운영지원팀</option><option>재무팀</option>
-        <option>입시센터</option><option>지점</option><option>기타</option>
-      </select>
-      <input class="login-input" id="suPosition" placeholder="직책 (예: 실장, 팀장, 원장) — 선택">
+      <input class="login-input" id="suName" placeholder="이름 (사내 명부와 같게)" autocomplete="name">
       <input type="password" class="login-input" id="suPw" placeholder="비밀번호" autocomplete="new-password">
       <input type="password" class="login-input" id="suPw2" placeholder="비밀번호 확인" autocomplete="new-password">
       <input type="password" class="login-input" id="suAdminCode" placeholder="관리자 확인 코드" autocomplete="off" style="display:none">
       <button class="btn btn-primary" style="width:100%;justify-content:center">가입 신청</button>
-      <div class="login-hint">신청 후 관리자가 승인하면 로그인할 수 있어요.<br>비밀번호 초기화를 받은 경우에도 이 화면에서 새 비밀번호를 설정하세요.</div>
+      <div class="login-hint">소속·직책·열람 등급은 사내 명부에서 자동으로 정해져요.<br>팀장급 이상만 가입할 수 있고, 관리자 승인 후 로그인할 수 있어요.<br>비밀번호 초기화를 받은 경우에도 이 화면에서 새 비밀번호를 설정하세요.</div>
     </form>
 
     <div class="login-err" id="loginErr"></div>
@@ -988,6 +987,13 @@ select.login-input{appearance:auto}
         </div>
       </div>
 
+      <!-- 공개 범위 (열람 등급, 필수) -->
+      <div style="margin-bottom:16px">
+        <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:8px">🔒 공개 범위 <span style="color:#ef4444;font-size:13px">*</span> <span style="font-weight:400;font-size:12px">(이 회의록을 볼 수 있는 등급)</span></label>
+        <div id="uploadLevelError" style="display:none;color:#ef4444;font-size:12px;margin-bottom:6px">⚠️ 공개 범위를 선택해 주세요.</div>
+        <div id="uploadLevelChips" class="level-chips"></div>
+      </div>
+
       <!-- 참석자 선택 (셀렉트박스 + 칩) -->
       <div style="margin-bottom:16px">
         <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px">참석자 <span style="font-weight:400;font-size:12px;color:var(--text3)">(선택 — 입력하면 AI 추출보다 우선 적용)</span></label>
@@ -1107,6 +1113,10 @@ select.login-input{appearance:auto}
       <label class="rv-label">주관부서</label>
       <div id="rvTeam" style="font-size:14px;color:var(--text)"></div>
     </div>
+    <div style="margin-bottom:14px">
+      <label class="rv-label">🔒 공개 범위</label>
+      <select id="rvLevel" class="rv-input"></select>
+    </div>
     <!-- 키워드 태그 -->
     <div style="margin-bottom:14px">
       <label class="rv-label">🏷️ 키워드 태그 <span class="rv-hint">(쉼표로 구분)</span></label>
@@ -1187,6 +1197,10 @@ select.login-input{appearance:auto}
         <option>기획팀</option><option>사업팀</option><option>가맹마케팅지원팀</option>
         <option>에듀테크팀</option><option>운영지원팀</option><option>재무팀</option>
       </select>
+    </div>
+    <div>
+      <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">🔒 공개 범위</label>
+      <select id="editLevel" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font)"></select>
     </div>
     <div>
       <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">회의 제목</label>
@@ -1287,7 +1301,8 @@ function showLoginScreen() {
 
 async function enterApp(me) {
   ME = me.user;
-  document.getElementById('sbMe').innerHTML = `<b>${esc(ME.name)}</b>${ME.position ? ' ' + esc(ME.position) : ''}<br>${esc(ME.dept)} · ${esc(ME.empNo)}${ME.role === 'admin' ? '<span class="um-role">관리자</span>' : ''}`;
+  document.getElementById('sbMe').innerHTML = `<b>${esc(ME.name)}</b>${ME.position ? ' ' + esc(ME.position) : ''}<br>${esc(ME.dept)} · ${esc(ME.empNo)}${ME.role === 'admin' ? '<span class="um-role">관리자</span>' : ''}<br><span class="lv-badge lv-${ME.grade}">🔒 열람 등급 ${ME.grade}</span>`;
+  renderUploadLevelChips();
   document.getElementById('nav-admin').style.display = ME.role === 'admin' ? '' : 'none';
   setAdminBadge(me.pendingCount || 0);
   document.getElementById('loginScreen').classList.remove('show');
@@ -1317,6 +1332,7 @@ async function doLogin() {
     const data = await res.json();
     if (!data.ok) return loginMsg('err', data.error || '로그인에 실패했습니다.');
     document.getElementById('loginPw').value = '';
+    try { sessionStorage.setItem('ma_alive', '1'); } catch {}
     const me = await (await fetch('/api/me')).json();
     await enterApp(me);
   } catch { loginMsg('err', '네트워크 오류가 발생했습니다.'); }
@@ -1324,8 +1340,8 @@ async function doLogin() {
 
 async function doSignup() {
   const v = id => document.getElementById(id).value.trim();
-  const body = { empNo: v('suEmpNo'), name: v('suName'), dept: v('suDept'), position: v('suPosition'), password: document.getElementById('suPw').value, adminCode: document.getElementById('suAdminCode').value };
-  if (!body.empNo || !body.name || !body.dept) return loginMsg('err', '사번, 이름, 소속을 입력해 주세요.');
+  const body = { empNo: v('suEmpNo'), name: v('suName'), password: document.getElementById('suPw').value, adminCode: document.getElementById('suAdminCode').value };
+  if (!body.empNo || !body.name) return loginMsg('err', '사번과 이름을 입력해 주세요.');
   if (body.password !== document.getElementById('suPw2').value) return loginMsg('err', '비밀번호 확인이 일치하지 않습니다.');
   loginMsg();
   try {
@@ -1338,13 +1354,15 @@ async function doSignup() {
     ['suPw', 'suPw2', 'suAdminCode'].forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('loginEmpNo').value = body.empNo.toUpperCase();
     switchLoginTab('login');
-    loginMsg('ok', data.status === 'approved'
+    const who = data.position ? `${data.name} ${data.position}(${data.dept}) · 열람 등급 ${data.grade || '-'}${data.gradeLabel ? ' (' + data.gradeLabel + ')' : ''}\n` : '';
+    loginMsg('ok', who + (data.status === 'approved'
       ? '비밀번호가 설정됐어요. 바로 로그인하세요.'
-      : '가입 신청이 접수됐어요. 관리자 승인 후 로그인할 수 있어요.');
+      : '가입 신청이 접수됐어요. 관리자 승인 후 로그인할 수 있어요.'));
   } catch { loginMsg('err', '네트워크 오류가 발생했습니다.'); }
 }
 
 async function doLogout() {
+  try { sessionStorage.removeItem('ma_alive'); } catch {}
   await fetch('/api/logout', { method: 'POST' });
   showLoginScreen();
 }
@@ -1487,6 +1505,14 @@ async function loadAdminUsers() {
     if (!data.ok) { box.innerHTML = `<div class="um-empty">${esc(data.error || '불러오기 실패')}</div>`; return; }
     const users = data.users;
     setAdminBadge(users.filter(u => u.status === 'pending').length);
+    const ro = data.roster || { total: 0, counts: {} };
+    const rosterBox = `<div class="um-section"><h3>📇 사내 명부</h3>
+      <div class="um-roster">
+        <div>${ro.total ? `등록된 명부 <b>${ro.total}명</b> · 가입 가능 S <b>${ro.counts.S || 0}</b> · A <b>${ro.counts.A || 0}</b> · B <b>${ro.counts.B || 0}</b>${ro.updatedAt ? `<div class="um-roster-sub">마지막 업로드 ${ro.updatedAt.slice(0, 16).replace('T', ' ')}</div>` : ''}`
+          : '<b style="color:var(--red)">명부가 아직 없어요.</b> 명부를 올려야 직원들이 가입할 수 있어요.'}
+          <div class="um-roster-sub">엑셀(사번·이름·직급(직책)·팀 열)을 올리면 직책으로 등급이 자동 지정돼요. S: 대표·원장·이사 / A: 실장 / B: 팀장·센터장·부원장·부실장</div></div>
+        <label class="btn btn-primary btn-sm" style="cursor:pointer;white-space:nowrap">📤 명부 엑셀 올리기<input type="file" accept=".xlsx,.xls" style="display:none" onchange="uploadRoster(this.files[0]);this.value=''"></label>
+      </div></div>`;
     const fmt = s => s ? s.slice(0, 16).replace('T', ' ') : '—';
     const btn = (u, action, label, cls = 'btn-ghost') => `<button class="btn ${cls} btn-sm" onclick="adminUserAction('${u.empNo}','${action}')">${label}</button>`;
     const section = (title, list, actions, cols) => `
@@ -1495,17 +1521,19 @@ async function loadAdminUsers() {
         <tr><th>사번</th><th>이름</th><th>소속 · 직책</th><th>${cols}</th><th></th></tr>
         ${list.map(u => `<tr>
           <td>${esc(u.empNo)}</td>
-          <td>${esc(u.name)}${u.role === 'admin' ? '<span class="um-role">관리자</span>' : ''}${ME && u.empNo === ME.empNo ? ' <span style="color:var(--text2);font-size:12px">(나)</span>' : ''}</td>
+          <td>${esc(u.name)} ${u.grade ? `<span class="lv-badge lv-${u.grade}" style="margin-top:0">${u.grade}${u.gradeOverride ? '*' : ''}</span>` : '<span class="lv-badge" style="margin-top:0;background:var(--bg3);color:var(--text2)">등급 없음</span>'}${u.role === 'admin' ? '<span class="um-role">관리자</span>' : ''}${ME && u.empNo === ME.empNo ? ' <span style="color:var(--text2);font-size:12px">(나)</span>' : ''}</td>
           <td>${esc(u.dept)}${u.position ? ' · ' + esc(u.position) : ''}</td>
           <td style="font-size:13px;color:var(--text2)">${cols === '신청일' ? fmt(u.createdAt) : cols === '최근 로그인' ? fmt(u.lastLoginAt) : UM_STATUS[u.status]}</td>
           <td><div class="um-actions">${actions(u)}</div></td>
         </tr>`).join('')}
       </table></div>` : `<div class="um-table-wrap"><div class="um-empty">없음</div></div>`}</div>`;
     const isMe = u => ME && u.empNo === ME.empNo;
-    box.innerHTML =
+    const gradeSel = u => isMe(u) || u.role === 'admin' ? '' : `<select class="filter-select" style="padding:5px 8px;font-size:12.5px" title="등급 직접 지정 (*표시)" onchange="adminUserAction('${u.empNo}','setGrade',this.value)">
+        <option value="">등급: 명부 기준</option>${['S', 'A', 'B'].map(g => `<option value="${g}"${u.gradeOverride === g ? ' selected' : ''}>등급 ${g}로 지정</option>`).join('')}</select>`;
+    box.innerHTML = rosterBox +
       section('⏳ 승인 대기', users.filter(u => u.status === 'pending'), u => btn(u, 'approve', '✅ 승인', 'btn-primary') + btn(u, 'reject', '반려'), '신청일') +
       section('✅ 승인된 회원', users.filter(u => u.status === 'approved'), u => isMe(u) ? '' :
-        (u.role === 'admin' ? btn(u, 'revokeAdmin', '관리자 해제') : btn(u, 'makeAdmin', '관리자 지정')) + btn(u, 'reset', '비밀번호 초기화') + btn(u, 'delete', '삭제'), '최근 로그인') +
+        gradeSel(u) + (u.role === 'admin' ? btn(u, 'revokeAdmin', '관리자 해제') : btn(u, 'makeAdmin', '관리자 지정')) + btn(u, 'reset', '비밀번호 초기화') + btn(u, 'delete', '삭제'), '최근 로그인') +
       section('기타 (반려·재설정 대기)', users.filter(u => u.status === 'rejected' || u.status === 'reset'), u =>
         (u.status === 'rejected' ? btn(u, 'approve', '승인') : '') + btn(u, 'delete', '삭제'), '상태');
   } catch { box.innerHTML = '<div class="um-empty">불러오기 실패</div>'; }
@@ -1519,10 +1547,35 @@ const UM_CONFIRM = {
   revokeAdmin: '관리자 권한을 해제할까요?'
 };
 
-async function adminUserAction(empNo, action) {
+// 사내 명부 엑셀 → 서버 (엑셀은 브라우저에서 읽고 필요한 열만 전송)
+function loadXlsxLib() {
+  if (window.XLSX) return Promise.resolve();
+  return new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'; s.onload = ok; s.onerror = () => no(new Error('엑셀 도구를 불러오지 못했어요')); document.head.appendChild(s); });
+}
+async function uploadRoster(file) {
+  if (!file) return;
+  try {
+    showToast('📇 명부를 읽는 중...');
+    await loadXlsxLib();
+    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+    const grid = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '' });
+    const hi = grid.findIndex(r => r.some(c => String(c).includes('사번')) && r.some(c => String(c).includes('이름')));
+    if (hi < 0) throw new Error('사번·이름 머리글을 찾지 못했어요');
+    const H = grid[hi].map(c => String(c));
+    const col = k => H.findIndex(h => k.some(x => h.includes(x)));
+    const ci = { empNo: col(['사번']), name: col(['이름', '성명']), position: col(['직책', '직급']), dept: col(['팀', '소속', '부서']) };
+    const rows = grid.slice(hi + 1).map(r => ({ empNo: r[ci.empNo], name: r[ci.name], position: ci.position >= 0 ? r[ci.position] : '', dept: ci.dept >= 0 ? r[ci.dept] : '' })).filter(r => r.empNo && r.name);
+    const data = await (await fetch('/api/admin/roster', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows }) })).json();
+    if (!data.ok) throw new Error(data.error || '업로드 실패');
+    showToast(`✅ 명부 ${data.total}명 등록 (S ${data.counts.S} · A ${data.counts.A} · B ${data.counts.B} · 대상 아님 ${data.counts.none})`);
+    loadAdminUsers();
+  } catch (e) { showToast('⚠️ ' + e.message); }
+}
+
+async function adminUserAction(empNo, action, grade) {
   if (UM_CONFIRM[action] && !confirm(UM_CONFIRM[action])) return;
   try {
-    const data = await (await fetch('/api/admin/users/' + encodeURIComponent(empNo), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }) })).json();
+    const data = await (await fetch('/api/admin/users/' + encodeURIComponent(empNo), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, grade }) })).json();
     showToast(data.ok ? '✅ 처리됐어요' : '⚠️ ' + (data.error || '실패'));
   } catch { showToast('⚠️ 네트워크 오류'); }
   loadAdminUsers();
@@ -1697,6 +1750,7 @@ function cardHtml(m) {
     <!-- 왼쪽: 배지+날짜 -->
     <div class="mc-left">
       <span class="mc-ext ${ext}">${ext.toUpperCase()}</span>
+      ${levelBadge(m)}
       <div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.6">
         <span style="opacity:.7">회의</span> ${m.meetingDate || '—'}<br>
         <span style="opacity:.7">등록</span> ${m.uploadedAt.slice(0,10)}
@@ -1780,6 +1834,8 @@ function renderDetail(m) {
     <div class="dp-section-title">📌 기본 정보</div>
     <div class="dp-row"><span class="dp-row-label">회의 일자</span><span class="dp-row-val">${esc(displayDate)}</span></div>
     <div class="dp-row"><span class="dp-row-label">주관부서</span><span class="dp-row-val">${esc(String(teamStr || '').split(',').map(s => s.trim()).filter(Boolean).join(', ') || teamStr)}</span></div>
+    <div class="dp-row"><span class="dp-row-label">공개 범위</span><span class="dp-row-val">${levelBadge(m)} <span style="font-size:13px;color:var(--text2)">${LEVEL_TEXT[levelOf(m)].slice(4)} 열람</span></span></div>
+    ${m.uploadedBy ? `<div class="dp-row"><span class="dp-row-label">등록자</span><span class="dp-row-val">${esc(m.uploadedBy.name || m.uploadedBy.empNo)}</span></div>` : ''}
     <div class="dp-row"><span class="dp-row-label">참석자</span><span class="dp-row-val">${esc(attendeeStr)}</span></div>
     <div class="dp-row"><span class="dp-row-label">파일명</span><span class="dp-row-val" style="font-size:12.5px;color:var(--text2)">${esc(m.fileName)}</span></div>
   </div>`;
@@ -1882,7 +1938,11 @@ function openEdit(id) {
   if (!m) return;
   EDIT_ID = id;
 
-  document.getElementById('editTeam').value = m.team || '';
+  const teamSel = document.getElementById('editTeam');
+  // 공동 주관(여러 부서) 값도 그대로 유지되도록 선택지에 추가
+  if (m.team && ![...teamSel.options].some(o => o.value === m.team)) teamSel.add(new Option(m.team.split(',').join(', '), m.team));
+  teamSel.value = m.team || '';
+  document.getElementById('editLevel').innerHTML = levelOptions(levelOf(m));
   document.getElementById('editTitle').value = m.meetingTitle || '';
   document.getElementById('editDate').value = m.meetingDate || '';
   document.getElementById('editAttendees').value = (m.attendees || []).join('\n');
@@ -1923,6 +1983,7 @@ async function saveEdit() {
 
   const body = {
     team:         document.getElementById('editTeam').value,
+    accessLevel:  document.getElementById('editLevel').value,
     meetingTitle: document.getElementById('editTitle').value.trim(),
     meetingDate:  document.getElementById('editDate').value.trim(),
     attendees:    toLines(document.getElementById('editAttendees').value),
@@ -2114,6 +2175,7 @@ function openReviewModal(id, meta) {
 
   document.getElementById('rvTeam').textContent = (meta.team || '').split(',').filter(Boolean).join(', ') || '—';
   document.getElementById('rvTags').value = (meta.tags || []).join(', ');
+  document.getElementById('rvLevel').innerHTML = levelOptions(levelOf(meta));
 
   // AI 요약 — 상세보기와 같은 항목을 편집 가능 textarea로
   const sec = document.getElementById('rvSummarySection');
@@ -2174,6 +2236,7 @@ async function saveReview() {
         attendees,
         team: m.team,
         tags: (document.getElementById('rvTags').value || '').split(',').map(s => s.trim()).filter(Boolean),
+        accessLevel: document.getElementById('rvLevel').value,
         ...(rm.oneLiner !== undefined ? { oneLiner: rm.oneLiner } : {}),
         summary: {
           actionItems: (document.getElementById('rvSumActions')?.value || '').split('\n').map(s=>s.trim()).filter(Boolean),
@@ -2319,6 +2382,7 @@ async function startAudioUpload(file) {
     xhr.setRequestHeader('Content-Type', mimeType);
     const team = [...document.querySelectorAll('.upload-team-cb:checked')].map(cb => cb.value).join(',');
     if (team) xhr.setRequestHeader('X-Team', encodeURIComponent(team));
+    xhr.setRequestHeader('X-Access-Level', selectedUploadLevel());
     const attendeesVal = (document.getElementById('uploadAttendees')?.value || '').trim();
     if (attendeesVal) xhr.setRequestHeader('X-Manual-Attendees', encodeURIComponent(attendeesVal));
 
@@ -2404,11 +2468,29 @@ async function startAudioUpload(file) {
 function checkTeamRequired() {
   const ok = document.querySelectorAll('.upload-team-cb:checked').length > 0;
   document.getElementById('uploadTeamError').style.display = ok ? 'none' : 'block';
-  return ok;
+  const lvOk = !!selectedUploadLevel();
+  document.getElementById('uploadLevelError').style.display = lvOk ? 'none' : 'block';
+  if (!lvOk && ok) showToast('⚠️ 공개 범위를 선택해 주세요');
+  return ok && lvOk;
 }
 document.addEventListener('change', function(e) {
   if (e.target.classList.contains('upload-team-cb')) checkTeamRequired();
+  if (e.target.name === 'uploadLevel') document.getElementById('uploadLevelError').style.display = 'none';
 });
+
+// ── 열람 등급 (공개 범위) ─────────────────────────────────────────────────
+const RANK = { S: 3, A: 2, B: 1 };
+const LEVEL_TEXT = { S: 'S · 대표·원장·관리자만', A: 'A · 실장 이상', B: 'B · 팀장급 이상' };
+const levelOf = m => (m && RANK[m.accessLevel]) ? m.accessLevel : 'S';
+// 본인 등급 이하만 선택 가능 (높게 설정하면 본인도 못 보게 되므로)
+const allowedLevels = () => ['S', 'A', 'B'].filter(l => ME && RANK[l] <= RANK[ME.grade || 'B']);
+function selectedUploadLevel() { return document.querySelector('input[name="uploadLevel"]:checked')?.value || ''; }
+function renderUploadLevelChips() {
+  document.getElementById('uploadLevelChips').innerHTML = allowedLevels().map(l =>
+    `<label class="team-chip-label level-${l}"><input type="radio" name="uploadLevel" value="${l}"><span>🔒 ${LEVEL_TEXT[l]}</span></label>`).join('');
+}
+const levelBadge = m => `<span class="lv-badge lv-${levelOf(m)}" title="열람: ${LEVEL_TEXT[levelOf(m)]}">🔒 ${levelOf(m)}</span>`;
+const levelOptions = cur => allowedLevels().map(l => `<option value="${l}"${l === cur ? ' selected' : ''}>${LEVEL_TEXT[l]}</option>`).join('');
 
 // ── 업로드 폼 — 참석자 셀렉트+칩 ─────────────────────────────────────────
 let UPLOAD_ATTENDEES = [];
@@ -2665,6 +2747,7 @@ async function startUpload(file) {
   formData.append('file', file);
   const team = [...document.querySelectorAll('.upload-team-cb:checked')].map(cb => cb.value).join(',');
   if (team) formData.append('team', team);
+  formData.append('accessLevel', selectedUploadLevel());
   const attendeesVal = (document.getElementById('uploadAttendees')?.value || '').trim();
   if (attendeesVal) formData.append('manualAttendees', attendeesVal);
 
@@ -3311,7 +3394,10 @@ function toggleRpSection(titleEl) {
 // ── 초기화 ──────────────────────────────────────────────────────────────
 (async function init() {
   applyTheme();
-  // 이미 로그인된 경우 (승인된 회원 세션)
+  // 보안: 창(탭)을 새로 열면 항상 다시 로그인. 같은 창에서 새로고침만 로그인 유지.
+  let alive = false;
+  try { alive = sessionStorage.getItem('ma_alive') === '1'; } catch {}
+  if (!alive) { try { await fetch('/api/logout', { method: 'POST' }); } catch {} return; }
   try {
     const res = await fetch('/api/me');
     if (res.ok) await enterApp(await res.json());
