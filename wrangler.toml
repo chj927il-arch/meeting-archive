@@ -2,6 +2,7 @@ name = "meeting-archive"
 main = "worker.js"
 compatibility_date = "2024-11-01"
 compatibility_flags = ["nodejs_compat"]
+account_id = "366520a4b0fdd3d18601166b6bd0e152"
 
 [assets]
 directory = "./public"
@@ -9,12 +10,8 @@ binding = "ASSETS"
 
 [[kv_namespaces]]
 binding = "MEETING_KV"
-id = "REPLACE_WITH_KV_ID"
-preview_id = "REPLACE_WITH_KV_PREVIEW_ID"
-
-[[r2_buckets]]
-binding = "MEETING_R2"
-bucket_name = "meeting-files"
+id = "f7c3cfa16b6b400b977489625811575f"
+preview_id = "f7c3cfa16b6b400b977489625811575f"
 
 # Secrets (set via: npx wrangler secret put SECRET_NAME)
 # GEMINI_API_KEY
