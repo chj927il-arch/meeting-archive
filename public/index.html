@@ -303,6 +303,7 @@ select.login-input{appearance:auto}
   background:rgba(139,148,158,.15);color:var(--text2);text-transform:uppercase;
 }
 .mc-ext.pdf{background:rgba(239,68,68,.15);color:#fb7185}
+.mc-ext.md,.mc-ext.txt,.mc-ext.markdown{background:rgba(16,185,129,.15);color:#0F9F6E}
 .mc-ext.docx,.mc-ext.doc{background:rgba(59,130,246,.15);color:var(--accent2)}
 .mc-ext.hwp,.mc-ext.hwpx{background:rgba(234,179,8,.15);color:var(--yellow)}
 
@@ -983,8 +984,8 @@ select.login-input{appearance:auto}
 
       <!-- 팀 선택 (복수 선택, 필수) -->
       <div style="margin-bottom:16px">
-        <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:8px">주관부서 <span style="color:#ef4444;font-size:13px">*</span> <span style="font-weight:400;font-size:12px">(복수 선택 가능, 최소 1개 필수)</span></label>
-        <div id="uploadTeamError" style="display:none;color:#ef4444;font-size:12px;margin-bottom:6px">⚠️ 주관부서를 1개 이상 선택해 주세요.</div>
+        <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:8px">참석부서 <span style="color:#ef4444;font-size:13px">*</span> <span style="font-weight:400;font-size:12px">(복수 선택 가능, 최소 1개 필수)</span></label>
+        <div id="uploadTeamError" style="display:none;color:#ef4444;font-size:12px;margin-bottom:6px">⚠️ 참석부서를 1개 이상 선택해 주세요.</div>
         <div id="uploadTeamChips" style="display:flex;flex-wrap:wrap;gap:6px">
           <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="기획팀"><span>기획팀</span></label>
           <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="사업팀"><span>사업팀</span></label>
@@ -1022,13 +1023,13 @@ select.login-input{appearance:auto}
 
       <!-- 문서 탭 -->
       <div id="uploadTabDoc" style="display:none">
-        <div class="page-sub" style="margin-bottom:16px">PDF, DOCX, DOC, HWP 파일을 올리면 AI가 자동으로 분석·요약합니다.<br>HWP는 AI 분석 없이 저장만 됩니다. PDF로 저장 후 올리시면 더 정확합니다.</div>
+        <div class="page-sub" style="margin-bottom:16px">PDF, DOCX, DOC, MD, TXT, HWP 파일을 올리면 AI가 자동으로 분석·요약합니다. <b>여러 파일을 한 번에</b> 고르면 파일마다 회의록 1건씩 등록돼요.<br>HWP는 AI 분석 없이 저장만 됩니다. PDF로 저장 후 올리시면 더 정확합니다.</div>
         <div class="drop-zone" id="dropZone" onclick="document.getElementById('uploadFileInput').click()" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
           <div class="drop-icon">📁</div>
           <div class="drop-title">파일을 드래그하거나 클릭해서 선택</div>
-          <div class="drop-sub">PDF, DOCX, DOC, HWP — 최대 15MB<br><span onclick="event.stopPropagation();document.getElementById('uploadFileInput').click()">파일 선택</span></div>
+          <div class="drop-sub">PDF, DOCX, DOC, MD, TXT, HWP — 파일당 최대 15MB · 여러 개 선택 가능<br><span onclick="event.stopPropagation();document.getElementById('uploadFileInput').click()">파일 선택</span></div>
         </div>
-        <input type="file" id="uploadFileInput" accept=".pdf,.docx,.doc,.hwp,.hwpx" onchange="onFileSelected(this.files[0])">
+        <input type="file" id="uploadFileInput" multiple accept=".pdf,.docx,.doc,.md,.markdown,.txt,.hwp,.hwpx" onchange="onFilesSelected(this.files)">
       </div>
 
       <!-- 음성 탭 -->
@@ -1121,9 +1122,9 @@ select.login-input{appearance:auto}
       <div id="rvChips" style="display:flex;flex-wrap:wrap;gap:6px;min-height:34px;margin-bottom:7px"></div>
       <input id="rvAttendeeInput" type="text" placeholder="이름 입력 후 Enter" style="width:100%;box-sizing:border-box;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text1);font-size:13px;font-family:inherit">
     </div>
-    <!-- 주관부서 (등록 시 선택값) -->
+    <!-- 참석부서 (등록 시 선택값) -->
     <div style="margin-bottom:14px">
-      <label class="rv-label">주관부서</label>
+      <label class="rv-label">참석부서</label>
       <div id="rvTeam" style="font-size:14px;color:var(--text)"></div>
     </div>
     <div style="margin-bottom:14px">
@@ -1474,7 +1475,7 @@ async function renderStats() {
   const mMax = Math.max(1, ...mCnt.map(r => r[1]));
   const trend = `<div class="st-cols">${mCnt.map(([mo, v]) => `<div class="st-col"><div class="st-col-val">${v}</div><div class="st-col-bar" style="height:${v / mMax * 100}%"></div><div class="st-col-label">${Number(mo.slice(5))}월</div></div>`).join('')}</div>`;
 
-  // ③ 부서별 주관 회의
+  // ③ 부서별 참석 회의
   const byTeam = stCount(list.flatMap(stTeams));
 
   // ④ 협조 부서: 공동 주관 / 다른 부서 회의에서 언급 / 후속조치 담당
@@ -1507,9 +1508,9 @@ async function renderStats() {
 
   box.innerHTML = kpis + `<div class="st-grid">
     ${stCard('📈 월별 회의 추이', '최근 6개월', trend)}
-    ${stCard('🏢 부서별 주관 회의', '여러 부서가 공동 주관하면 각 부서에 1건씩 집계', stBars(byTeam))}
-    ${stCard('🤝 협조 부서 — 공동 주관', '다른 부서와 함께 회의를 주관한 횟수', stBars(coHost, { empty: '공동 주관 회의가 없어요' }) + (pairs.length ? `<div class="st-sub-title">자주 함께하는 조합</div>` + stBars(stCount(pairs), { top: 5, color: '#8B95A1', wideLabel: true }) : ''))}
-    ${stCard('📣 협조 부서 — 회의에서 언급', '자기 부서가 주관하지 않은 회의에서 이름이 언급된 회의 수', stBars(mentioned, { empty: '다른 부서 언급이 없어요' }))}
+    ${stCard('🏢 부서별 참석 회의', '여러 부서가 함께 참석하면 각 부서에 1건씩 집계', stBars(byTeam))}
+    ${stCard('🤝 협조 부서 — 함께 참석', '다른 부서와 함께 회의에 참석한 횟수', stBars(coHost, { empty: '여러 부서가 함께한 회의가 없어요' }) + (pairs.length ? `<div class="st-sub-title">자주 함께하는 조합</div>` + stBars(stCount(pairs), { top: 5, color: '#8B95A1', wideLabel: true }) : ''))}
+    ${stCard('📣 협조 부서 — 회의에서 언급', '자기 부서가 참석하지 않은 회의에서 이름이 언급된 회의 수', stBars(mentioned, { empty: '다른 부서 언급이 없어요' }))}
     ${stCard('🔑 주요 키워드 TOP 15', '회의록 키워드 태그 빈도', stBars(kw, { top: 15, rank: true }))}
     ${stCard('🔥 최근 30일 떠오르는 키워드', '30일 이전보다 더 자주 나온 키워드 · 🆕 새로 등장', stBars(rising, { top: 10, color: '#F04452', empty: hasOlder ? '최근 30일 새로 늘어난 키워드가 없어요' : '30일보다 오래된 회의록이 쌓이면 비교해서 보여드려요' }))}
     ${stCard('📋 후속조치 담당', '후속조치 담당으로 지정된 부서 / 사람', (ownerDept.length ? `<div class="st-sub-title">부서</div>` + stBars(ownerDept, { top: 6 }) : '') + `<div class="st-sub-title">사람</div>` + stBars(ownerPerson, { top: 8, empty: '담당자가 지정된 후속조치가 없어요' }))}
@@ -1779,7 +1780,7 @@ function cardHtml(m) {
         <span style="opacity:.7">회의</span> ${m.meetingDate || '—'}<br>
         <span style="opacity:.7">등록</span> ${m.uploadedAt.slice(0,10)}
       </div>
-      ${m.team ? `<div class="mc-team"><span style="opacity:.7">주관</span>${m.team.split(',').map(t => t.trim()).filter(Boolean).map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
+      ${m.team ? `<div class="mc-team"><span style="opacity:.7">참석</span>${m.team.split(',').map(t => t.trim()).filter(Boolean).map(t => `<span>${esc(t)}</span>`).join('')}</div>` : ''}
     </div>
     <!-- 가운데: 제목+참석자+bullets -->
     <div class="mc-center">
@@ -1857,7 +1858,7 @@ function renderDetail(m) {
   bodyHtml += `<div class="dp-section">
     <div class="dp-section-title">📌 기본 정보</div>
     <div class="dp-row"><span class="dp-row-label">회의 일자</span><span class="dp-row-val">${esc(displayDate)}</span></div>
-    <div class="dp-row"><span class="dp-row-label">주관부서</span><span class="dp-row-val">${esc(String(teamStr || '').split(',').map(s => s.trim()).filter(Boolean).join(', ') || teamStr)}</span></div>
+    <div class="dp-row"><span class="dp-row-label">참석부서</span><span class="dp-row-val">${esc(String(teamStr || '').split(',').map(s => s.trim()).filter(Boolean).join(', ') || teamStr)}</span></div>
     <div class="dp-row"><span class="dp-row-label">공개 범위</span><span class="dp-row-val">${levelBadge(m)} <span style="font-size:13px;color:var(--text2)">${LEVEL_TEXT[levelOf(m)].slice(4)} 열람</span></span></div>
     ${m.uploadedBy ? `<div class="dp-row"><span class="dp-row-label">등록자</span><span class="dp-row-val">${esc(m.uploadedBy.name || m.uploadedBy.empNo)}</span></div>` : ''}
     <div class="dp-row"><span class="dp-row-label">참석자</span><span class="dp-row-val">${esc(attendeeStr)}</span></div>
@@ -2308,6 +2309,7 @@ async function saveReview() {
 function closeReviewModal() {
   document.getElementById('reviewBackdrop').style.display = 'none';
   REVIEW_ID = null;
+  if (DOC_REVIEW_QUEUE.length) setTimeout(nextDocReview, 400);
 }
 
 function closeReanalyzeModal() {
@@ -2401,7 +2403,7 @@ function onDropAudio(e) {
 
 function onAudioFileSelected(file) {
   if (!file) return;
-  if (!checkTeamRequired()) { showToast('⚠️ 주관부서를 1개 이상 선택해 주세요'); return; }
+  if (!checkTeamRequired()) { showToast('⚠️ 참석부서를 1개 이상 선택해 주세요'); return; }
   const ext = file.name.split('.').pop().toLowerCase();
   const allowed = ['mp3','m4a','wav','ogg','webm','aac','flac'];
   if (!allowed.includes(ext)) { showToast('⚠️ MP3, M4A, WAV, OGG 등 음성 파일만 가능합니다'); return; }
@@ -2776,21 +2778,42 @@ function onDragLeave(e) { document.getElementById('dropZone').classList.remove('
 function onDrop(e) {
   e.preventDefault();
   document.getElementById('dropZone').classList.remove('dragover');
-  const file = e.dataTransfer.files[0];
-  if (file) onFileSelected(file);
+  onFilesSelected(e.dataTransfer.files);
 }
 
-function onFileSelected(file) {
-  if (!file) return;
-  if (!checkTeamRequired()) { showToast('⚠️ 주관부서를 1개 이상 선택해 주세요'); return; }
-  const ext = file.name.split('.').pop().toLowerCase();
-  const allowed = ['pdf','docx','doc','hwp','hwpx'];
-  if (!allowed.includes(ext)) { showToast('⚠️ PDF, DOCX, DOC, HWP 파일만 가능합니다'); return; }
-  if (file.size > 15*1024*1024) { showToast('⚠️ 문서 파일은 15MB 이하만 가능합니다'); return; }
-  startUpload(file);
+const DOC_EXTS = ['pdf','docx','doc','md','markdown','txt','hwp','hwpx'];
+let DOC_REVIEW_QUEUE = [];
+function onFileSelected(file) { if (file) onFilesSelected([file]); }
+async function onFilesSelected(list) {
+  const files = [...(list || [])];
+  if (!files.length) return;
+  if (!checkTeamRequired()) { showToast('⚠️ 참석부서를 1개 이상 선택해 주세요'); return; }
+  const bad = files.filter(f => !DOC_EXTS.includes(f.name.split('.').pop().toLowerCase()));
+  const big = files.filter(f => f.size > 15*1024*1024);
+  if (bad.length) { showToast('⚠️ PDF, DOCX, DOC, MD, TXT, HWP 파일만 가능합니다: ' + bad.map(f => f.name).join(', ')); return; }
+  if (big.length) { showToast('⚠️ 15MB를 넘는 파일이 있어요: ' + big.map(f => f.name).join(', ')); return; }
+  document.getElementById('uploadFileInput').value = '';
+  const done = [], fails = [];
+  for (let i = 0; i < files.length; i++) {
+    const r = await startUpload(files[i], files.length > 1 ? `(${i + 1}/${files.length}) ` : '');
+    if (r) done.push(r); else fails.push(files[i].name);
+  }
+  if (files.length > 1) {
+    const result = document.getElementById('uploadResult');
+    result.style.display = 'block';
+    result.innerHTML = (fails.length ? `<div class="upload-err">❌ 실패 ${fails.length}건: ${esc(fails.join(', '))}</div>` : '')
+      + `<div class="upload-ok"><div style="font-size:15px;font-weight:700;margin-bottom:4px">✅ ${done.length}개 파일 등록 완료</div><div style="font-size:13px;color:var(--text2)">${esc(done.map(d => d.name).join(', '))}<br>파일마다 차례로 검수 화면이 열려요.</div></div>`;
+  }
+  await loadMeetings();
+  DOC_REVIEW_QUEUE = done;
+  nextDocReview();
+}
+function nextDocReview() {
+  const n = DOC_REVIEW_QUEUE.shift();
+  if (n) openWordCheckModal(n.id, n.meta);
 }
 
-async function startUpload(file) {
+async function startUpload(file, step = '') {
   const progWrap = document.getElementById('uploadProgress');
   const progBar  = document.getElementById('progressBar');
   const progLabel= document.getElementById('progressLabel');
@@ -2799,7 +2822,7 @@ async function startUpload(file) {
   progWrap.style.display = 'block';
   result.style.display   = 'none';
   progBar.style.width    = '15%';
-  progLabel.textContent  = `📤 "${file.name}" 업로드 중...`;
+  progLabel.textContent  = `📤 ${step}"${file.name}" 업로드 중...`;
 
   const formData = new FormData();
   formData.append('file', file);
@@ -2811,7 +2834,7 @@ async function startUpload(file) {
 
   try {
     progBar.style.width = '40%';
-    progLabel.textContent = '🤖 AI 분석 중... (최대 30초)';
+    progLabel.textContent = `🤖 ${step}"${file.name}" AI 분석 중... (최대 30초)`;
 
     const res = await fetch('/api/upload', { method: 'POST', body: formData });
     const data = await res.json();
@@ -2821,8 +2844,8 @@ async function startUpload(file) {
     if (!data.ok) {
       progWrap.style.display = 'none';
       result.style.display = 'block';
-      result.innerHTML = `<div class="upload-err">❌ 업로드 실패: ${esc(data.error)}</div>`;
-      return;
+      result.innerHTML = `<div class="upload-err">❌ "${esc(file.name)}" 업로드 실패: ${esc(data.error)}</div>`;
+      return null;
     }
 
     const m = data.meta;
@@ -2850,13 +2873,12 @@ async function startUpload(file) {
     progWrap.style.display = 'none';
     result.style.display   = 'block';
     result.innerHTML = `${warnHtml}<div class="upload-ok"><div style="font-size:15px;font-weight:700;margin-bottom:4px">✅ "${esc(file.name)}" 등록 완료</div><div style="font-size:13px;color:var(--text2)">내용을 확인하고 수정할 수 있습니다.</div></div>`;
-    document.getElementById('uploadFileInput').value = '';
-    await loadMeetings();
-    openWordCheckModal(data.id, m);
+    return { id: data.id, meta: m, name: file.name };
   } catch (e) {
     progWrap.style.display = 'none';
     result.style.display = 'block';
-    result.innerHTML = `<div class="upload-err">❌ 오류: ${esc(e.message)}</div>`;
+    result.innerHTML = `<div class="upload-err">❌ "${esc(file.name)}" 오류: ${esc(e.message)}</div>`;
+    return null;
   }
 }
 
@@ -3001,7 +3023,7 @@ function calDayClick(e, dateStr) {
   if (meetings.length) {
     inner += `<div style="font-size:11px;font-weight:700;color:var(--text2);margin:6px 0 2px">회의록 (${meetings.length}건)</div>` +
       meetings.map(m => `<div class="cal-popup-item" onclick="calClosePopup();openDetail('${m.id}')">
-        <div class="cal-popup-date">${m.team ? '주관 ' + esc(m.team) + ' | ' : ''}${(m.attendees||[]).slice(0,2).join(', ')}</div>
+        <div class="cal-popup-date">${m.team ? '참석 ' + esc(m.team) + ' | ' : ''}${(m.attendees||[]).slice(0,2).join(', ')}</div>
         ${esc(m.meetingTitle)}
       </div>`).join('');
   }
@@ -3754,7 +3776,7 @@ function toggleRpSection(titleEl) {
         <button class="btn btn-ghost btn-sm" id="chNew" style="flex:none;background:var(--bg2);border:1px solid var(--border)">＋ 새 대화</button>
       </div>
       <div class="ch-scope">
-        <select id="chTeam" title="주관부서"><option value="">전체 부서</option>${teams.map(t => `<option>${E(t)}</option>`).join('')}</select>
+        <select id="chTeam" title="참석부서"><option value="">전체 부서</option>${teams.map(t => `<option>${E(t)}</option>`).join('')}</select>
         <select id="chPeriod" title="기간"><option value="">전체 기간</option><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="90">최근 3개월</option><option value="year">올해</option></select>
       </div>
       <div class="ch-thread" id="chThread"></div>
@@ -3825,7 +3847,7 @@ function toggleRpSection(titleEl) {
     const A = v => (Array.isArray(v) ? v : v ? [v] : []);
     L.push(`[회의록] ${m.meetingTitle}${m.meetingDate ? ` (${shortDate(m.meetingDate)})` : ''}`);
     const team = Array.isArray(m.team) ? m.team.join(', ') : (m.team || '');
-    if (team) L.push(`주관부서: ${team}`);
+    if (team) L.push(`참석부서: ${team}`);
     if (m.attendees && m.attendees.length) L.push(`참석자: ${m.attendees.join(', ')}`);
     const sec = (t, items) => { if (items.length) L.push('', `■ ${t}`, ...items.map(x => `- ${x}`)); };
     sec('회의 결과', A(s.result));

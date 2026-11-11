@@ -356,6 +356,12 @@ async function saveIndex(env, list) {
 }
 
 // ── DOCX 텍스트 추출 ──────────────────────────────────────────────────
+const TEXT_EXTS = ['md', 'markdown', 'txt'];
+// UTF-8 우선, 깨지면 한국어 윈도우 메모장(EUC-KR/CP949)으로 다시 읽기
+function decodeText(arrayBuffer) {
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(arrayBuffer).replace(/^\uFEFF/, ''); }
+  catch { try { return new TextDecoder('euc-kr').decode(arrayBuffer); } catch { return new TextDecoder().decode(arrayBuffer); } }
+}
 async function extractDocxText(arrayBuffer) {
   try {
     const uint8 = new Uint8Array(arrayBuffer);
@@ -774,14 +780,15 @@ async function handleUpload(request, env) {
   if (fileSize > 15 * 1024 * 1024)
     return json({ ok: false, error: '파일 크기는 15MB 이하만 가능합니다.' }, 400);
 
-  const supportedExts = ['pdf', 'docx', 'doc', 'hwp', 'hwpx'];
+  const supportedExts = ['pdf', 'docx', 'doc', 'md', 'markdown', 'txt', 'hwp', 'hwpx'];
   if (!supportedExts.includes(ext))
-    return json({ ok: false, error: 'PDF, DOCX, DOC, HWP 파일만 업로드 가능합니다.' }, 400);
+    return json({ ok: false, error: 'PDF, DOCX, DOC, MD, TXT, HWP 파일만 업로드 가능합니다.' }, 400);
 
   const mimeMap = {
     pdf: 'application/pdf',
     docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    doc: 'application/msword', hwp: 'application/x-hwp', hwpx: 'application/x-hwpx'
+    doc: 'application/msword', hwp: 'application/x-hwp', hwpx: 'application/x-hwpx',
+    md: 'text/markdown; charset=utf-8', markdown: 'text/markdown; charset=utf-8', txt: 'text/plain; charset=utf-8'
   };
   const mimeType    = mimeMap[ext] || 'application/octet-stream';
   const id          = crypto.randomUUID();
@@ -800,6 +807,12 @@ async function handleUpload(request, env) {
   if (ext === 'pdf') {
     analysis = await analyzeWithGemini(env, arrayBuffer, 'application/pdf', fileName, null, manualAttendees);
     if (!analysis) analysisStatus = 'failed';
+  } else if (TEXT_EXTS.includes(ext)) {
+    const textContent = decodeText(arrayBuffer);
+    if (textContent.trim().length > 50) {
+      analysis = await analyzeWithGemini(env, null, null, fileName, textContent, manualAttendees);
+      if (!analysis) analysisStatus = 'failed';
+    } else { analysisStatus = 'text_extract_failed'; }
   } else if (ext === 'docx') {
     const textContent = await extractDocxText(arrayBuffer);
     if (textContent && textContent.length > 50) {
@@ -1237,6 +1250,12 @@ async function handleReanalyze(request, env, id) {
   if (ext === 'pdf') {
     analysis = await analyzeWithGemini(env, arrayBuffer, 'application/pdf', meta.fileName, null, manualAttendees);
     analysisStatus = analysis ? 'ok' : 'failed';
+  } else if (TEXT_EXTS.includes(ext)) {
+    const textContent = decodeText(arrayBuffer);
+    if (textContent.trim().length > 50) {
+      analysis = await analyzeWithGemini(env, null, null, meta.fileName, textContent, manualAttendees);
+      analysisStatus = analysis ? 'ok' : 'failed';
+    }
   } else if (ext === 'docx') {
     const textContent = await extractDocxText(arrayBuffer);
     if (textContent && textContent.length > 50) {

@@ -117,7 +117,7 @@ export function meetingToText(m, states = {}) {
   const L = [];
   L.push(`제목: ${m.meetingTitle || '(제목 없음)'}`);
   L.push(`회의 일자: ${meetingDate(m) || '미상'}`);
-  if (teamStr(m)) L.push(`주관부서: ${teamStr(m)}`);
+  if (teamStr(m)) L.push(`참석부서: ${teamStr(m)}`);
   if (arr(m.attendees).length) L.push(`참석자: ${arr(m.attendees).join(', ')}`);
   if (arr(m.tags).length) L.push(`태그: ${arr(m.tags).join(', ')}`);
   if (m.oneLiner) L.push(`한 줄 요약: ${m.oneLiner}`);
