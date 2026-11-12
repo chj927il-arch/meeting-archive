@@ -1542,6 +1542,7 @@ async function loadAdminUsers() {
         <div>${ro.total ? `등록된 명부 <b>${ro.total}명</b> · 가입 가능 S <b>${ro.counts.S || 0}</b> · A <b>${ro.counts.A || 0}</b> · B <b>${ro.counts.B || 0}</b>${ro.updatedAt ? `<div class="um-roster-sub">마지막 업로드 ${ro.updatedAt.slice(0, 16).replace('T', ' ')}</div>` : ''}`
           : '<b style="color:var(--red)">명부가 아직 없어요.</b> 명부를 올려야 직원들이 가입할 수 있어요.'}
           <div class="um-roster-sub">엑셀(사번·이름·직급(직책)·팀 열)을 올리면 직책으로 등급이 자동 지정돼요. S: 대표·원장·이사 / A: 실장 / B: 팀장·센터장·부원장·부실장</div></div>
+        ${ro.total ? `<button class="btn btn-ghost btn-sm" style="white-space:nowrap" onclick="downloadRoster()">📥 현재 명부 내려받기</button>` : ''}
         <label class="btn btn-primary btn-sm" style="cursor:pointer;white-space:nowrap">📤 명부 엑셀 올리기<input type="file" accept=".xlsx,.xls" style="display:none" onchange="uploadRoster(this.files[0]);this.value=''"></label>
       </div></div>`;
     const fmt = s => s ? s.slice(0, 16).replace('T', ' ') : '—';
@@ -1600,6 +1601,19 @@ async function uploadRoster(file) {
     if (!data.ok) throw new Error(data.error || '업로드 실패');
     showToast(`✅ 명부 ${data.total}명 등록 (S ${data.counts.S} · A ${data.counts.A} · B ${data.counts.B} · 대상 아님 ${data.counts.none})`);
     loadAdminUsers();
+  } catch (e) { showToast('⚠️ ' + e.message); }
+}
+
+// 현재 등록된 명부 → 엑셀 (같은 양식으로 고쳐서 다시 올릴 수 있음)
+async function downloadRoster() {
+  try {
+    showToast('📇 명부를 준비하는 중...');
+    const [d] = await Promise.all([fetch('/api/admin/roster').then(r => r.json()), loadXlsxLib()]);
+    if (!d.ok) throw new Error(d.error || '불러오기 실패');
+    const aoa = [['사번', '이름', '직급(직책)', '팀', '열람등급(자동)'], ...d.rows.map(r => [r.empNo, r.name, r.position || '', r.dept || '', r.grade || '-'])];
+    const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = [{ wch: 16 }, { wch: 10 }, { wch: 14 }, { wch: 20 }, { wch: 14 }];
+    const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '사내명부');
+    XLSX.writeFile(wb, `사내명부_${(d.updatedAt || new Date().toISOString()).slice(0, 10)}.xlsx`);
   } catch (e) { showToast('⚠️ ' + e.message); }
 }
 

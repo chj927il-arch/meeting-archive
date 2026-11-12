@@ -1430,6 +1430,11 @@ export default {
         if (user.role !== 'admin') return json({ ok: false, error: '관리자만 사용할 수 있습니다.' }, 403);
         if (pathname === '/api/admin/users' && method === 'GET') return handleAdminUsers(env);
         if (pathname === '/api/admin/roster' && method === 'POST') return handleAdminRoster(request, env);
+        if (pathname === '/api/admin/roster' && method === 'GET') {
+          const r = JSON.parse((await env.MEETING_KV.get('roster')) || '{}');
+          const rows = Object.entries(r).filter(([k]) => !k.startsWith('__')).map(([empNo, v]) => ({ empNo, name: v[0], dept: v[1], position: v[2], grade: v[3] }));
+          return json({ ok: true, rows, updatedAt: r.__updatedAt || null });
+        }
         if (pathname === '/api/admin/org' && method === 'POST') return handleAdminOrg(request, env);
         const um = pathname.match(/^\/api\/admin\/users\/([A-Za-z0-9]+)$/);
         if (um && method === 'POST') return handleAdminUserAction(request, env, user, um[1]);
