@@ -240,6 +240,11 @@ select.login-input{appearance:auto}
   background:rgba(59,130,246,.07);border:1.5px solid rgba(59,130,246,.25);
   border-radius:12px;padding:5px 10px 5px 8px;
 }
+.org-unit{border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:var(--bg2,transparent);display:flex;flex-direction:column;gap:8px}
+.org-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.org-team{padding-left:22px}
+.org-lbl{font-size:12.5px;font-weight:700;color:var(--text2);min-width:58px}
+.org-inp{flex:1;min-width:140px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13.5px;font-family:var(--font)}
 .dept-label{
   font-size:12px;font-weight:800;color:var(--accent2);
   white-space:nowrap;padding-right:8px;border-right:1.5px solid rgba(59,130,246,.3);
@@ -835,7 +840,7 @@ select.login-input{appearance:auto}
         <span class="nav-icon">📊</span> 통계
       </button>
       <button class="nav-btn" onclick="showView('admin')" id="nav-admin" style="display:none">
-        <span class="nav-icon">👥</span> 회원 관리 <span class="nav-badge" id="adminBadge" style="display:none"></span>
+        <span class="nav-icon">👥</span> 회원·조직 관리 <span class="nav-badge" id="adminBadge" style="display:none"></span>
       </button>
     </div>
     <div class="sb-bottom">
@@ -885,21 +890,7 @@ select.login-input{appearance:auto}
             <div class="filter-section-label">👥 팀별 필터</div>
             <div class="filter-chip-row">
               <button class="chip-btn active" id="teamChip-all" onclick="selectTeam('')">전체</button>
-              <span class="dept-group">
-                <span class="dept-label">사업기획실</span>
-                <button class="chip-btn" id="teamChip-기획팀" onclick="selectTeam('기획팀')">기획팀</button>
-                <button class="chip-btn" id="teamChip-에듀테크팀" onclick="selectTeam('에듀테크팀')">에듀테크팀</button>
-              </span>
-              <span class="dept-group">
-                <span class="dept-label">가맹사업성장실</span>
-                <button class="chip-btn" id="teamChip-사업팀" onclick="selectTeam('사업팀')">사업팀</button>
-                <button class="chip-btn" id="teamChip-가맹마케팅지원팀" onclick="selectTeam('가맹마케팅지원팀')">가맹마케팅지원팀</button>
-              </span>
-              <span class="dept-group">
-                <span class="dept-label">경영관리실</span>
-                <button class="chip-btn" id="teamChip-운영지원팀" onclick="selectTeam('운영지원팀')">운영지원팀</button>
-                <button class="chip-btn" id="teamChip-재무팀" onclick="selectTeam('재무팀')">재무팀</button>
-              </span>
+              <span id="teamFilterGroups" style="display:contents"></span>
             </div>
           </div>
 
@@ -985,9 +976,14 @@ select.login-input{appearance:auto}
     </div>
 
     <div class="view" id="view-admin">
-      <div class="page-title">👥 회원 관리</div>
-      <div class="page-sub">가입 신청을 승인해야 회의록 대시보드에 접속할 수 있어요.</div>
+      <div class="page-title">👥 회원·조직 관리</div>
+      <div class="page-sub">가입 신청 승인, 사내 명부, 실·팀 구조를 관리해요. (관리자 전용)</div>
+      <div style="display:flex;gap:8px;margin-bottom:18px">
+        <button class="upload-tab active" id="admTabUsers" onclick="switchAdminTab('users')">👤 회원·명부</button>
+        <button class="upload-tab" id="admTabOrg" onclick="switchAdminTab('org')">🏢 조직 관리</button>
+      </div>
       <div id="adminUsers"><div class="um-empty">불러오는 중...</div></div>
+      <div id="adminOrg" style="display:none"></div>
     </div>
 
     <div class="view" id="view-upload">
@@ -1004,12 +1000,6 @@ select.login-input{appearance:auto}
         <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:8px">참석부서 <span style="color:#ef4444;font-size:13px">*</span> <span style="font-weight:400;font-size:12px">(복수 선택 가능, 최소 1개 필수)</span></label>
         <div id="uploadTeamError" style="display:none;color:#ef4444;font-size:12px;margin-bottom:6px">⚠️ 참석부서를 1개 이상 선택해 주세요.</div>
         <div id="uploadTeamChips" style="display:flex;flex-wrap:wrap;gap:6px">
-          <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="기획팀"><span>기획팀</span></label>
-          <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="사업팀"><span>사업팀</span></label>
-          <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="가맹마케팅지원팀"><span>가맹마케팅지원팀</span></label>
-          <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="에듀테크팀"><span>에듀테크팀</span></label>
-          <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="운영지원팀"><span>운영지원팀</span></label>
-          <label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="재무팀"><span>재무팀</span></label>
         </div>
       </div>
 
@@ -1232,8 +1222,6 @@ select.login-input{appearance:auto}
       <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:5px">팀</label>
       <select id="editTeam" style="width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font)">
         <option value="">팀 미지정</option>
-        <option>기획팀</option><option>사업팀</option><option>가맹마케팅지원팀</option>
-        <option>에듀테크팀</option><option>운영지원팀</option><option>재무팀</option>
       </select>
     </div>
     <div>
@@ -1297,7 +1285,7 @@ let ACTIVE_TAG = null;
 let ACTIVE_TEAM = '';
 const DETAIL_CACHE = {};
 
-const TEAMS = ['기획팀','사업팀','가맹마케팅지원팀','에듀테크팀','운영지원팀','재무팀'];
+let TEAMS = ['기획팀','사업팀','가맹마케팅지원팀','에듀테크팀','운영지원팀','재무팀'];
 
 function selectTeam(team) {
   ACTIVE_TEAM = team;
@@ -1349,6 +1337,7 @@ async function enterApp(me) {
   setAdminBadge(me.pendingCount || 0);
   document.getElementById('loginScreen').classList.remove('show');
   document.getElementById('mainApp').style.display = 'flex';
+  await loadOrg();
   await loadMeetings();
   buildYearFilter();
   buildTagChips();
@@ -1410,7 +1399,7 @@ async function doLogout() {
 }
 
 // ── 통계 ──────────────────────────────────────────────────────────────────
-const ST_DEPTS = ['기획팀', '에듀테크팀', '사업팀', '가맹마케팅지원팀', '운영지원팀', '재무팀', '입시센터', '사업기획실', '가맹사업성장실', '경영관리실'];
+let ST_DEPTS = ['기획팀', '에듀테크팀', '사업팀', '가맹마케팅지원팀', '운영지원팀', '재무팀', '입시센터', '사업기획실', '가맹사업성장실', '경영관리실'];
 const ST_COMPETITORS = [
   ['잇올스파르타', /잇올|이돌\s?스파르타/], ['대성디랩', /디랩/], ['수만휘', /수만휘/],
   ['메가스터디', /메가\s?스터디/], ['수능선배', /수능선배/], ['작심스터디카페', /작심/], ['시대인재', /시대인재/],
@@ -1623,6 +1612,73 @@ async function adminUserAction(empNo, action, grade) {
   loadAdminUsers();
 }
 
+// ── 조직 관리 (관리자) ────────────────────────────────────────────────────
+let ADMIN_TAB = 'users';
+let ORG_DRAFT = null;
+function switchAdminTab(tab) {
+  ADMIN_TAB = tab;
+  document.getElementById('admTabUsers').classList.toggle('active', tab === 'users');
+  document.getElementById('admTabOrg').classList.toggle('active', tab === 'org');
+  document.getElementById('adminUsers').style.display = tab === 'users' ? '' : 'none';
+  document.getElementById('adminOrg').style.display = tab === 'org' ? '' : 'none';
+  if (tab === 'org') { ORG_DRAFT = JSON.parse(JSON.stringify(ORG)); renderOrgEditor(); }
+}
+const orgNames = s => String(s || '').split(/[,，、\n]/).map(x => x.trim()).filter(Boolean);
+function orgSet(path, val) {   // path 예: '0.name', '0.heads', '0.teams.1.members', 'branch'
+  const k = path.split('.'); let o = ORG_DRAFT;
+  for (let i = 0; i < k.length - 1; i++) o = k[i] === 'units' ? o.units : (Array.isArray(o) ? o[+k[i]] : o[k[i]]);
+  const last = k[k.length - 1];
+  o[last] = /heads|members|branch/.test(last) ? orgNames(val) : val.trim();
+}
+function orgOp(op, ui, ti) {
+  const U = ORG_DRAFT.units;
+  if (op === 'addUnit') U.push({ name: '새 실', heads: [], teams: [] });
+  if (op === 'delUnit' && confirm(`'${U[ui].name}'과(와) 소속 팀을 모두 지울까요?`)) U.splice(ui, 1);
+  if (op === 'upUnit' && ui > 0) [U[ui - 1], U[ui]] = [U[ui], U[ui - 1]];
+  if (op === 'addTeam') U[ui].teams.push({ name: '새 팀', members: [] });
+  if (op === 'delTeam' && confirm(`'${U[ui].teams[ti].name}'을(를) 지울까요?`)) U[ui].teams.splice(ti, 1);
+  renderOrgEditor();
+}
+function orgMoveTeam(ui, ti, to) {
+  if (to === '' || +to === ui) return;
+  const [t] = ORG_DRAFT.units[ui].teams.splice(ti, 1); ORG_DRAFT.units[+to].teams.push(t); renderOrgEditor();
+}
+function renderOrgEditor() {
+  const D = ORG_DRAFT, inp = 'class="org-inp"';
+  const unitOpts = cur => D.units.map((u, i) => i === cur ? '' : `<option value="${i}">${esc(u.name)}(으)로 이동</option>`).join('');
+  document.getElementById('adminOrg').innerHTML = `
+    <div class="um-section"><h3>🏢 실·팀 구조</h3>
+    <div class="um-roster-sub" style="margin-bottom:12px">이름을 바꾸거나 팀을 추가·삭제한 뒤 <b>저장</b>을 누르면 팀별 필터, 회의록 등록의 참석부서·참석자 목록, 통계에 바로 반영돼요. 사람 이름은 쉼표(,)로 구분해요.<br>※ 이미 등록된 회의록에 적힌 팀 이름은 바뀌지 않아요. 팀 이름을 바꾸면 예전 회의록은 '팀 미지정'처럼 보일 수 있어요.</div>
+    ${D.units.map((u, ui) => `<div class="org-unit">
+      <div class="org-row"><span class="org-lbl">실</span><input ${inp} value="${esc(u.name)}" onchange="orgSet('units.${ui}.name',this.value)">
+        <button class="btn btn-ghost btn-sm" onclick="orgOp('upUnit',${ui})" title="위로">▲</button>
+        <button class="btn btn-ghost btn-sm" onclick="orgOp('delUnit',${ui})">실 삭제</button></div>
+      <div class="org-row"><span class="org-lbl">실장 등</span><input ${inp} value="${esc(u.heads.join(', '))}" placeholder="이름, 이름" onchange="orgSet('units.${ui}.heads',this.value)"></div>
+      ${u.teams.map((t, ti) => `<div class="org-row org-team"><span class="org-lbl">└ 팀</span>
+        <input ${inp} style="max-width:170px" value="${esc(t.name)}" onchange="orgSet('units.${ui}.teams.${ti}.name',this.value)">
+        <input ${inp} value="${esc(t.members.join(', '))}" placeholder="팀원 이름, 이름" onchange="orgSet('units.${ui}.teams.${ti}.members',this.value)">
+        <select class="filter-select" style="padding:5px 8px;font-size:12.5px" onchange="orgMoveTeam(${ui},${ti},this.value)"><option value="">다른 실로…</option>${unitOpts(ui)}</select>
+        <button class="btn btn-ghost btn-sm" onclick="orgOp('delTeam',${ui},${ti})">삭제</button></div>`).join('')}
+      <div class="org-row org-team"><button class="btn btn-ghost btn-sm" onclick="orgOp('addTeam',${ui})">＋ 팀 추가</button></div>
+    </div>`).join('')}
+    <div class="org-row" style="margin:6px 0 14px"><button class="btn btn-ghost btn-sm" onclick="orgOp('addUnit')">＋ 실 추가</button></div>
+    <div class="org-unit"><div class="org-row"><span class="org-lbl">지점 원장</span><input ${inp} value="${esc((D.branch || []).join(', '))}" placeholder="이름, 이름" onchange="orgSet('branch',this.value)"></div></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-ghost btn-sm" onclick="switchAdminTab('org')">되돌리기</button>
+      <button class="btn btn-primary btn-sm" onclick="saveOrg()">💾 저장</button></div>
+    ${ORG.updatedAt ? `<div class="um-roster-sub" style="text-align:right;margin-top:6px">마지막 저장 ${ORG.updatedAt.slice(0, 16).replace('T', ' ')}</div>` : ''}
+    </div>`;
+}
+async function saveOrg() {
+  const names = ORG_DRAFT.units.flatMap(u => u.teams.map(t => t.name));
+  if (names.some((n, i) => names.indexOf(n) !== i)) return showToast('⚠️ 같은 이름의 팀이 두 개 있어요');
+  try {
+    const d = await (await fetch('/api/admin/org', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(ORG_DRAFT) })).json();
+    if (!d.ok) throw new Error(d.error || '저장 실패');
+    ORG = d.org; applyOrg(); renderList(); switchAdminTab('org'); showToast('✅ 조직 구조를 저장했어요');
+  } catch (e) { showToast('⚠️ ' + e.message); }
+}
+
 // ── 뷰 전환 ─────────────────────────────────────────────────────────────
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
@@ -1634,7 +1690,7 @@ function showView(name) {
   // 상세 패널이 열려있으면 닫기
   const dp = document.getElementById('detailPanel');
   if (dp) dp.classList.remove('open');
-  if (name === 'admin') loadAdminUsers();
+  if (name === 'admin') { loadAdminUsers(); switchAdminTab(ADMIN_TAB); }
   if (name === 'stats') renderStats();
   if (name === 'upload') {
     document.getElementById('uploadResult').style.display = 'none';
@@ -2572,28 +2628,53 @@ const levelOptions = cur => allowedLevels().map(l => `<option value="${l}"${l ==
 // ── 업로드 폼 — 참석자 셀렉트+칩 ─────────────────────────────────────────
 let UPLOAD_ATTENDEES = [];
 
-(function initUploadAttendeesSelect() {
-  // 조직 구조: [그룹명, [이름, ...]]
-  const ORG = [
-    // ── 본사 전직원 ──────────────────────────────────────────
-    ['본사 > CEO', ['김근욱','남웅식']],
-    ['본사 > 사업기획실', ['이기열']],
-    ['본사 > 사업기획실 > 기획팀', ['강태혁','최혁준']],
-    ['본사 > 사업기획실 > 에듀테크팀', ['정구용','김태현','윤희지','강민석']],
-    ['본사 > 가맹사업성장실', ['권현']],
-    ['본사 > 가맹사업성장실 > 사업팀', ['장훈희','강민구','송의진','박숙진']],
-    ['본사 > 가맹사업성장실 > 가맹마케팅지원팀', ['신수경','김연주','조영준','주윤미','김지현','최선규']],
-    ['본사 > 경영관리실', ['배소연']],
-    ['본사 > 경영관리실 > 운영지원팀', ['김민지','김다은','고소영']],
-    ['본사 > 경영관리실 > 재무팀', ['김지명','소현지']],
-    ['본사 > 입시센터', ['김영준']],
-    // ── 지점 원장·부원장만 ────────────────────────────────────
-    ['지점 원장', ['백용기','윤진우']],
-  ];
+// ── 조직 구조 (관리자 '조직 관리'에서 수정, KV 'org'. 없으면 기본값) ─────────
+const DEFAULT_ORG = { units: [
+  { name: 'CEO', heads: ['김근욱','남웅식'], teams: [] },
+  { name: '사업기획실', heads: ['이기열'], teams: [
+    { name: '기획팀', members: ['강태혁','최혁준'] }, { name: '에듀테크팀', members: ['정구용','김태현','윤희지','강민석'] }] },
+  { name: '가맹사업성장실', heads: ['권현'], teams: [
+    { name: '사업팀', members: ['장훈희','강민구','송의진','박숙진'] }, { name: '가맹마케팅지원팀', members: ['신수경','김연주','조영준','주윤미','김지현','최선규'] }] },
+  { name: '경영관리실', heads: ['배소연'], teams: [
+    { name: '운영지원팀', members: ['김민지','김다은','고소영'] }, { name: '재무팀', members: ['김지명','소현지'] }] },
+  { name: '입시센터', heads: ['김영준'], teams: [] },
+], branch: ['백용기','윤진우'] };
+let ORG = DEFAULT_ORG;
+
+async function loadOrg() {
+  try { const d = await (await fetch('/api/org')).json(); if (d.ok && d.org && d.org.units) ORG = d.org; } catch {}
+  applyOrg();
+}
+
+function applyOrg() {
+  TEAMS = ORG.units.flatMap(u => u.teams.map(t => t.name));
+  ST_DEPTS = [...TEAMS, ...ORG.units.filter(u => u.name !== 'CEO').map(u => u.name)];
+  // 목록 팀별 필터
+  const fg = document.getElementById('teamFilterGroups');
+  if (fg) fg.innerHTML = ORG.units.filter(u => u.teams.length).map(u => `<span class="dept-group"><span class="dept-label">${esc(u.name)}</span>${
+    u.teams.map(t => `<button class="chip-btn${ACTIVE_TEAM === t.name ? ' active' : ''}" id="teamChip-${esc(t.name)}" onclick="selectTeam('${esc(t.name)}')">${esc(t.name)}</button>`).join('')}</span>`).join('');
+  // 업로드 참석부서 체크박스 (체크 상태 유지)
+  const uc = document.getElementById('uploadTeamChips');
+  if (uc) { const on = new Set([...uc.querySelectorAll('.upload-team-cb:checked')].map(c => c.value));
+    uc.innerHTML = TEAMS.map(t => `<label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="${esc(t)}"${on.has(t) ? ' checked' : ''}><span>${esc(t)}</span></label>`).join(''); }
+  // 편집 모달 팀 선택
+  const et = document.getElementById('editTeam');
+  if (et) et.innerHTML = '<option value="">팀 미지정</option>' + TEAMS.map(t => `<option>${esc(t)}</option>`).join('');
+  initUploadAttendeesSelect();
+}
+
+function initUploadAttendeesSelect() {
+  const groups = [];
+  ORG.units.forEach(u => {
+    if (u.heads.length) groups.push(['본사 > ' + u.name, u.heads]);
+    u.teams.forEach(t => { if (t.members.length) groups.push(['본사 > ' + u.name + ' > ' + t.name, t.members]); });
+  });
+  if (ORG.branch && ORG.branch.length) groups.push(['지점 원장', ORG.branch]);
 
   const sel = document.getElementById('uploadAttendeesSelect');
   if (!sel) return;
-  ORG.forEach(([label, names]) => {
+  sel.querySelectorAll('optgroup').forEach(g => g.remove());
+  groups.forEach(([label, names]) => {
     const grp = document.createElement('optgroup');
     grp.label = label;
     names.forEach(n => {
@@ -2603,7 +2684,7 @@ let UPLOAD_ATTENDEES = [];
     });
     sel.appendChild(grp);
   });
-})();
+}
 
 function addUploadAttendee() {
   const sel = document.getElementById('uploadAttendeesSelect');

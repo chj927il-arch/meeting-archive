@@ -288,6 +288,22 @@ async function handleAdminUsers(env) {
 }
 
 // 사내 명부 업로드 (관리자) — 브라우저에서 엑셀을 읽어 [{dept, empNo, name, position}] 전송
+// ── 조직 구조 저장 (관리자) ─────────────────────────────────────────────
+async function handleAdminOrg(request, env) {
+  const body = await request.json().catch(() => ({}));
+  const nm = v => String(v || '').trim().slice(0, 30);
+  const names = a => (Array.isArray(a) ? a : []).map(nm).filter(Boolean).slice(0, 100);
+  if (!Array.isArray(body.units)) return json({ ok: false, error: '조직 데이터가 올바르지 않습니다.' }, 400);
+  const units = body.units.slice(0, 30).map(u => ({
+    name: nm(u.name), heads: names(u.heads),
+    teams: (Array.isArray(u.teams) ? u.teams : []).slice(0, 30).map(t => ({ name: nm(t.name), members: names(t.members) })).filter(t => t.name),
+  })).filter(u => u.name);
+  if (!units.length) return json({ ok: false, error: '실을 1개 이상 입력해 주세요.' }, 400);
+  const org = { units, branch: names(body.branch), updatedAt: new Date().toISOString() };
+  await env.MEETING_KV.put('org', JSON.stringify(org));
+  return json({ ok: true, org });
+}
+
 async function handleAdminRoster(request, env) {
   const { rows } = await request.json().catch(() => ({}));
   if (!Array.isArray(rows) || !rows.length) return json({ ok: false, error: '명부 데이터가 비어 있습니다.' }, 400);
@@ -1407,10 +1423,14 @@ export default {
                 put: (k, v, o) => k.startsWith('chat:rl:') ? env.MEETING_KV.put(k, v, o) : null },
         });
       }
+      if (pathname === '/api/org' && method === 'GET') {
+        return json({ ok: true, org: JSON.parse((await env.MEETING_KV.get('org')) || 'null') });
+      }
       if (pathname.startsWith('/api/admin/')) {
         if (user.role !== 'admin') return json({ ok: false, error: '관리자만 사용할 수 있습니다.' }, 403);
         if (pathname === '/api/admin/users' && method === 'GET') return handleAdminUsers(env);
         if (pathname === '/api/admin/roster' && method === 'POST') return handleAdminRoster(request, env);
+        if (pathname === '/api/admin/org' && method === 'POST') return handleAdminOrg(request, env);
         const um = pathname.match(/^\/api\/admin\/users\/([A-Za-z0-9]+)$/);
         if (um && method === 'POST') return handleAdminUserAction(request, env, user, um[1]);
         return json({ ok: false, error: '없음' }, 404);
