@@ -1047,16 +1047,18 @@ async function callChatLLM(env, { system, contents }) {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${env.GEMINI_API_KEY}`,
         { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
       if (!res.ok) {
+        const t = await res.text().catch(() => '');
         lastErr = `HTTP ${res.status}`;
+        console.error('채팅 Gemini 오류:', model, res.status, t.slice(0, 300));
         if ([429, 500, 502, 503, 504, 524].includes(res.status)) { await new Promise(r => setTimeout(r, 1500)); continue; }
-        break;
+        i = Math.floor(i / 2) * 2 + 1; continue; // 이 모델은 건너뛰고 다음 모델로
       }
       let text = '';
       for (const line of (await res.text()).split('\n')) {
         if (!line.startsWith('data:')) continue;
         try { const c = JSON.parse(line.slice(5))?.candidates?.[0]; text += (c?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join(''); } catch {}
       }
-      if (!text) { lastErr = '빈 응답'; continue; }
+      if (!text) { lastErr = '빈 응답'; console.error('채팅 Gemini 빈 응답:', model); continue; }
       try { return JSON.parse(text); } catch { const m = text.match(/\{[\s\S]*\}/); if (m) { try { return JSON.parse(m[0]); } catch {} } return { answer: text }; }
     } catch (e) { lastErr = e.message; }
   }
