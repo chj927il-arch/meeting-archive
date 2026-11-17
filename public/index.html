@@ -1050,15 +1050,15 @@ select.login-input{appearance:auto}
               <li><strong>구조화 추출</strong> — 회의 결과, 시사점, 핵심 결정사항, 후속 조치를 JSON 구조로 추출합니다.</li>
               <li><strong>Word 생성</strong> — 분석 결과로 다운로드 가능한 회의록 Word 파일을 자동 생성합니다.</li>
             </ol>
-            <div class="audio-info-notice">⏱️ <strong>분석에는 파일 크기에 따라 1~6분이 걸려요.</strong> 업로드 중에는 화면을 닫지 마세요.<br>📦 <strong>음성 파일은 100MB까지</strong> 올릴 수 있어요 (스마트폰 녹음 기준 약 1.5~3시간). 더 길면 나눠서 올려주세요.</div>
+            <div class="audio-info-notice">⏱️ <strong>분석에는 파일 크기에 따라 1~6분이 걸려요.</strong> 업로드 중에는 화면을 닫지 마세요.<br>📦 <strong>음성 파일은 파일당 100MB까지</strong> 올릴 수 있어요 (스마트폰 녹음 기준 약 1.5~3시간). 회의가 길어 녹음을 나눴다면 <strong>여러 파일을 함께 선택</strong>하세요 — 파일 이름순으로 이어서 회의록 1건으로 만들어요.</div>
           </div>
         </div>
         <div class="drop-zone" id="dropZoneAudio" onclick="document.getElementById('uploadAudioInput').click()" ondragover="onDragOver(event)" ondragleave="onDragLeaveAudio(event)" ondrop="onDropAudio(event)">
           <div class="drop-icon">🎙️</div>
           <div class="drop-title">음성 파일을 드래그하거나 클릭해서 선택</div>
-          <div class="drop-sub">MP3, M4A, WAV, OGG, WebM — 100MB까지<br><span onclick="event.stopPropagation();document.getElementById('uploadAudioInput').click()">파일 선택</span></div>
+          <div class="drop-sub">MP3, M4A, WAV, OGG, WebM — 파일당 100MB까지<br>한 회의를 나눠 녹음했다면 여러 파일을 함께 선택하세요 (회의록 1건으로 합쳐져요)<br><span onclick="event.stopPropagation();document.getElementById('uploadAudioInput').click()">파일 선택</span></div>
         </div>
-        <input type="file" id="uploadAudioInput" accept=".mp3,.m4a,.wav,.ogg,.webm,.aac,.flac" onchange="onAudioFileSelected(this.files[0])">
+        <input type="file" id="uploadAudioInput" multiple accept=".mp3,.m4a,.wav,.ogg,.webm,.aac,.flac" onchange="onAudioFilesSelected(this.files)">
         </div><!-- /audio-info-box -->
       </div>
 
@@ -2485,8 +2485,76 @@ function onDragLeaveAudio(e) { document.getElementById('dropZoneAudio').classLis
 function onDropAudio(e) {
   e.preventDefault();
   document.getElementById('dropZoneAudio').classList.remove('dragover');
-  const file = e.dataTransfer.files[0];
-  if (file) onAudioFileSelected(file);
+  onAudioFilesSelected(e.dataTransfer.files);
+}
+
+// 여러 개 선택 = 한 회의를 나눠 녹음한 것 → 파일 이름순으로 이어 회의록 1건
+function onAudioFilesSelected(list) {
+  const files = [...(list || [])];
+  if (!files.length) return;
+  if (files.length === 1) return onAudioFileSelected(files[0]);
+  if (!checkTeamRequired()) { showToast('⚠️ 참석부서를 1개 이상 선택해 주세요'); return; }
+  const allowed = ['mp3','m4a','wav','ogg','webm','aac','flac'];
+  if (files.some(f => !allowed.includes(f.name.split('.').pop().toLowerCase()))) { showToast('⚠️ MP3, M4A, WAV, OGG 등 음성 파일만 가능합니다'); return; }
+  if (files.length > 10) { showToast('⚠️ 한 번에 10개까지 올릴 수 있어요'); return; }
+  const big = files.find(f => f.size > 99 * 1024 * 1024);
+  if (big) { showToast(`⚠️ "${big.name}"이 100MB를 넘어요. 파일당 100MB까지 올릴 수 있어요.`); document.getElementById('uploadAudioInput').value = ''; return; }
+  files.sort((a, b) => a.name.localeCompare(b.name, 'ko', { numeric: true }));
+  startAudioMultiUpload(files);
+}
+
+async function startAudioMultiUpload(files) {
+  const progWrap = document.getElementById('uploadProgress'), progBar = document.getElementById('progressBar');
+  const progLabel = document.getElementById('progressLabel'), result = document.getElementById('uploadResult');
+  progWrap.style.display = 'block'; result.style.display = 'none';
+  const total = files.reduce((a, f) => a + f.size, 0); let done = 0;
+  const fail = msg => { progWrap.style.display = 'none'; result.style.display = 'block'; result.innerHTML = `<div class="upload-err">❌ 오류: ${esc(msg)}</div>`; };
+  try {
+    const partIds = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const partId = await new Promise((ok, no) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/audio/part', true);
+        xhr.setRequestHeader('X-File-Name', encodeURIComponent(f.name));
+        xhr.setRequestHeader('Content-Type', AUDIO_MIME[f.name.split('.').pop().toLowerCase()] || 'audio/mpeg');
+        xhr.upload.addEventListener('progress', e => {
+          if (!e.lengthComputable) return;
+          progBar.style.width = ((done + e.loaded) / total * 60) + '%';
+          progLabel.textContent = e.loaded >= e.total ? `📦 ${i + 1}/${files.length}번째 파일 준비 중... (${esc(f.name)})` : `📤 ${i + 1}/${files.length}번째 파일 업로드 중... ${Math.round(e.loaded / e.total * 100)}% (${esc(f.name)})`;
+        });
+        xhr.addEventListener('load', () => {
+          if (xhr.status === 401) { showLoginScreen(); return no(new Error('로그인이 만료되었습니다. 다시 로그인 후 올려주세요.')); }
+          let d; try { d = JSON.parse(xhr.responseText); } catch { return no(new Error(`서버 응답 오류(${xhr.status})`)); }
+          d.ok ? ok(d.partId) : no(new Error(d.error || '업로드 실패'));
+        });
+        xhr.addEventListener('error', () => no(new Error('네트워크 오류가 발생했습니다. 인터넷 연결을 확인하세요.')));
+        xhr.send(f);
+      });
+      partIds.push(partId); done += f.size;
+    }
+    const t0 = Date.now();
+    const tick = () => { const s = Math.floor((Date.now() - t0) / 1000);
+      progLabel.textContent = `🤖 파일 ${files.length}개 업로드 완료 — AI가 하나의 회의로 이어서 분석하고 있어요... (${Math.floor(s / 60)}분 ${String(s % 60).padStart(2, '0')}초 경과) 창을 닫지 마세요.`;
+      progBar.style.width = (60 + 35 * (1 - Math.exp(-s / 150))) + '%'; };
+    tick(); const timer = setInterval(tick, 1000);
+    let data;
+    try {
+      const res = await fetch('/api/audio/finalize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        partIds, team: [...document.querySelectorAll('.upload-team-cb:checked')].map(cb => cb.value).join(','),
+        accessLevel: selectedUploadLevel(), attendees: (document.getElementById('uploadAttendees')?.value || '').trim() }) });
+      if (res.status === 401) { showLoginScreen(); throw new Error('로그인이 만료되었습니다. 다시 로그인 후 올려주세요.'); }
+      try { data = await res.json(); } catch { throw new Error(`서버 응답 오류(${res.status}). 잠시 후 목록에 등록됐는지 확인해 주세요.`); }
+    } finally { clearInterval(timer); }
+    if (!data.ok) throw new Error(data.error || '처리 실패');
+    progBar.style.width = '100%';
+    const warnHtml = data.analysisStatus !== 'ok' ? `<div class="upload-warn">⚠️ AI 분석에 실패했습니다. 파일은 등록되었습니다.${data.analysisError ? `<br><span style="font-size:12px;opacity:.8">원인: ${esc(data.analysisError)}</span>` : ''}<br>상세화면의 재분석 버튼으로 다시 시도해 주세요.</div>` : '';
+    progWrap.style.display = 'none'; result.style.display = 'block';
+    result.innerHTML = `${warnHtml}<div class="upload-ok"><div style="font-size:15px;font-weight:700;margin-bottom:4px">✅ 음성 ${files.length}개를 회의록 1건으로 등록 완료</div><div style="font-size:13px;color:var(--text2)">${files.map(f => esc(f.name)).join(' → ')}</div></div>`;
+    document.getElementById('uploadAudioInput').value = '';
+    await loadMeetings();
+    openWordCheckModal(data.id, data.meta);
+  } catch (e) { fail(e.message); document.getElementById('uploadAudioInput').value = ''; }
 }
 
 function onAudioFileSelected(file) {

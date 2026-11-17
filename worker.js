@@ -758,8 +758,15 @@ function keepUncertainInText(analysis) {
 }
 
 async function analyzeAudioWithGemini(env, fileUri, fileName, mimeType, manualAttendees) {
-  const prompt = makePrompt(fileName, true, manualAttendees);
-  const parts  = [{ text: prompt }, { fileData: { mimeType, fileUri } }];
+  return analyzeAudioPartsWithGemini(env, [{ fileUri, mimeType }], fileName, manualAttendees);
+}
+
+// 여러 음성 파일(한 회의를 나눠 녹음)을 순서대로 붙여 하나의 회의로 분석
+async function analyzeAudioPartsWithGemini(env, files, fileName, manualAttendees) {
+  let prompt = makePrompt(fileName, true, manualAttendees);
+  if (files.length > 1) prompt += `\n\n[중요] 첨부된 음성 ${files.length}개는 하나의 회의를 나눠 녹음한 것입니다. 1번부터 순서대로 이어지는 하나의 회의로 보고, 전체 내용을 합쳐 회의록 1건으로 정리하세요.`;
+  const parts = [{ text: prompt }];
+  files.forEach((f, i) => { if (files.length > 1) parts.push({ text: `[녹음 ${i + 1}/${files.length}]` }); parts.push({ fileData: { mimeType: f.mimeType, fileUri: f.fileUri } }); });
   return keepUncertainInText(await callGemini(env, parts, 0));
 }
 
@@ -932,6 +939,66 @@ async function handleAudioUpload(request, env) {
   return json({ ok: true, id, analysisStatus, meta });
 }
 
+// ── 나눠 녹음한 음성 여러 개 → 회의록 1건 ─────────────────────────────────
+// ① /api/audio/part: 파일 1개씩 Drive·Gemini에 올리고, 결과는 서버 KV에 임시 보관(1일)
+async function handleAudioPart(request, env) {
+  const user = reqUser(request);
+  const fileName = decodeURIComponent(request.headers.get('X-File-Name') || 'recording');
+  const mimeType = request.headers.get('Content-Type') || 'audio/mpeg';
+  const buf = await request.arrayBuffer();
+  let driveFileId = null, driveUrl = null;
+  if (env.GDRIVE_SERVICE_ACCOUNT) {
+    const d = await uploadToGDrive(env, buf, fileName);
+    if (d?.id) { driveFileId = d.id; driveUrl = d.webViewLink || `https://drive.google.com/file/d/${d.id}/view`; }
+    else if (d?._error) console.error('Drive 업로드 실패:', d._error);
+  }
+  const up = await geminiUploadAudio(env, buf, fileName, mimeType);
+  if (up.fatal || up.error) return json({ ok: false, error: up.fatal || up.error }, 500);
+  const partId = crypto.randomUUID();
+  await env.MEETING_KV.put(`apart-${partId}`, JSON.stringify({ owner: user.empNo, fileName, mimeType, size: buf.byteLength, fileUri: up.fileUri, driveFileId, driveUrl }), { expirationTtl: 86400 });
+  return json({ ok: true, partId });
+}
+
+// ② /api/audio/finalize: 올린 조각들을 순서대로 묶어 분석 → 회의록 1건 저장
+async function handleAudioFinalize(request, env) {
+  const user = reqUser(request);
+  const body = await request.json().catch(() => ({}));
+  const ids = Array.isArray(body.partIds) ? body.partIds.slice(0, 10) : [];
+  if (ids.length < 1) return json({ ok: false, error: '음성 파일이 없습니다.' }, 400);
+  const accessLevel = pickLevel(user, body.accessLevel);
+  if (!accessLevel) return json({ ok: false, error: '공개 범위(S/A/B)를 선택해 주세요.' }, 400);
+  const parts = [];
+  for (const pid of ids) {
+    const p = JSON.parse((await env.MEETING_KV.get(`apart-${String(pid)}`)) || 'null');
+    if (!p || p.owner !== user.empNo) return json({ ok: false, error: '업로드한 음성 조각을 찾지 못했습니다. 다시 올려주세요.' }, 400);
+    parts.push(p);
+  }
+  const team = String(body.team || ''), manualAttendees = String(body.attendees || '');
+  const fileName = parts.map(p => p.fileName).join(' + ');
+  const { analysis, analysisError } = await geminiAnalyzeFiles(env, parts.map(p => ({ fileUri: p.fileUri, mimeType: p.mimeType })), fileName, manualAttendees);
+  const id = crypto.randomUUID(), now = new Date().toISOString();
+  const meta = {
+    id, fileName, fileSize: parts.reduce((a, p) => a + p.size, 0), mimeType: parts[0].mimeType, fileType: 'audio',
+    uploadedAt: now, analysisStatus: analysis ? 'ok' : 'failed', analysisError, team,
+    accessLevel, uploadedBy: { empNo: user.empNo, name: user.name },
+    driveFileId: parts[0].driveFileId, driveUrl: parts[0].driveUrl,
+    audioParts: parts.map(p => ({ fileName: p.fileName, mimeType: p.mimeType, size: p.size, driveFileId: p.driveFileId, driveUrl: p.driveUrl })),
+    meetingTitle: titleFor(analysis?.meetingTitle || parts[0].fileName.replace(/\.[^.]+$/, ''), accessLevel),
+    meetingDate: analysis?.meetingDate || '', attendees: analysis?.attendees || [],
+    oneLiner: analysis?.oneLiner || '', tags: analysis?.tags || [], summary: analysis?.summary || null,
+    uncertainTerms: analysis?.uncertainTerms || [], hasDoc: false,
+  };
+  if (analysis) await saveMeetingDoc(env, id, meta);
+  await env.MEETING_KV.put(`meeting-${id}`, JSON.stringify(meta));
+  const idx = await getIndex(env);
+  idx.unshift(makeIndexEntry(id, meta, analysis, { fileType: 'audio' }));
+  if (idx.length > 500) idx.splice(500);
+  await saveIndex(env, idx);
+  if (analysis) await autoAddNextMeeting(env, analysis, meta.meetingTitle, id);
+  for (const pid of ids) await env.MEETING_KV.delete(`apart-${pid}`);
+  return json({ ok: true, id, analysisStatus: meta.analysisStatus, analysisError, meta });
+}
+
 async function saveMeetingDoc(env, id, meta) {
   const docBytes = new TextEncoder().encode(generateMeetingDoc(meta));
   let binary = '';
@@ -952,7 +1019,8 @@ async function downloadFromGDrive(env, fileId) {
 }
 
 // Gemini File API 업로드 → ACTIVE 대기 → 분석. 반환: { analysis, analysisError, fatal }
-async function geminiAudioAnalyze(env, audioBuffer, fileName, mimeType, manualAttendees) {
+// Gemini File API 업로드 → ACTIVE 대기. 반환: { fileUri } | { fatal } | { error }
+async function geminiUploadAudio(env, audioBuffer, fileName, mimeType) {
   const initRes = await fetch(
     `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${env.GEMINI_API_KEY}&uploadType=resumable`,
     {
@@ -991,17 +1059,27 @@ async function geminiAudioAnalyze(env, audioBuffer, fileName, mimeType, manualAt
   // 파일이 ACTIVE가 될 때까지 대기 (최대 ~60초)
   let state = fileData.file?.state;
   for (let i = 0; state !== 'ACTIVE' && i < 30; i++) {
-    if (state === 'FAILED') return { analysis: null, analysisError: 'Gemini가 음성 파일 처리에 실패함(FAILED)' };
+    if (state === 'FAILED') return { error: 'Gemini가 음성 파일 처리에 실패함(FAILED)' };
     await new Promise(r => setTimeout(r, 2000));
     try {
       const s = await fetch(`https://generativelanguage.googleapis.com/v1beta/${gName}?key=${env.GEMINI_API_KEY}`);
       if (s.ok) state = (await s.json()).state;
     } catch (_) {}
   }
-  if (state !== 'ACTIVE') return { analysis: null, analysisError: `Gemini 파일 준비 시간 초과 (state=${state})` };
+  if (state !== 'ACTIVE') return { error: `Gemini 파일 준비 시간 초과 (state=${state})` };
+  return { fileUri };
+}
 
+async function geminiAudioAnalyze(env, audioBuffer, fileName, mimeType, manualAttendees) {
+  const up = await geminiUploadAudio(env, audioBuffer, fileName, mimeType);
+  if (up.fatal) return { fatal: up.fatal };
+  if (up.error) return { analysis: null, analysisError: up.error };
+  return geminiAnalyzeFiles(env, [{ fileUri: up.fileUri, mimeType }], fileName, manualAttendees);
+}
+
+async function geminiAnalyzeFiles(env, files, fileName, manualAttendees) {
   try {
-    const analysis = await analyzeAudioWithGemini(env, fileUri, fileName, mimeType, manualAttendees);
+    const analysis = await analyzeAudioPartsWithGemini(env, files, fileName, manualAttendees);
     return { analysis: analysis ? correctAnalysisNames(analysis) : null, analysisError: analysis ? null : 'Gemini 응답 없음' };
   } catch (e) {
     return { analysis: null, analysisError: e.message || 'Gemini 분석 중 예외 발생' };
@@ -1222,11 +1300,25 @@ async function handleReanalyze(request, env, id) {
   if (meta.fileType === 'audio') {
     if (!meta.driveFileId || !env.GDRIVE_SERVICE_ACCOUNT)
       return json({ ok: false, error: '원본 음성파일이 Drive에 없어 재분석할 수 없습니다. 다시 업로드해주세요.' }, 400);
-    let buf;
-    try { buf = await downloadFromGDrive(env, meta.driveFileId); }
-    catch (e) { return json({ ok: false, error: e.message }, 500); }
     const attendees = manualAttendees || (meta.attendees || []).join(', ');
-    const { analysis, analysisError, fatal } = await geminiAudioAnalyze(env, buf, meta.fileName, meta.mimeType || 'audio/mp4', attendees);
+    let res;
+    if (meta.audioParts?.length > 1) {   // 나눠 녹음한 회의: 조각을 모두 다시 올려 함께 분석
+      if (meta.audioParts.some(p => !p.driveFileId)) return json({ ok: false, error: '일부 음성 조각이 Drive에 없어 재분석할 수 없습니다.' }, 400);
+      const files = [];
+      for (const p of meta.audioParts) {
+        let b; try { b = await downloadFromGDrive(env, p.driveFileId); } catch (e) { return json({ ok: false, error: e.message }, 500); }
+        const up = await geminiUploadAudio(env, b, p.fileName, p.mimeType);
+        if (up.fatal || up.error) return json({ ok: false, error: up.fatal || up.error }, 500);
+        files.push({ fileUri: up.fileUri, mimeType: p.mimeType });
+      }
+      res = await geminiAnalyzeFiles(env, files, meta.fileName, attendees);
+    } else {
+      let buf;
+      try { buf = await downloadFromGDrive(env, meta.driveFileId); }
+      catch (e) { return json({ ok: false, error: e.message }, 500); }
+      res = await geminiAudioAnalyze(env, buf, meta.fileName, meta.mimeType || 'audio/mp4', attendees);
+    }
+    const { analysis, analysisError, fatal } = res;
     if (fatal) return json({ ok: false, error: fatal }, 500);
     meta.reanalyzedAt = new Date().toISOString();
     if (analysis) {
@@ -1444,6 +1536,8 @@ export default {
 
     if (pathname === '/api/upload'        && method === 'POST') return handleUpload(request, env);
     if (pathname === '/api/audio/upload'  && method === 'POST') return handleAudioUpload(request, env);
+    if (pathname === '/api/audio/part'    && method === 'POST') return handleAudioPart(request, env);
+    if (pathname === '/api/audio/finalize' && method === 'POST') return handleAudioFinalize(request, env);
     if (pathname === '/api/meetings'      && method === 'GET')  return handleList(request, env);
     if (pathname === '/api/todo-states'   && method === 'GET')  return handleTodoGet(request, env);
     if (pathname === '/api/todo-states'   && method === 'POST') return handleTodoSet(request, env);
