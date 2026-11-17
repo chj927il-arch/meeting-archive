@@ -299,7 +299,7 @@ async function handleAdminOrg(request, env) {
     teams: (Array.isArray(u.teams) ? u.teams : []).slice(0, 30).map(t => ({ name: nm(t.name), members: names(t.members) })).filter(t => t.name),
   })).filter(u => u.name);
   if (!units.length) return json({ ok: false, error: '실을 1개 이상 입력해 주세요.' }, 400);
-  const org = { units, branch: names(body.branch), updatedAt: new Date().toISOString() };
+  const org = { units, branch: names(body.branch), extra: names(body.extra), updatedAt: new Date().toISOString() };
   await env.MEETING_KV.put('org', JSON.stringify(org));
   return json({ ok: true, org });
 }
