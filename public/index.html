@@ -1016,7 +1016,7 @@ select.login-input{appearance:auto}
         <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px">참석자 <span style="font-weight:400;font-size:12px;color:var(--text3)">(선택 — 입력하면 AI 추출보다 우선 적용)</span></label>
         <div style="display:flex;gap:6px;margin-bottom:8px">
           <select id="uploadAttendeesSelect" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:13px;font-family:inherit">
-            <option value="">-- 대표·실장·팀장·센터장·원장 선택 --</option>
+            <option value="">-- 참석자 선택 (간부 · 팀원) --</option>
           </select>
           <button type="button" onclick="addUploadAttendee()" style="padding:8px 14px;border-radius:8px;border:1px solid var(--accent);background:rgba(59,130,246,.1);color:var(--accent2);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">+ 추가</button>
         </div>
@@ -2762,7 +2762,7 @@ let ORG = DEFAULT_ORG;
 
 async function loadOrg() {
   try { const d = await (await fetch('/api/org')).json(); if (d.ok && d.org && d.org.units) ORG = d.org; } catch {}
-  try { const d = await (await fetch('/api/leaders')).json(); if (d.ok) LEADERS = d.leaders; } catch {}
+  try { const d = await (await fetch('/api/leaders')).json(); if (d.ok) { LEADERS = d.leaders; MEMBERS = d.members || []; } } catch {}
   applyOrg();
 }
 
@@ -2783,6 +2783,7 @@ function applyOrg() {
   initUploadAttendeesSelect();
 }
 
+let MEMBERS = [];
 let LEADERS = null;   // 명부 기준 대표·임원·실장·팀장·센터장·원장
 const LEADER_CAT = p => /대표|이사|상무/.test(p) ? '대표·임원' : p === '실장' ? '실장' : p === '원장' ? '원장' : '팀장·센터장';
 function renderAttendeeQuick() {
@@ -2807,6 +2808,10 @@ function initUploadAttendeesSelect() {
       const list = LEADERS.filter(l => cat(l.position) === c).sort((a, b) => a.dept.localeCompare(b.dept, 'ko') || a.name.localeCompare(b.name, 'ko'));
       if (list.length) groups.push([c, list.map(l => ({ v: l.name, t: `${l.name} (${l.dept ? l.dept + ' ' : ''}${l.position})` }))]);
     });
+    // 팀원: 팀별로 (조직 관리의 팀 순서 우선)
+    const order = TEAMS || [];
+    [...new Set(MEMBERS.map(m => m.dept))].sort((a, b) => ((order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99)) || a.localeCompare(b, 'ko'))
+      .forEach(dep => groups.push(['팀원 · ' + dep, MEMBERS.filter(m => m.dept === dep).sort((a, b) => a.name.localeCompare(b.name, 'ko')).map(m => ({ v: m.name, t: `${m.name} (${m.position || '팀원'})` }))]));
   } else ORG.units.forEach(u => {
     if (u.heads.length) groups.push(['본사 > ' + u.name, u.heads]);
     u.teams.forEach(t => { if (t.members.length) groups.push(['본사 > ' + u.name + ' > ' + t.name, t.members]); });

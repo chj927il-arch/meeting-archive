@@ -1544,9 +1544,9 @@ export default {
       }
       if (pathname === '/api/leaders' && method === 'GET') {   // 참석자 선택용: 대표·임원·실장·팀장·센터장·원장만
         const r = JSON.parse((await env.MEETING_KV.get('roster')) || '{}');
-        const leaders = Object.entries(r).filter(([k, v]) => !k.startsWith('__') && Array.isArray(v) && /^(대표.*|.*이사|상무.*|실장|팀장|센터장|원장)$/.test(String(v[2] || '').trim()))
-          .map(([, v]) => ({ name: v[0], dept: v[1] || '', position: String(v[2]).trim() }));
-        return json({ ok: true, leaders });
+        const isLeader = p => /^(대표.*|.*이사|상무.*|실장|팀장|센터장|원장)$/.test(p);
+        const all = Object.entries(r).filter(([k, v]) => !k.startsWith('__') && Array.isArray(v)).map(([, v]) => ({ name: v[0], dept: v[1] || '', position: String(v[2] || '').trim() }));
+        return json({ ok: true, leaders: all.filter(x => isLeader(x.position)), members: all.filter(x => !isLeader(x.position) && x.dept && x.dept !== '-') });
       }
       if (pathname === '/api/org' && method === 'GET') {
         return json({ ok: true, org: JSON.parse((await env.MEETING_KV.get('org')) || 'null') });
