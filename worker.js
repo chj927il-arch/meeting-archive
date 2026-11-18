@@ -788,14 +788,14 @@ async function analyzeAudioPartsWithGemini(env, files, fileName, manualAttendees
   const partial = await Promise.all(files.map((f, i) => callGemini(env, [
     { text: base + `\n\n[중요] 이 음성은 하나의 회의를 ${files.length}개로 나눠 녹음한 것 중 ${i + 1}번째 부분입니다. 이 부분에서 나온 내용을 빠짐없이 자세히 정리하세요.` },
     { fileData: { mimeType: f.mimeType, fileUri: f.fileUri } },
-  ], 0).catch(e => ({ _error: e.message }))));
+  ], 0, 'part' + (i + 1)).catch(e => ({ _error: e.message }))));
   const ok = partial.map((p, i) => ({ p, i })).filter(x => x.p && !x.p._error);
   if (!ok.length) throw new Error('조각 분석 모두 실패: ' + (partial[0]?._error || ''));
   const merged = await callGemini(env, [{ text: base +
     `\n\n[중요] 아래는 하나의 회의를 ${files.length}개로 나눠 녹음한 각 부분을 따로 정리한 결과(JSON)입니다. 1부터 순서대로 이어지는 하나의 회의입니다.` +
     ` 모든 부분의 안건·결정사항·후속조치를 빠짐없이 포함해 회의록 1건으로 합치세요. 중복은 하나로 정리하고, 제목·한줄요약은 회의 전체를 대표하게 쓰세요.` +
     (ok.length < files.length ? ` (${files.length - ok.length}개 부분은 분석에 실패해 빠져 있습니다.)` : '') +
-    ok.map(x => `\n\n=== ${x.i + 1}번째 부분 ===\n${JSON.stringify(x.p)}`).join('') }], 0);
+    ok.map(x => `\n\n=== ${x.i + 1}번째 부분 ===\n${JSON.stringify(x.p)}`).join('') }], 0, 'merge');
   return keepUncertainInText(merged);
 }
 
