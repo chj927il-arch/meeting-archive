@@ -1421,7 +1421,9 @@ async function stLoadDetails() {
 
 const stDate = m => m.meetingDate || (m.uploadedAt || '').slice(0, 10);
 // 참석부서를 전부 고른 회의 → 목록에서 '직책자 전체'로 짧게
-const isAllTeams = m => { const t = stTeams(m), opts = [...TEAMS, ...orgExtra()]; return opts.length > 1 && opts.every(o => t.includes(o)); };
+// (대표·상무·입시센터는 2026-11-18에 추가 — 그 전에 '전체 선택'한 회의도 전체로 인정)
+const LATE_ADDED = ['대표', '상무', '입시센터'];
+const isAllTeams = m => { const t = stTeams(m), opts = [...TEAMS, ...orgExtra()]; const miss = opts.filter(o => !t.includes(o)); return opts.length > 1 && (miss.length === 0 || miss.every(o => LATE_ADDED.includes(o))); };
 const stTeams = m => String(m.team || '').split(',').map(s => s.trim()).filter(Boolean);
 const stText = d => {
   const s = (d && d.summary) || {};
