@@ -2791,11 +2791,12 @@ function renderAttendeeQuick() {
   if (!LEADERS || !LEADERS.length) { box.innerHTML = ''; return; }
   const cats = ['대표·임원', '원장', '실장', '팀장·센터장'].filter(c => LEADERS.some(l => LEADER_CAT(l.position) === c));
   const b = (key, label) => `<button type="button" class="chip-btn" style="font-size:12px;padding:4px 10px" onclick="quickAddAttendees('${key}')">＋ ${label}</button>`;
-  box.innerHTML = '<span style="font-size:12px;color:var(--text2);align-self:center">한 번에 추가:</span>' + b('all', '간부 전체') + cats.map(c => b(c, c + ' 전원')).join('') +
+  box.innerHTML = '<span style="font-size:12px;color:var(--text2);align-self:center">한 번에 추가:</span>' + b('all', '간부 전체') + cats.map(c => b(c, c + ' 전원' + (c !== '대표·임원' ? ' (+대표)' : ''))).join('') +
     (UPLOAD_ATTENDEES.length ? `<button type="button" class="chip-btn" style="font-size:12px;padding:4px 10px" onclick="UPLOAD_ATTENDEES=[];renderUploadAttendeeChips()">✕ 모두 지우기</button>` : '');
 }
 function quickAddAttendees(key) {
-  (LEADERS || []).filter(l => key === 'all' || LEADER_CAT(l.position) === key).forEach(l => { if (!UPLOAD_ATTENDEES.includes(l.name)) UPLOAD_ATTENDEES.push(l.name); });
+  // 원장·실장·팀장 전원 추가 시 대표(대표이사)는 항상 함께 포함
+  (LEADERS || []).filter(l => key === 'all' || LEADER_CAT(l.position) === key || /^대표/.test(l.position)).forEach(l => { if (!UPLOAD_ATTENDEES.includes(l.name)) UPLOAD_ATTENDEES.push(l.name); });
   renderUploadAttendeeChips();
 }
 function initUploadAttendeesSelect() {
