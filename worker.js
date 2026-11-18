@@ -95,7 +95,21 @@ const PBKDF2_ITER = 100000;
 // S: 대표·원장·이사·관리자 / A: 실장 / B: 팀장·센터장·부원장·부실장
 // 회의록 accessLevel(S|A|B) = 열람 가능한 최저 등급. 기본값 S.
 const RANK = { S: 3, A: 2, B: 1 };
-const LEVEL_LABEL = { S: '대표·원장·관리자', A: '실장 이상', B: '팀장급 이상' };
+const LEVEL_LABEL = { S: '원장단 (대표·원장)', A: '실장단 (대표·실장)', B: '팀장단 (대표·원장·실장·팀장·센터장)' };
+// 열람 자리(seat): all=대표·임원·관리자(전부), 원장, 실장, 팀장(팀장·센터장·부원장·부실장)
+// 원장단(S)=대표·원장 / 실장단(A)=대표·실장 / 팀장단(B)=모두
+function userSeat(u, roster) {
+  if (u.role === 'admin') return 'all';
+  if (u.gradeOverride) return { S: 'all', A: '실장', B: '팀장' }[u.gradeOverride] || null;
+  const r = roster && roster[u.empNo];
+  if (!r || !RANK[r[3]]) return null;
+  const p = String(r[2] || '').trim();
+  if (/^대표/.test(p) || /이사$/.test(p) || /^상무/.test(p)) return 'all';
+  if (p === '원장') return '원장';
+  if (p === '실장') return '실장';
+  return '팀장';
+}
+const SEAT_LEVELS = { all: ['S', 'A', 'B'], 원장: ['S', 'B'], 실장: ['A', 'B'], 팀장: ['B'] };
 function gradeFromPosition(pos) {
   const p = String(pos || '').split('/')[0].trim();
   if (/^대표/.test(p) || p === '원장' || /이사$/.test(p)) return 'S';
@@ -125,7 +139,7 @@ function titleFor(title, level) {
   return (LEVEL_PREFIX[level] || '') + base;
 }
 const withLevelTitle = m => (m ? { ...m, meetingTitle: titleFor(m.meetingTitle, levelOf(m)) } : m);
-const canSee = (user, m) => !!user && RANK[user.grade] >= RANK[levelOf(m)];
+const canSee = (user, m) => !!user && (SEAT_LEVELS[user.seat] || []).includes(levelOf(m));
 // 요청 → 로그인 사용자 (라우터에서 확인 후 저장)
 const REQ_USER = new WeakMap();
 const reqUser = request => REQ_USER.get(request);
@@ -133,7 +147,7 @@ const reqUser = request => REQ_USER.get(request);
 function pickLevel(user, v) {
   const lv = String(v || '').toUpperCase();
   if (!RANK[lv]) return null;
-  return RANK[lv] > RANK[user.grade] ? user.grade : lv;
+  return (SEAT_LEVELS[user.seat] || []).includes(lv) ? lv : null; // 본인이 못 보는 범위로는 등록 불가
 }
 const nameKey = s => String(s || '').replace(/[A-Z]$/, '').replace(/\s+/g, '');
 
@@ -160,7 +174,7 @@ async function getUser(env, empNo) {
   return raw ? JSON.parse(raw) : null;
 }
 const putUser = (env, u) => env.MEETING_KV.put(`user-${u.empNo}`, JSON.stringify(u));
-const publicUser = (u, roster) => ({ empNo: u.empNo, name: u.name, dept: u.dept, position: u.position || '', status: u.status, role: u.role, grade: roster ? userGrade(u, roster) : (u.grade || null), gradeOverride: u.gradeOverride || null, createdAt: u.createdAt, approvedAt: u.approvedAt || null, lastLoginAt: u.lastLoginAt || null });
+const publicUser = (u, roster) => ({ empNo: u.empNo, name: u.name, dept: u.dept, position: u.position || '', status: u.status, role: u.role, grade: roster ? userGrade(u, roster) : (u.grade || null), seat: roster ? userSeat(u, roster) : (u.seat || null), gradeOverride: u.gradeOverride || null, createdAt: u.createdAt, approvedAt: u.approvedAt || null, lastLoginAt: u.lastLoginAt || null });
 
 function getCookie(request, name) {
   const m = (request.headers.get('cookie') || '').match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`));
@@ -174,8 +188,10 @@ async function getSessionUser(request, env) {
   if (!empNo) return null;
   const u = await getUser(env, empNo);
   if (!u || u.status !== 'approved') return null;
-  u.grade = userGrade(u, await getRoster(env));
-  return u.grade ? u : null; // 등급 없는 계정은 이용 불가
+  const roster = await getRoster(env);
+  u.grade = userGrade(u, roster);
+  u.seat = userSeat(u, roster);
+  return u.grade && u.seat ? u : null; // 등급 없는 계정은 이용 불가
 }
 
 async function handleSignup(request, env) {
@@ -763,11 +779,22 @@ async function analyzeAudioWithGemini(env, fileUri, fileName, mimeType, manualAt
 
 // 여러 음성 파일(한 회의를 나눠 녹음)을 순서대로 붙여 하나의 회의로 분석
 async function analyzeAudioPartsWithGemini(env, files, fileName, manualAttendees) {
-  let prompt = makePrompt(fileName, true, manualAttendees);
-  if (files.length > 1) prompt += `\n\n[중요] 첨부된 음성 ${files.length}개는 하나의 회의를 나눠 녹음한 것입니다. 1번부터 순서대로 이어지는 하나의 회의로 보고, 전체 내용을 합쳐 회의록 1건으로 정리하세요.`;
-  const parts = [{ text: prompt }];
-  files.forEach((f, i) => { if (files.length > 1) parts.push({ text: `[녹음 ${i + 1}/${files.length}]` }); parts.push({ fileData: { mimeType: f.mimeType, fileUri: f.fileUri } }); });
-  return keepUncertainInText(await callGemini(env, parts, 0));
+  const base = makePrompt(fileName, true, manualAttendees);
+  if (files.length === 1)
+    return keepUncertainInText(await callGemini(env, [{ text: base }, { fileData: { mimeType: files[0].mimeType, fileUri: files[0].fileUri } }], 0));
+  // 여러 조각: 한 번에 넣으면 앞 파일 위주로 요약되는 문제 → 조각별로 각각 분석한 뒤 하나로 합침
+  const partial = await Promise.all(files.map((f, i) => callGemini(env, [
+    { text: base + `\n\n[중요] 이 음성은 하나의 회의를 ${files.length}개로 나눠 녹음한 것 중 ${i + 1}번째 부분입니다. 이 부분에서 나온 내용을 빠짐없이 자세히 정리하세요.` },
+    { fileData: { mimeType: f.mimeType, fileUri: f.fileUri } },
+  ], 0).catch(e => ({ _error: e.message }))));
+  const ok = partial.map((p, i) => ({ p, i })).filter(x => x.p && !x.p._error);
+  if (!ok.length) throw new Error('조각 분석 모두 실패: ' + (partial[0]?._error || ''));
+  const merged = await callGemini(env, [{ text: base +
+    `\n\n[중요] 아래는 하나의 회의를 ${files.length}개로 나눠 녹음한 각 부분을 따로 정리한 결과(JSON)입니다. 1부터 순서대로 이어지는 하나의 회의입니다.` +
+    ` 모든 부분의 안건·결정사항·후속조치를 빠짐없이 포함해 회의록 1건으로 합치세요. 중복은 하나로 정리하고, 제목·한줄요약은 회의 전체를 대표하게 쓰세요.` +
+    (ok.length < files.length ? ` (${files.length - ok.length}개 부분은 분석에 실패해 빠져 있습니다.)` : '') +
+    ok.map(x => `\n\n=== ${x.i + 1}번째 부분 ===\n${JSON.stringify(x.p)}`).join('') }], 0);
+  return keepUncertainInText(merged);
 }
 
 // ── 인덱스 항목 공통 생성 ─────────────────────────────────────────────
@@ -794,7 +821,7 @@ async function handleUpload(request, env) {
   if (!file) return json({ ok: false, error: '파일 없음' }, 400);
   const user = reqUser(request);
   const accessLevel = pickLevel(user, formData.get('accessLevel'));
-  if (!accessLevel) return json({ ok: false, error: '공개 범위(S/A/B)를 선택해 주세요.' }, 400);
+  if (!accessLevel) return json({ ok: false, error: '공개 범위(원장단·실장단·팀장단)를 선택해 주세요.' }, 400);
 
   const fileName = file.name;
   const fileSize = file.size;
@@ -885,7 +912,7 @@ async function handleAudioUpload(request, env) {
   const manualAttendees = decodeURIComponent(request.headers.get('X-Manual-Attendees') || '');
   const user = reqUser(request);
   const accessLevel = pickLevel(user, request.headers.get('X-Access-Level'));
-  if (!accessLevel) return json({ ok: false, error: '공개 범위(S/A/B)를 선택해 주세요.' }, 400);
+  if (!accessLevel) return json({ ok: false, error: '공개 범위(원장단·실장단·팀장단)를 선택해 주세요.' }, 400);
 
   // ① 음성 파일 버퍼링 (Drive + Gemini 둘 다 전송하기 위해)
   const audioBuffer = await request.arrayBuffer();
@@ -966,7 +993,7 @@ async function handleAudioFinalize(request, env) {
   const ids = Array.isArray(body.partIds) ? body.partIds.slice(0, 10) : [];
   if (ids.length < 1) return json({ ok: false, error: '음성 파일이 없습니다.' }, 400);
   const accessLevel = pickLevel(user, body.accessLevel);
-  if (!accessLevel) return json({ ok: false, error: '공개 범위(S/A/B)를 선택해 주세요.' }, 400);
+  if (!accessLevel) return json({ ok: false, error: '공개 범위(원장단·실장단·팀장단)를 선택해 주세요.' }, 400);
   const parts = [];
   for (const pid of ids) {
     const p = JSON.parse((await env.MEETING_KV.get(`apart-${String(pid)}`)) || 'null');
@@ -1514,6 +1541,12 @@ export default {
           kv: { get: k => k.startsWith('chat:rl:') ? env.MEETING_KV.get(k) : null,
                 put: (k, v, o) => k.startsWith('chat:rl:') ? env.MEETING_KV.put(k, v, o) : null },
         });
+      }
+      if (pathname === '/api/leaders' && method === 'GET') {   // 참석자 선택용: 대표·임원·실장·팀장·센터장·원장만
+        const r = JSON.parse((await env.MEETING_KV.get('roster')) || '{}');
+        const leaders = Object.entries(r).filter(([k, v]) => !k.startsWith('__') && Array.isArray(v) && /^(대표.*|.*이사|상무.*|실장|팀장|센터장|원장)$/.test(String(v[2] || '').trim()))
+          .map(([, v]) => ({ name: v[0], dept: v[1] || '', position: String(v[2]).trim() }));
+        return json({ ok: true, leaders });
       }
       if (pathname === '/api/org' && method === 'GET') {
         return json({ ok: true, org: JSON.parse((await env.MEETING_KV.get('org')) || 'null') });

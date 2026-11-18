@@ -997,7 +997,8 @@ select.login-input{appearance:auto}
 
       <!-- 팀 선택 (복수 선택, 필수) -->
       <div style="margin-bottom:16px">
-        <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:8px">참석부서 <span style="color:#ef4444;font-size:13px">*</span> <span style="font-weight:400;font-size:12px">(복수 선택 가능, 최소 1개 필수)</span></label>
+        <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:8px">참석부서 <span style="color:#ef4444;font-size:13px">*</span> <span style="font-weight:400;font-size:12px">(복수 선택 가능, 최소 1개 필수)</span>
+          <button type="button" id="uploadTeamAllBtn" onclick="toggleAllUploadTeams()" style="margin-left:8px;padding:3px 10px;border-radius:14px;border:1px solid var(--accent);background:rgba(59,130,246,.1);color:var(--accent2);font-size:12px;font-weight:600;cursor:pointer">✓ 전체 선택</button></label>
         <div id="uploadTeamError" style="display:none;color:#ef4444;font-size:12px;margin-bottom:6px">⚠️ 참석부서를 1개 이상 선택해 주세요.</div>
         <div id="uploadTeamChips" style="display:flex;flex-wrap:wrap;gap:6px">
         </div>
@@ -1015,10 +1016,11 @@ select.login-input{appearance:auto}
         <label style="font-size:13px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px">참석자 <span style="font-weight:400;font-size:12px;color:var(--text3)">(선택 — 입력하면 AI 추출보다 우선 적용)</span></label>
         <div style="display:flex;gap:6px;margin-bottom:8px">
           <select id="uploadAttendeesSelect" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-size:13px;font-family:inherit">
-            <option value="">-- 직원 선택 --</option>
+            <option value="">-- 대표·실장·팀장·센터장·원장 선택 --</option>
           </select>
           <button type="button" onclick="addUploadAttendee()" style="padding:8px 14px;border-radius:8px;border:1px solid var(--accent);background:rgba(59,130,246,.1);color:var(--accent2);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">+ 추가</button>
         </div>
+        <div id="uploadAttendeeQuick" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px"></div>
         <div id="uploadAttendeeChips" style="display:flex;flex-wrap:wrap;gap:5px;min-height:0"></div>
         <!-- 직접 입력 (이름 직접 타이핑) -->
         <div style="display:flex;gap:6px;margin-top:7px">
@@ -1050,7 +1052,7 @@ select.login-input{appearance:auto}
               <li><strong>구조화 추출</strong> — 회의 결과, 시사점, 핵심 결정사항, 후속 조치를 JSON 구조로 추출합니다.</li>
               <li><strong>Word 생성</strong> — 분석 결과로 다운로드 가능한 회의록 Word 파일을 자동 생성합니다.</li>
             </ol>
-            <div class="audio-info-notice">⏱️ <strong>분석에는 파일 크기에 따라 1~6분이 걸려요.</strong> 업로드 중에는 화면을 닫지 마세요.<br>📦 <strong>음성 파일은 파일당 100MB까지</strong> 올릴 수 있어요 (스마트폰 녹음 기준 약 1.5~3시간). 회의가 길어 녹음을 나눴다면 <strong>여러 파일을 함께 선택</strong>하세요 — 파일 이름순으로 이어서 회의록 1건으로 만들어요.</div>
+            <div class="audio-info-notice">⏱️ <strong>분석에는 파일 크기에 따라 1~6분이 걸려요.</strong> 업로드 중에는 화면을 닫지 마세요.<br>📦 <strong>음성 파일은 파일당 100MB까지</strong> 올릴 수 있어요 (스마트폰 녹음 기준 약 1.5~3시간). 회의가 길어 녹음을 나눴다면 <strong>여러 파일을 함께 선택</strong>하세요 — 녹음된 시각 순서대로 이어서 회의록 1건으로 만들어요.</div>
           </div>
         </div>
         <div class="drop-zone" id="dropZoneAudio" onclick="document.getElementById('uploadAudioInput').click()" ondragover="onDragOver(event)" ondragleave="onDragLeaveAudio(event)" ondrop="onDropAudio(event)">
@@ -1331,7 +1333,7 @@ function showLoginScreen() {
 
 async function enterApp(me) {
   ME = me.user;
-  document.getElementById('sbMe').innerHTML = `<b>${esc(ME.name)}</b>${ME.position ? ' ' + esc(ME.position) : ''}<br>${esc(ME.dept)} · ${esc(ME.empNo)}${ME.role === 'admin' ? '<span class="um-role">관리자</span>' : ''}<br><span class="lv-badge lv-${ME.grade}">🔒 열람 등급 ${ME.grade}</span>`;
+  document.getElementById('sbMe').innerHTML = `<b>${esc(ME.name)}</b>${ME.position ? ' ' + esc(ME.position) : ''}<br>${esc(ME.dept)} · ${esc(ME.empNo)}${ME.role === 'admin' ? '<span class="um-role">관리자</span>' : ''}<br><span class="lv-badge lv-${ME.grade}">🔒 열람: ${({ all: '전체', 원장: '원장단·팀장단', 실장: '실장단·팀장단', 팀장: '팀장단' })[ME.seat] || '-'}</span>`;
   renderUploadLevelChips();
   document.getElementById('nav-admin').style.display = ME.role === 'admin' ? '' : 'none';
   setAdminBadge(me.pendingCount || 0);
@@ -1947,7 +1949,7 @@ function renderDetail(m) {
     <div class="dp-section-title">📌 기본 정보</div>
     <div class="dp-row"><span class="dp-row-label">회의 일자</span><span class="dp-row-val">${esc(displayDate)}</span></div>
     <div class="dp-row"><span class="dp-row-label">참석부서</span><span class="dp-row-val">${esc(String(teamStr || '').split(',').map(s => s.trim()).filter(Boolean).join(', ') || teamStr)}</span></div>
-    <div class="dp-row"><span class="dp-row-label">공개 범위</span><span class="dp-row-val">${levelBadge(m)} <span style="font-size:13px;color:var(--text2)">${LEVEL_TEXT[levelOf(m)].slice(4)} 열람</span></span></div>
+    <div class="dp-row"><span class="dp-row-label">공개 범위</span><span class="dp-row-val">${levelBadge(m)} <span style="font-size:13px;color:var(--text2)">${LEVEL_TEXT[levelOf(m)].split(' · ')[1]} 열람</span></span></div>
     ${m.uploadedBy ? `<div class="dp-row"><span class="dp-row-label">등록자</span><span class="dp-row-val">${esc(m.uploadedBy.name || m.uploadedBy.empNo)}</span></div>` : ''}
     <div class="dp-row"><span class="dp-row-label">참석자</span><span class="dp-row-val">${esc(attendeeStr)}</span></div>
     <div class="dp-row"><span class="dp-row-label">파일명</span><span class="dp-row-val" style="font-size:12.5px;color:var(--text2)">${esc(m.fileName)}</span></div>
@@ -2488,7 +2490,19 @@ function onDropAudio(e) {
   onAudioFilesSelected(e.dataTransfer.files);
 }
 
-// 여러 개 선택 = 한 회의를 나눠 녹음한 것 → 파일 이름순으로 이어 회의록 1건
+// 여러 개 선택 = 한 회의를 나눠 녹음한 것 → 녹음 시각순(수정 가능)으로 이어 회의록 1건
+function toggleAllUploadTeams() {
+  const cbs = [...document.querySelectorAll('.upload-team-cb')];
+  const allOn = cbs.length && cbs.every(c => c.checked);
+  cbs.forEach(c => { c.checked = !allOn; });
+  syncUploadTeamAllBtn(); checkTeamRequired();
+}
+function syncUploadTeamAllBtn() {
+  const cbs = [...document.querySelectorAll('.upload-team-cb')], b = document.getElementById('uploadTeamAllBtn');
+  if (b) b.textContent = cbs.length && cbs.every(c => c.checked) ? '✕ 전체 해제' : '✓ 전체 선택';
+}
+document.addEventListener('change', e => { if (e.target.classList?.contains('upload-team-cb')) syncUploadTeamAllBtn(); });
+
 function onAudioFilesSelected(list) {
   const files = [...(list || [])];
   if (!files.length) return;
@@ -2499,9 +2513,27 @@ function onAudioFilesSelected(list) {
   if (files.length > 10) { showToast('⚠️ 한 번에 10개까지 올릴 수 있어요'); return; }
   const big = files.find(f => f.size > 99 * 1024 * 1024);
   if (big) { showToast(`⚠️ "${big.name}"이 100MB를 넘어요. 파일당 100MB까지 올릴 수 있어요.`); document.getElementById('uploadAudioInput').value = ''; return; }
-  files.sort((a, b) => a.name.localeCompare(b.name, 'ko', { numeric: true }));
-  startAudioMultiUpload(files);
+  files.sort((a, b) => (a.lastModified - b.lastModified) || a.name.localeCompare(b.name, 'ko', { numeric: true }));
+  AUDIO_ORDER = files; renderAudioOrder();
 }
+
+// 올리기 전에 이어 붙일 순서를 보여주고 바꿀 수 있게
+let AUDIO_ORDER = [];
+function renderAudioOrder() {
+  const r = document.getElementById('uploadResult');
+  r.style.display = 'block';
+  const fmtT = t => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+  r.innerHTML = `<div class="upload-ok" style="text-align:left"><div style="font-size:15px;font-weight:700;margin-bottom:6px">🎙️ 이 순서대로 이어 붙여 회의록 1건으로 만들어요</div>
+    <div style="font-size:12.5px;color:var(--text2);margin-bottom:8px">녹음된 시각 순서로 자동 정렬했어요. 순서가 다르면 ▲▼로 바꿔 주세요.</div>
+    ${AUDIO_ORDER.map((f, i) => `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-top:1px solid var(--border)">
+      <b style="width:22px">${i + 1}</b><span style="flex:1;min-width:0;overflow-wrap:anywhere">${esc(f.name)} <span style="color:var(--text2);font-size:12px">· ${formatSize(f.size)} · ${fmtT(f.lastModified)}</span></span>
+      <button class="btn btn-ghost btn-sm" ${i ? '' : 'disabled'} onclick="moveAudioOrder(${i},-1)">▲</button>
+      <button class="btn btn-ghost btn-sm" ${i < AUDIO_ORDER.length - 1 ? '' : 'disabled'} onclick="moveAudioOrder(${i},1)">▼</button></div>`).join('')}
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="btn btn-ghost btn-sm" onclick="AUDIO_ORDER=[];document.getElementById('uploadResult').style.display='none';document.getElementById('uploadAudioInput').value=''">취소</button>
+      <button class="btn btn-primary btn-sm" id="audioOrderGo" onclick="startAudioMultiUpload(AUDIO_ORDER)">📤 이 순서로 올리기</button></div></div>`;
+}
+function moveAudioOrder(i, d) { const a = AUDIO_ORDER; [a[i], a[i + d]] = [a[i + d], a[i]]; renderAudioOrder(); }
 
 async function startAudioMultiUpload(files) {
   const progWrap = document.getElementById('uploadProgress'), progBar = document.getElementById('progressBar');
@@ -2696,16 +2728,18 @@ document.addEventListener('change', function(e) {
 
 // ── 열람 등급 (공개 범위) ─────────────────────────────────────────────────
 const RANK = { S: 3, A: 2, B: 1 };
-const LEVEL_TEXT = { S: 'S · 대표·원장·관리자만', A: 'A · 실장 이상', B: 'B · 팀장급 이상' };
+const LEVEL_TEXT = { S: '원장단 · 대표·원장', A: '실장단 · 대표·실장', B: '팀장단 · 대표·원장·실장·팀장·센터장' };
+const LEVEL_NAME = { S: '원장단', A: '실장단', B: '팀장단' };
+const SEAT_LEVELS = { all: ['S', 'A', 'B'], 원장: ['S', 'B'], 실장: ['A', 'B'], 팀장: ['B'] };
 const levelOf = m => (m && RANK[m.accessLevel]) ? m.accessLevel : 'S';
 // 본인 등급 이하만 선택 가능 (높게 설정하면 본인도 못 보게 되므로)
-const allowedLevels = () => ['S', 'A', 'B'].filter(l => ME && RANK[l] <= RANK[ME.grade || 'B']);
+const allowedLevels = () => ['A', 'S', 'B'].filter(l => ME && (SEAT_LEVELS[ME.seat] || ['B']).includes(l));
 function selectedUploadLevel() { return document.querySelector('input[name="uploadLevel"]:checked')?.value || ''; }
 function renderUploadLevelChips() {
   document.getElementById('uploadLevelChips').innerHTML = allowedLevels().map(l =>
-    `<label class="team-chip-label level-${l}"><input type="radio" name="uploadLevel" value="${l}"><span>🔒 ${LEVEL_TEXT[l]}</span></label>`).join('');
+    `<label class="team-chip-label level-${l}"><input type="radio" name="uploadLevel" value="${l}"><span>🔒 <b>${LEVEL_NAME[l]}</b> · ${LEVEL_TEXT[l].split(' · ')[1]} 열람</span></label>`).join('');
 }
-const levelBadge = m => `<span class="lv-badge lv-${levelOf(m)}" title="열람: ${LEVEL_TEXT[levelOf(m)]}">🔒 ${levelOf(m)}</span>`;
+const levelBadge = m => `<span class="lv-badge lv-${levelOf(m)}" title="열람: ${LEVEL_TEXT[levelOf(m)]}">🔒 ${LEVEL_NAME[levelOf(m)]}</span>`;
 const levelOptions = cur => allowedLevels().map(l => `<option value="${l}"${l === cur ? ' selected' : ''}>${LEVEL_TEXT[l]}</option>`).join('');
 
 // ── 업로드 폼 — 참석자 셀렉트+칩 ─────────────────────────────────────────
@@ -2728,6 +2762,7 @@ let ORG = DEFAULT_ORG;
 
 async function loadOrg() {
   try { const d = await (await fetch('/api/org')).json(); if (d.ok && d.org && d.org.units) ORG = d.org; } catch {}
+  try { const d = await (await fetch('/api/leaders')).json(); if (d.ok) LEADERS = d.leaders; } catch {}
   applyOrg();
 }
 
@@ -2748,23 +2783,45 @@ function applyOrg() {
   initUploadAttendeesSelect();
 }
 
+let LEADERS = null;   // 명부 기준 대표·임원·실장·팀장·센터장·원장
+const LEADER_CAT = p => /대표|이사|상무/.test(p) ? '대표·임원' : p === '실장' ? '실장' : p === '원장' ? '원장' : '팀장·센터장';
+function renderAttendeeQuick() {
+  const box = document.getElementById('uploadAttendeeQuick');
+  if (!box) return;
+  if (!LEADERS || !LEADERS.length) { box.innerHTML = ''; return; }
+  const cats = ['대표·임원', '원장', '실장', '팀장·센터장'].filter(c => LEADERS.some(l => LEADER_CAT(l.position) === c));
+  const b = (key, label) => `<button type="button" class="chip-btn" style="font-size:12px;padding:4px 10px" onclick="quickAddAttendees('${key}')">＋ ${label}</button>`;
+  box.innerHTML = '<span style="font-size:12px;color:var(--text2);align-self:center">한 번에 추가:</span>' + b('all', '간부 전체') + cats.map(c => b(c, c + ' 전원')).join('') +
+    (UPLOAD_ATTENDEES.length ? `<button type="button" class="chip-btn" style="font-size:12px;padding:4px 10px" onclick="UPLOAD_ATTENDEES=[];renderUploadAttendeeChips()">✕ 모두 지우기</button>` : '');
+}
+function quickAddAttendees(key) {
+  (LEADERS || []).filter(l => key === 'all' || LEADER_CAT(l.position) === key).forEach(l => { if (!UPLOAD_ATTENDEES.includes(l.name)) UPLOAD_ATTENDEES.push(l.name); });
+  renderUploadAttendeeChips();
+}
 function initUploadAttendeesSelect() {
   const groups = [];
-  ORG.units.forEach(u => {
+  if (LEADERS && LEADERS.length) {
+    const cat = LEADER_CAT;
+    ['대표·임원', '원장', '실장', '팀장·센터장'].forEach(c => {
+      const list = LEADERS.filter(l => cat(l.position) === c).sort((a, b) => a.dept.localeCompare(b.dept, 'ko') || a.name.localeCompare(b.name, 'ko'));
+      if (list.length) groups.push([c, list.map(l => ({ v: l.name, t: `${l.name} (${l.dept ? l.dept + ' ' : ''}${l.position})` }))]);
+    });
+  } else ORG.units.forEach(u => {
     if (u.heads.length) groups.push(['본사 > ' + u.name, u.heads]);
     u.teams.forEach(t => { if (t.members.length) groups.push(['본사 > ' + u.name + ' > ' + t.name, t.members]); });
   });
-  if (ORG.branch && ORG.branch.length) groups.push(['지점 원장', ORG.branch]);
+  if (!(LEADERS && LEADERS.length) && ORG.branch && ORG.branch.length) groups.push(['지점 원장', ORG.branch]);
 
   const sel = document.getElementById('uploadAttendeesSelect');
   if (!sel) return;
   sel.querySelectorAll('optgroup').forEach(g => g.remove());
+  renderAttendeeQuick();
   groups.forEach(([label, names]) => {
     const grp = document.createElement('optgroup');
     grp.label = label;
     names.forEach(n => {
       const opt = document.createElement('option');
-      opt.value = n; opt.textContent = n;
+      opt.value = typeof n === 'string' ? n : n.v; opt.textContent = typeof n === 'string' ? n : n.t;
       grp.appendChild(opt);
     });
     sel.appendChild(grp);
@@ -2797,6 +2854,7 @@ function renderUploadAttendeeChips() {
   // hidden input 동기화 (기존 코드 호환)
   const hid = document.getElementById('uploadAttendees');
   if (hid) hid.value = UPLOAD_ATTENDEES.join(', ');
+  renderAttendeeQuick();
 }
 
 document.addEventListener('keydown', function(e) {
