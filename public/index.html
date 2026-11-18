@@ -2760,6 +2760,8 @@ const DEFAULT_ORG = { units: [
     { name: '운영지원팀', members: ['김민지','김다은','고소영'] }, { name: '재무팀', members: ['김지명','소현지'] }] },
   { name: '입시센터', heads: ['김영준'], teams: [] },
 ], branch: ['백용기','윤진우'] };
+// 참석부서 표시 순서: 대표·상무 맨 앞 → 팀 → 나머지
+const deptOptions = () => { const ex = orgExtra(), top = ex.filter(x => x === '대표' || x === '상무'); return [...top, ...TEAMS, ...ex.filter(x => !top.includes(x))]; };
 const DEFAULT_EXTRA = ['대표','상무','입시센터','사업기획실장','가맹사업성장실장','경영관리실장','이천기숙원장','독학기숙원장','대치점 원장','분당정자점 원장'];
 const orgExtra = () => Array.isArray(ORG.extra) ? ORG.extra : DEFAULT_EXTRA;
 let ORG = DEFAULT_ORG;
@@ -2780,10 +2782,10 @@ function applyOrg() {
   // 업로드 참석부서 체크박스 (체크 상태 유지)
   const uc = document.getElementById('uploadTeamChips');
   if (uc) { const on = new Set([...uc.querySelectorAll('.upload-team-cb:checked')].map(c => c.value));
-    uc.innerHTML = [...TEAMS, ...orgExtra()].map(t => `<label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="${esc(t)}"${on.has(t) ? ' checked' : ''}><span>${esc(t)}</span></label>`).join(''); }
+    uc.innerHTML = deptOptions().map(t => `<label class="team-chip-label"><input type="checkbox" class="upload-team-cb" value="${esc(t)}"${on.has(t) ? ' checked' : ''}><span>${esc(t)}</span></label>`).join(''); }
   // 편집 모달 팀 선택
   const et = document.getElementById('editTeam');
-  if (et) et.innerHTML = '<option value="">팀 미지정</option>' + [...TEAMS, ...orgExtra()].map(t => `<option>${esc(t)}</option>`).join('');
+  if (et) et.innerHTML = '<option value="">팀 미지정</option>' + deptOptions().map(t => `<option>${esc(t)}</option>`).join('');
   initUploadAttendeesSelect();
 }
 
