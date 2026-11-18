@@ -603,7 +603,7 @@ ${attendeesRule}
   ※ 참고 고유명사(아래와 정확히 같게 적은 단어는 uncertainTerms에 넣지 말 것): 이투스247, 잇올스파르타, 대성디랩, 수만휘스파르타, 수능선배, 작심스터디카페, 윈터스쿨, LMCT, LMTI, LMAT`;
 }
 
-async function callGemini(env, parts, thinkingBudget = 2048) {
+async function callGemini(env, parts, thinkingBudget = 2048, tag = '') {
   const MODELS = ['gemini-3.8-flash', 'gemini-2.5-flash'];
   const genConfig = {
     responseMimeType: 'application/json',
@@ -616,11 +616,12 @@ async function callGemini(env, parts, thinkingBudget = 2048) {
   // 과부하(503/429) 시 대체 모델로 전환: 각 모델 2회씩
   for (let i = 0; i < MODELS.length * 2; i++) {
     const model = MODELS[Math.floor(i / 2)];
+    const t0 = Date.now();
     try {
       // 스트리밍(SSE): 긴 음성 분석 시 중간 연결 100초 타임아웃(524) 회피
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${env.GEMINI_API_KEY}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body), signal: AbortSignal.timeout(300000)   // 한 번 호출 최대 5분
       });
       if (!res.ok) {
         const t = await res.text();
@@ -645,6 +646,7 @@ async function callGemini(env, parts, thinkingBudget = 2048) {
           if (chunk?.promptFeedback?.blockReason) blockReason = chunk.promptFeedback.blockReason;
         } catch (_) {}
       }
+      console.log('Gemini 응답', tag, model, Math.round((Date.now() - t0) / 1000) + 's', 'len=' + text.length, finishReason);
       const cand = { finishReason };
       const data = { promptFeedback: { blockReason } };
       if (!text) {
